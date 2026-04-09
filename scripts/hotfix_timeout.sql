@@ -1,0 +1,369 @@
+-- ================================================================
+-- HOTFIX: Remove statement_timeout das 3 funções RPC
+-- O MV lc131_mv já existe. Só recria as funções sem timeout.
+-- Cole e execute no Supabase SQL Editor.
+-- ================================================================
+
+-- 1. Dashboard — remove timeout de 30s
+DROP FUNCTION IF EXISTS public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text);
+
+CREATE OR REPLACE FUNCTION public.lc131_dashboard(
+  p_ano           integer DEFAULT NULL,
+  p_drs           text    DEFAULT NULL,
+  p_regiao_ad     text    DEFAULT NULL,
+  p_rras          text    DEFAULT NULL,
+  p_regiao_sa     text    DEFAULT NULL,
+  p_municipio     text    DEFAULT NULL,
+  p_grupo_despesa text    DEFAULT NULL,
+  p_tipo_despesa  text    DEFAULT NULL,
+  p_rotulo        text    DEFAULT NULL,
+  p_fonte_recurso text    DEFAULT NULL,
+  p_codigo_ug     text    DEFAULT NULL,
+  p_uo            text    DEFAULT NULL,
+  p_elemento      text    DEFAULT NULL,
+  p_favorecido    text    DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET statement_timeout = 0
+AS $$
+DECLARE result json;
+BEGIN
+  WITH base AS (
+    SELECT *
+    FROM lc131_mv
+    WHERE
+      (p_ano           IS NULL OR ano_referencia = p_ano)
+      AND (p_drs           IS NULL OR drs                       = ANY(string_to_array(p_drs, '|')))
+      AND (p_regiao_ad     IS NULL OR regiao_ad                 = ANY(string_to_array(p_regiao_ad, '|')))
+      AND (p_rras          IS NULL OR rras                      = ANY(string_to_array(p_rras, '|')))
+      AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
+      AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
+      AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
+      AND (p_fonte_recurso IS NULL OR codigo_nome_fonte_recurso = ANY(string_to_array(p_fonte_recurso, '|')))
+      AND (p_codigo_ug     IS NULL OR codigo_ug::text           = ANY(string_to_array(p_codigo_ug, '|')))
+      AND (p_uo            IS NULL OR codigo_nome_uo            = ANY(string_to_array(p_uo, '|')))
+      AND (p_elemento      IS NULL OR codigo_nome_elemento      = ANY(string_to_array(p_elemento, '|')))
+      AND (p_favorecido    IS NULL OR codigo_nome_favorecido    = ANY(string_to_array(p_favorecido, '|')))
+  )
+  SELECT json_build_object(
+    'kpis', (
+      SELECT json_build_object(
+        'empenhado',  SUM(COALESCE(empenhado, 0)),
+        'liquidado',  SUM(COALESCE(liquidado, 0)),
+        'pago',       SUM(COALESCE(pago, 0)),
+        'pago_total', SUM(pago_total),
+        'total',      COUNT(*),
+        'municipios', COUNT(DISTINCT COALESCE(municipio, codigo_ug::text))
+      ) FROM base
+    ),
+    'por_ano', (
+      SELECT json_agg(r ORDER BY r.ano) FROM (
+        SELECT ano_referencia::int AS ano,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(COALESCE(pago, 0))      AS pago,
+          SUM(pago_total)             AS pago_total,
+          COUNT(*)                    AS registros
+        FROM base WHERE ano_referencia IS NOT NULL
+        GROUP BY ano_referencia
+      ) r
+    ),
+    'por_grupo', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_grupo AS grupo_despesa,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo <> ''
+        GROUP BY codigo_nome_grupo ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_drs', (
+      SELECT json_agg(r) FROM (
+        SELECT drs,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE drs IS NOT NULL AND drs <> ''
+        GROUP BY drs ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_municipio', (
+      SELECT json_agg(r) FROM (
+        SELECT municipio,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE municipio IS NOT NULL AND municipio <> ''
+        GROUP BY municipio ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_fonte', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_fonte_recurso AS fonte_recurso,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE codigo_nome_fonte_recurso IS NOT NULL AND codigo_nome_fonte_recurso <> ''
+        GROUP BY codigo_nome_fonte_recurso ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_elemento', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_elemento AS elemento,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE codigo_nome_elemento IS NOT NULL AND codigo_nome_elemento <> ''
+        GROUP BY codigo_nome_elemento ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_regiao_ad', (
+      SELECT json_agg(r) FROM (
+        SELECT regiao_ad,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE regiao_ad IS NOT NULL AND regiao_ad <> ''
+        GROUP BY regiao_ad ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_uo', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_uo AS uo,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE codigo_nome_uo IS NOT NULL AND codigo_nome_uo <> ''
+        GROUP BY codigo_nome_uo ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_rras', (
+      SELECT json_agg(r) FROM (
+        SELECT rras,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE rras IS NOT NULL AND rras <> ''
+        GROUP BY rras ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_tipo_despesa', (
+      SELECT json_agg(r) FROM (
+        SELECT tipo_despesa,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(COALESCE(liquidado, 0)) AS liquidado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE tipo_despesa IS NOT NULL AND tipo_despesa <> ''
+        GROUP BY tipo_despesa ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_rotulo', (
+      SELECT json_agg(r) FROM (
+        SELECT rotulo,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE rotulo IS NOT NULL AND rotulo <> ''
+        GROUP BY rotulo ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_favorecido', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_favorecido AS favorecido,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total,
+          COUNT(*)                    AS contratos
+        FROM base WHERE codigo_nome_favorecido IS NOT NULL AND codigo_nome_favorecido <> ''
+        GROUP BY codigo_nome_favorecido ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_projeto', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_projeto_atividade AS projeto,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total,
+          COUNT(*)                    AS registros
+        FROM base WHERE codigo_nome_projeto_atividade IS NOT NULL AND codigo_nome_projeto_atividade <> ''
+        GROUP BY codigo_nome_projeto_atividade ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_ug', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_ug AS ug,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE codigo_nome_ug IS NOT NULL AND codigo_nome_ug <> ''
+        GROUP BY codigo_nome_ug ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_regiao_sa', (
+      SELECT json_agg(r) FROM (
+        SELECT regiao_sa,
+          SUM(COALESCE(empenhado, 0)) AS empenhado,
+          SUM(pago_total)             AS pago_total
+        FROM base WHERE regiao_sa IS NOT NULL AND regiao_sa <> ''
+        GROUP BY regiao_sa ORDER BY 2 DESC LIMIT 20
+      ) r
+    )
+  ) INTO result;
+  RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
+
+
+-- 2. Distincts — remove timeout de 15s
+DROP FUNCTION IF EXISTS public.lc131_distincts(integer,text,text,text,text,text,text,text,text,text,text,text,text,text);
+
+CREATE OR REPLACE FUNCTION public.lc131_distincts(
+  p_ano           integer DEFAULT NULL,
+  p_drs           text    DEFAULT NULL,
+  p_regiao_ad     text    DEFAULT NULL,
+  p_rras          text    DEFAULT NULL,
+  p_regiao_sa     text    DEFAULT NULL,
+  p_municipio     text    DEFAULT NULL,
+  p_grupo_despesa text    DEFAULT NULL,
+  p_tipo_despesa  text    DEFAULT NULL,
+  p_rotulo        text    DEFAULT NULL,
+  p_fonte_recurso text    DEFAULT NULL,
+  p_codigo_ug     text    DEFAULT NULL,
+  p_uo            text    DEFAULT NULL,
+  p_elemento      text    DEFAULT NULL,
+  p_favorecido    text    DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET statement_timeout = 0
+AS $$
+DECLARE result json;
+BEGIN
+  WITH filtered AS (
+    SELECT
+      drs,
+      regiao_ad,
+      rras,
+      regiao_sa,
+      municipio,
+      codigo_nome_grupo,
+      tipo_despesa,
+      rotulo,
+      codigo_nome_fonte_recurso,
+      codigo_ug,
+      codigo_nome_uo,
+      codigo_nome_elemento,
+      codigo_nome_favorecido
+    FROM lc131_mv
+    WHERE
+      (p_ano           IS NULL OR ano_referencia = p_ano)
+      AND (p_drs           IS NULL OR drs                       = ANY(string_to_array(p_drs, '|')))
+      AND (p_regiao_ad     IS NULL OR regiao_ad                 = ANY(string_to_array(p_regiao_ad, '|')))
+      AND (p_rras          IS NULL OR rras                      = ANY(string_to_array(p_rras, '|')))
+      AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
+      AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
+      AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
+      AND (p_fonte_recurso IS NULL OR codigo_nome_fonte_recurso = ANY(string_to_array(p_fonte_recurso, '|')))
+      AND (p_codigo_ug     IS NULL OR codigo_ug::text           = ANY(string_to_array(p_codigo_ug, '|')))
+      AND (p_uo            IS NULL OR codigo_nome_uo            = ANY(string_to_array(p_uo, '|')))
+      AND (p_elemento      IS NULL OR codigo_nome_elemento      = ANY(string_to_array(p_elemento, '|')))
+      AND (p_favorecido    IS NULL OR codigo_nome_favorecido    = ANY(string_to_array(p_favorecido, '|')))
+  )
+  SELECT json_build_object(
+    'distinct_drs',        (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT drs                       AS d FROM filtered WHERE drs                       IS NOT NULL AND drs <> '') x),
+    'distinct_regiao_ad',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT regiao_ad                 AS d FROM filtered WHERE regiao_ad                 IS NOT NULL AND regiao_ad <> '') x),
+    'distinct_rras',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rras                      AS d FROM filtered WHERE rras                      IS NOT NULL AND rras <> '') x),
+    'distinct_regiao_sa',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT regiao_sa                 AS d FROM filtered WHERE regiao_sa                 IS NOT NULL AND regiao_sa <> '') x),
+    'distinct_municipio',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT municipio                 AS d FROM filtered WHERE municipio                 IS NOT NULL AND municipio <> '') x),
+    'distinct_grupo',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_grupo         AS d FROM filtered WHERE codigo_nome_grupo         IS NOT NULL AND codigo_nome_grupo <> '') x),
+    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa              AS d FROM filtered WHERE tipo_despesa              IS NOT NULL AND tipo_despesa <> '') x),
+    'distinct_rotulo',     (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rotulo                    AS d FROM filtered WHERE rotulo                    IS NOT NULL AND rotulo <> '') x),
+    'distinct_fonte',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_fonte_recurso AS d FROM filtered WHERE codigo_nome_fonte_recurso IS NOT NULL AND codigo_nome_fonte_recurso <> '') x),
+    'distinct_codigo_ug',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_ug::text           AS d FROM filtered WHERE codigo_ug                 IS NOT NULL) x),
+    'distinct_uo',         (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_uo            AS d FROM filtered WHERE codigo_nome_uo            IS NOT NULL AND codigo_nome_uo <> '') x),
+    'distinct_elemento',   (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_elemento      AS d FROM filtered WHERE codigo_nome_elemento      IS NOT NULL AND codigo_nome_elemento <> '') x),
+    'distinct_favorecido', (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_favorecido    AS d FROM filtered WHERE codigo_nome_favorecido    IS NOT NULL AND codigo_nome_favorecido <> '') x)
+  ) INTO result;
+  RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.lc131_distincts(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
+
+
+-- 3. Detail — remove timeout de 30s
+DROP FUNCTION IF EXISTS public.lc131_detail(integer,text,text,text,text,text,text,text,text,text,text,text,text,text,integer,integer);
+
+CREATE OR REPLACE FUNCTION public.lc131_detail(
+  p_ano           integer DEFAULT NULL,
+  p_drs           text    DEFAULT NULL,
+  p_regiao_ad     text    DEFAULT NULL,
+  p_rras          text    DEFAULT NULL,
+  p_regiao_sa     text    DEFAULT NULL,
+  p_municipio     text    DEFAULT NULL,
+  p_grupo_despesa text    DEFAULT NULL,
+  p_tipo_despesa  text    DEFAULT NULL,
+  p_rotulo        text    DEFAULT NULL,
+  p_fonte_recurso text    DEFAULT NULL,
+  p_codigo_ug     text    DEFAULT NULL,
+  p_uo            text    DEFAULT NULL,
+  p_elemento      text    DEFAULT NULL,
+  p_favorecido    text    DEFAULT NULL,
+  p_limit         integer DEFAULT 200,
+  p_offset        integer DEFAULT 0
+)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET statement_timeout = 0
+AS $$
+DECLARE result json;
+BEGIN
+  WITH filtered AS (
+    SELECT *
+    FROM lc131_mv
+    WHERE
+      (p_ano           IS NULL OR ano_referencia = p_ano)
+      AND (p_drs           IS NULL OR drs                       = ANY(string_to_array(p_drs, '|')))
+      AND (p_regiao_ad     IS NULL OR regiao_ad                 = ANY(string_to_array(p_regiao_ad, '|')))
+      AND (p_rras          IS NULL OR rras                      = ANY(string_to_array(p_rras, '|')))
+      AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
+      AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
+      AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
+      AND (p_fonte_recurso IS NULL OR codigo_nome_fonte_recurso = ANY(string_to_array(p_fonte_recurso, '|')))
+      AND (p_codigo_ug     IS NULL OR codigo_ug::text           = ANY(string_to_array(p_codigo_ug, '|')))
+      AND (p_uo            IS NULL OR codigo_nome_uo            = ANY(string_to_array(p_uo, '|')))
+      AND (p_elemento      IS NULL OR codigo_nome_elemento      = ANY(string_to_array(p_elemento, '|')))
+      AND (p_favorecido    IS NULL OR codigo_nome_favorecido    = ANY(string_to_array(p_favorecido, '|')))
+  )
+  SELECT json_build_object(
+    'total', (SELECT COUNT(*) FROM filtered),
+    'rows',  (
+      SELECT json_agg(r)
+      FROM (
+        SELECT * FROM filtered
+        ORDER BY empenhado DESC NULLS LAST
+        LIMIT p_limit OFFSET p_offset
+      ) r
+    )
+  ) INTO result;
+  RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.lc131_detail(integer,text,text,text,text,text,text,text,text,text,text,text,text,text,integer,integer) TO anon, authenticated;
+
+
+-- ================================================================
+-- PRONTO! Teste com: SELECT lc131_dashboard();
+-- ================================================================

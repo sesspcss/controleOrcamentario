@@ -1,0 +1,5 @@
+{
+  "name": "Supabase Data Dashboard",
+  "description": "A dynamic dashboard to visualize and filter data from a Supabase database.",
+  "requestFramePermissions": []
+}
