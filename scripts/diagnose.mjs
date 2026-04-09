@@ -5,79 +5,55 @@ const sb = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbnN0YmV1aW9qb2h1dG9xdnZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTQ1NzgsImV4cCI6MjA5MDA5MDU3OH0._71Nt-rjs3EvOuDcGcQcPFKug-iDg_dEs38UVLBLJEQ'
 );
 
-// 1. Check municipality count
-const { data: munCount } = await sb.from('lc131_despesas')
-  .select('municipio')
-  .eq('ano_referencia', 2026)
+console.log("=== DIAGNÓSTICO COMPLETO ===\n");
+
+// 1. tab_drs
+const { count: drsCount } = await sb.from('tab_drs').select('*', { count: 'exact', head: true });
+const { data: drsSample } = await sb.from('tab_drs').select('*').limit(5);
+console.log(`1. tab_drs: ${drsCount} rows`);
+console.log(`   Sample:`, JSON.stringify(drsSample));
+
+// 2. tab_rras
+const { count: rrasCount } = await sb.from('tab_rras').select('*', { count: 'exact', head: true });
+console.log(`\n2. tab_rras: ${rrasCount} rows`);
+
+// 3. bd_ref
+const { count: bdRefTotal } = await sb.from('bd_ref').select('*', { count: 'exact', head: true });
+const { data: bdSample } = await sb.from('bd_ref').select('codigo,drs,unidade,municipio,rotulo').limit(5);
+console.log(`\n3. bd_ref: ${bdRefTotal} rows`);
+console.log(`   Sample:`, JSON.stringify(bdSample));
+
+// 4. lc131_despesas per-column counts
+const { count: total } = await sb.from('lc131_despesas').select('*', { count: 'exact', head: true });
+const cols = ['drs','rras','unidade','rotulo','municipio','nome_municipio','regiao_ad','regiao_sa','cod_ibge'];
+console.log(`\n4. lc131_despesas: ${total} total`);
+for (const col of cols) {
+  const { count: filled } = await sb.from('lc131_despesas')
+    .select('*', { count: 'exact', head: true })
+    .not(col, 'is', null)
+    .neq(col, '');
+  console.log(`   ${col.padEnd(20)} preenchido: ${filled}  (vazio: ${total - filled})`);
+}
+
+// 5. Sample: rows with municipio but no DRS
+const { data: noDrs } = await sb.from('lc131_despesas')
+  .select('id,nome_municipio,municipio,drs,rras,unidade,rotulo,codigo_ug,codigo_projeto_atividade')
   .not('municipio', 'is', null)
-  .not('municipio', 'eq', '');
-const distinctMun = new Set((munCount || []).map(r => r.municipio));
-console.log(`\n1. MUNICÍPIOS (2026 não nulos): ${distinctMun.size}`);
-
-// 2. Check how many records have NULL municipio
-const { count: total2026 } = await sb.from('lc131_despesas')
-  .select('*', { count: 'exact', head: true })
-  .eq('ano_referencia', 2026);
-const { count: nullMun } = await sb.from('lc131_despesas')
-  .select('*', { count: 'exact', head: true })
-  .eq('ano_referencia', 2026)
-  .or('municipio.is.null,municipio.eq.');
-console.log(`   Total registros 2026: ${total2026}`);
-console.log(`   Registros sem município: ${nullMun}`);
-
-// 3. Check rotulo coverage
-const { count: nullRotulo } = await sb.from('lc131_despesas')
-  .select('*', { count: 'exact', head: true })
-  .eq('ano_referencia', 2026)
-  .or('rotulo.is.null,rotulo.eq.');
-console.log(`\n3. RÓTULO: ${nullRotulo} registros sem rótulo de ${total2026}`);
-
-// 4. Check bd_ref rotulo coverage
-const { data: bdRefSample } = await sb.from('bd_ref')
-  .select('codigo, rotulo, tipo_despesa, fonte_recurso')
-  .not('rotulo', 'is', null)
-  .not('rotulo', 'eq', '')
+  .is('drs', null)
   .limit(5);
-console.log(`\n4. BD_REF com rótulo (amostra):`);
-console.log(bdRefSample?.length ? bdRefSample : '   NENHUM registro com rótulo!');
+console.log(`\n5. Rows com municipio mas SEM drs:`, JSON.stringify(noDrs, null, 2));
 
-// 5. Check bd_ref total & coverage
-const { count: bdRefTotal } = await sb.from('bd_ref')
-  .select('*', { count: 'exact', head: true });
-const { count: bdRefRotulo } = await sb.from('bd_ref')
-  .select('*', { count: 'exact', head: true })
-  .not('rotulo', 'is', null)
-  .not('rotulo', 'eq', '');
-const { count: bdRefTipo } = await sb.from('bd_ref')
-  .select('*', { count: 'exact', head: true })
-  .not('tipo_despesa', 'is', null)
-  .not('tipo_despesa', 'eq', '');
-console.log(`\n5. BD_REF total: ${bdRefTotal}`);
-console.log(`   Com rótulo: ${bdRefRotulo}`);
-console.log(`   Com tipo_despesa: ${bdRefTipo}`);
+// 6. Test refresh_dashboard_batch(1)
+const { data: batchTest, error: batchErr } = await sb.rpc('refresh_dashboard_batch', { p_batch_size: 1 });
+console.log(`\n6. refresh_dashboard_batch(1) = ${batchTest ?? 'ERRO: ' + batchErr?.message}`);
 
-// 6. Check enrichment status for 2026 records
-const { count: enrichedDrs } = await sb.from('lc131_despesas')
-  .select('*', { count: 'exact', head: true })
-  .eq('ano_referencia', 2026)
-  .not('drs', 'is', null)
-  .not('drs', 'eq', '');
-const { count: enrichedTipo } = await sb.from('lc131_despesas')
-  .select('*', { count: 'exact', head: true })
-  .eq('ano_referencia', 2026)
-  .not('tipo_despesa', 'is', null)
-  .not('tipo_despesa', 'eq', '');
-console.log(`\n6. ENRIQUECIMENTO 2026:`);
-console.log(`   Com DRS: ${enrichedDrs} de ${total2026}`);
-console.log(`   Com tipo_despesa: ${enrichedTipo} de ${total2026}`);
-
-// 7. Check KPI sums for 2026
-const { data: kpiCheck } = await sb.rpc('lc131_dashboard', { p_ano: 2026 });
-const kpis = kpiCheck?.kpis;
-console.log(`\n7. KPIs retornados pelo lc131_dashboard(2026):`);
-console.log(`   Empenhado:  ${Number(kpis?.empenhado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
-console.log(`   Liquidado:  ${Number(kpis?.liquidado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
-console.log(`   Pago:       ${Number(kpis?.pago || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+// 7. Per-year breakdown
+for (const ano of [2022, 2023, 2024, 2025, 2026]) {
+  const { count: t } = await sb.from('lc131_despesas').select('*', { count: 'exact', head: true }).eq('ano_referencia', ano);
+  const { count: d } = await sb.from('lc131_despesas').select('*', { count: 'exact', head: true }).eq('ano_referencia', ano).not('drs', 'is', null).neq('drs', '');
+  const { count: u } = await sb.from('lc131_despesas').select('*', { count: 'exact', head: true }).eq('ano_referencia', ano).not('unidade', 'is', null).neq('unidade', '');
+  console.log(`\n   ${ano}: ${t} total | DRS: ${d} | Unidade: ${u}`);
+}
 console.log(`   Pago Total: ${Number(kpis?.pago_total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
 console.log(`   Registros:  ${kpis?.total}`);
 console.log(`   Municípios: ${kpis?.municipios}`);

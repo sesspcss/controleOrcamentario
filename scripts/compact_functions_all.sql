@@ -493,7 +493,6 @@ BEGIN
       SELECT id FROM lc131_despesas
       WHERE COALESCE(TRIM(drs),'') = ''
          OR COALESCE(TRIM(rotulo),'') = ''
-         OR COALESCE(TRIM(unidade),'') = ''
       LIMIT batch_size
     ),
     enriched AS (
@@ -544,10 +543,11 @@ BEGIN
       LEFT JOIN tab_drs  td2  ON td2.municipio = norm_munic(lc.municipio)
       LEFT JOIN tab_rras tr   ON tr.municipio  = norm_munic(lc.nome_municipio)
       LEFT JOIN tab_rras tr2  ON tr2.municipio = norm_munic(lc.municipio)
-      LEFT JOIN bd_ref   rb1 ON rb1.codigo = lc.codigo_projeto_atividade::text
-      LEFT JOIN bd_ref   rb2 ON rb2.codigo = lc.codigo_ug::text
-      LEFT JOIN bd_ref   rb3 ON rb3.codigo = NULLIF(regexp_replace(
-          split_part(lc.codigo_nome_ug::text, ' ', 1), '[^0-9]', '', 'g'), '')
+      LEFT JOIN bd_ref   rb1 ON rb1.codigo = LPAD(lc.codigo_projeto_atividade::text, 6, '0')
+      LEFT JOIN bd_ref   rb2 ON rb2.codigo = LPAD(lc.codigo_ug::text, 6, '0')
+      LEFT JOIN bd_ref   rb3 ON rb3.codigo = LPAD(
+          NULLIF(regexp_replace(split_part(lc.codigo_nome_ug::text, ' ', 1), '[^0-9]', '', 'g'), ''),
+          6, '0')
     )
     UPDATE lc131_despesas tgt
     SET
@@ -688,7 +688,6 @@ BEGIN
     SELECT id FROM lc131_despesas
     WHERE COALESCE(TRIM(drs),'') = ''
        OR COALESCE(TRIM(rotulo),'') = ''
-       OR COALESCE(TRIM(unidade),'') = ''
     LIMIT p_batch_size
   ),
   enriched AS (
@@ -739,10 +738,11 @@ BEGIN
     LEFT JOIN tab_drs  td2  ON td2.municipio = norm_munic(lc.municipio)
     LEFT JOIN tab_rras tr   ON tr.municipio  = norm_munic(lc.nome_municipio)
     LEFT JOIN tab_rras tr2  ON tr2.municipio = norm_munic(lc.municipio)
-    LEFT JOIN bd_ref   rb1 ON rb1.codigo = lc.codigo_projeto_atividade::text
-    LEFT JOIN bd_ref   rb2 ON rb2.codigo = lc.codigo_ug::text
-    LEFT JOIN bd_ref   rb3 ON rb3.codigo = NULLIF(regexp_replace(
-        split_part(lc.codigo_nome_ug::text, ' ', 1), '[^0-9]', '', 'g'), '')
+    LEFT JOIN bd_ref   rb1 ON rb1.codigo = LPAD(lc.codigo_projeto_atividade::text, 6, '0')
+    LEFT JOIN bd_ref   rb2 ON rb2.codigo = LPAD(lc.codigo_ug::text, 6, '0')
+    LEFT JOIN bd_ref   rb3 ON rb3.codigo = LPAD(
+        NULLIF(regexp_replace(split_part(lc.codigo_nome_ug::text, ' ', 1), '[^0-9]', '', 'g'), ''),
+        6, '0')
   )
   UPDATE lc131_despesas tgt
   SET
