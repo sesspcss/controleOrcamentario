@@ -453,8 +453,7 @@ GRANT EXECUTE ON FUNCTION public.lc131_detail(integer,text,text,text,text,text,t
 
 -- ───────────────────────────────────────────────────────────────
 -- 4. refresh_dashboard (re-enriquece após importações)
---    Otimizado: só atualiza linhas sem enriquecimento (drs IS NULL)
---    ou com pago_total desatualizado, em batches de 10000
+--    NUNCA sobrescreve valores existentes com NULL (usa COALESCE)
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.refresh_dashboard()
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER
@@ -465,11 +464,10 @@ DECLARE
   total_updated bigint := 0;
   rows_affected bigint;
 BEGIN
-  -- Loop em batches: só pega registros que ainda não foram enriquecidos
   LOOP
     WITH candidates AS (
       SELECT id FROM lc131_despesas
-      WHERE drs IS NULL OR rotulo IS NULL
+      WHERE drs IS NULL OR rotulo IS NULL OR unidade IS NULL
       LIMIT batch_size
     ),
     enriched AS (
@@ -525,17 +523,17 @@ BEGIN
     )
     UPDATE lc131_despesas tgt
     SET
-      drs           = enriched.e_drs,
-      rras          = enriched.e_rras,
-      regiao_ad     = enriched.e_regiao_ad,
-      regiao_sa     = enriched.e_regiao_sa,
-      cod_ibge      = enriched.e_cod_ibge,
-      municipio     = enriched.e_municipio,
-      unidade       = enriched.e_unidade,
-      fonte_recurso = enriched.e_fonte_recurso,
-      grupo_despesa = enriched.e_grupo_despesa,
-      tipo_despesa  = enriched.e_tipo_despesa,
-      rotulo        = enriched.e_rotulo,
+      drs           = COALESCE(enriched.e_drs,           tgt.drs),
+      rras          = COALESCE(enriched.e_rras,          tgt.rras),
+      regiao_ad     = COALESCE(enriched.e_regiao_ad,     tgt.regiao_ad),
+      regiao_sa     = COALESCE(enriched.e_regiao_sa,     tgt.regiao_sa),
+      cod_ibge      = COALESCE(enriched.e_cod_ibge,      tgt.cod_ibge),
+      municipio     = COALESCE(enriched.e_municipio,     tgt.municipio),
+      unidade       = COALESCE(enriched.e_unidade,       tgt.unidade),
+      fonte_recurso = COALESCE(enriched.e_fonte_recurso, tgt.fonte_recurso),
+      grupo_despesa = COALESCE(enriched.e_grupo_despesa, tgt.grupo_despesa),
+      tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  tgt.tipo_despesa),
+      rotulo        = COALESCE(enriched.e_rotulo,        tgt.rotulo),
       pago_total    = COALESCE(tgt.pago, 0) + COALESCE(tgt.pago_anos_anteriores, 0)
     FROM enriched
     WHERE tgt.id = enriched.id;
@@ -650,6 +648,7 @@ GRANT EXECUTE ON FUNCTION public.lc131_delete_year(integer) TO anon, authenticat
 -- ───────────────────────────────────────────────────────────────
 -- 7. refresh_dashboard_batch — processa UM batch e retorna qtd atualizada
 --    Chamar repetidamente até retornar 0
+--    NUNCA sobrescreve valores existentes com NULL (usa COALESCE)
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.refresh_dashboard_batch(p_batch_size integer DEFAULT 5000)
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER
@@ -659,7 +658,7 @@ DECLARE rows_affected bigint;
 BEGIN
   WITH candidates AS (
     SELECT id FROM lc131_despesas
-    WHERE drs IS NULL OR rotulo IS NULL
+    WHERE drs IS NULL OR rotulo IS NULL OR unidade IS NULL
     LIMIT p_batch_size
   ),
   enriched AS (
@@ -715,17 +714,17 @@ BEGIN
   )
   UPDATE lc131_despesas tgt
   SET
-    drs           = enriched.e_drs,
-    rras          = enriched.e_rras,
-    regiao_ad     = enriched.e_regiao_ad,
-    regiao_sa     = enriched.e_regiao_sa,
-    cod_ibge      = enriched.e_cod_ibge,
-    municipio     = enriched.e_municipio,
-    unidade       = enriched.e_unidade,
-    fonte_recurso = enriched.e_fonte_recurso,
-    grupo_despesa = enriched.e_grupo_despesa,
-    tipo_despesa  = enriched.e_tipo_despesa,
-    rotulo        = enriched.e_rotulo,
+    drs           = COALESCE(enriched.e_drs,           tgt.drs),
+    rras          = COALESCE(enriched.e_rras,          tgt.rras),
+    regiao_ad     = COALESCE(enriched.e_regiao_ad,     tgt.regiao_ad),
+    regiao_sa     = COALESCE(enriched.e_regiao_sa,     tgt.regiao_sa),
+    cod_ibge      = COALESCE(enriched.e_cod_ibge,      tgt.cod_ibge),
+    municipio     = COALESCE(enriched.e_municipio,     tgt.municipio),
+    unidade       = COALESCE(enriched.e_unidade,       tgt.unidade),
+    fonte_recurso = COALESCE(enriched.e_fonte_recurso, tgt.fonte_recurso),
+    grupo_despesa = COALESCE(enriched.e_grupo_despesa, tgt.grupo_despesa),
+    tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  tgt.tipo_despesa),
+    rotulo        = COALESCE(enriched.e_rotulo,        tgt.rotulo),
     pago_total    = COALESCE(tgt.pago, 0) + COALESCE(tgt.pago_anos_anteriores, 0)
   FROM enriched
   WHERE tgt.id = enriched.id;
