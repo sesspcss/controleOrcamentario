@@ -6,6 +6,13 @@
 SET statement_timeout = 0;
 
 -- ───────────────────────────────────────────────────────────────
+-- 0. Adicionar colunas que faltam (idempotente)
+-- ───────────────────────────────────────────────────────────────
+ALTER TABLE public.lc131_despesas ADD COLUMN IF NOT EXISTS unidade TEXT;
+ALTER TABLE public.lc131_despesas ADD COLUMN IF NOT EXISTS descricao_processo TEXT;
+ALTER TABLE public.lc131_despesas ADD COLUMN IF NOT EXISTS numero_processo TEXT;
+
+-- ───────────────────────────────────────────────────────────────
 -- 1. lc131_dashboard — retorna KPIs + 18 agregações
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.lc131_dashboard(
@@ -427,7 +434,9 @@ BEGIN
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
           tipo_despesa, rotulo,
+          unidade,
           codigo_nome_favorecido, codigo_favorecido,
+          descricao_processo, numero_processo,
           empenhado, liquidado, pago, pago_anos_anteriores, _pt AS pago_total
         FROM filtered
         ORDER BY empenhado DESC NULLS LAST
@@ -472,6 +481,7 @@ BEGIN
         COALESCE(rb1.regiao_sa,     rb2.regiao_sa,     rb3.regiao_sa)     AS e_regiao_sa,
         COALESCE(rb1.cod_ibge,      rb2.cod_ibge,      rb3.cod_ibge)      AS e_cod_ibge,
         COALESCE(lc.nome_municipio, rb1.municipio, rb2.municipio, rb3.municipio) AS e_municipio,
+        COALESCE(rb1.unidade,       rb2.unidade,       rb3.unidade)       AS e_unidade,
         COALESCE(rb1.fonte_recurso, rb2.fonte_recurso, rb3.fonte_recurso) AS e_fonte_recurso,
         COALESCE(rb1.grupo_despesa, rb2.grupo_despesa, rb3.grupo_despesa) AS e_grupo_despesa,
         COALESCE(rb1.tipo_despesa,  rb2.tipo_despesa,  rb3.tipo_despesa)  AS e_tipo_despesa,
@@ -521,6 +531,7 @@ BEGIN
       regiao_sa     = enriched.e_regiao_sa,
       cod_ibge      = enriched.e_cod_ibge,
       municipio     = enriched.e_municipio,
+      unidade       = enriched.e_unidade,
       fonte_recurso = enriched.e_fonte_recurso,
       grupo_despesa = enriched.e_grupo_despesa,
       tipo_despesa  = enriched.e_tipo_despesa,
@@ -660,6 +671,7 @@ BEGIN
       COALESCE(rb1.regiao_sa,     rb2.regiao_sa,     rb3.regiao_sa)     AS e_regiao_sa,
       COALESCE(rb1.cod_ibge,      rb2.cod_ibge,      rb3.cod_ibge)      AS e_cod_ibge,
       COALESCE(lc.nome_municipio, rb1.municipio, rb2.municipio, rb3.municipio) AS e_municipio,
+      COALESCE(rb1.unidade,       rb2.unidade,       rb3.unidade)       AS e_unidade,
       COALESCE(rb1.fonte_recurso, rb2.fonte_recurso, rb3.fonte_recurso) AS e_fonte_recurso,
       COALESCE(rb1.grupo_despesa, rb2.grupo_despesa, rb3.grupo_despesa) AS e_grupo_despesa,
       COALESCE(rb1.tipo_despesa,  rb2.tipo_despesa,  rb3.tipo_despesa)  AS e_tipo_despesa,
@@ -709,6 +721,7 @@ BEGIN
     regiao_sa     = enriched.e_regiao_sa,
     cod_ibge      = enriched.e_cod_ibge,
     municipio     = enriched.e_municipio,
+    unidade       = enriched.e_unidade,
     fonte_recurso = enriched.e_fonte_recurso,
     grupo_despesa = enriched.e_grupo_despesa,
     tipo_despesa  = enriched.e_tipo_despesa,

@@ -136,7 +136,9 @@ interface DetailRow {
   codigo_nome_grupo: string; grupo_despesa: string; grupo_simpl: string;
   codigo_nome_elemento: string; codigo_elemento: string;
   tipo_despesa: string; rotulo: string;
+  unidade: string;
   codigo_nome_favorecido: string; codigo_favorecido: string;
+  descricao_processo: string; numero_processo: string;
   empenhado: number; liquidado: number; pago: number;
   pago_anos_anteriores: number; pago_total: number;
 }
@@ -160,8 +162,11 @@ const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: s
   { key: 'codigo_nome_elemento',          label: 'Cód. Nome Elemento',     w: '220px' },
   { key: 'tipo_despesa',                  label: 'Tipo de Despesa',        w: '150px' },
   { key: 'rotulo',                        label: 'Rótulo',                 w: '150px' },
+  { key: 'unidade',                       label: 'Unidade',                w: '220px' },
   { key: 'codigo_nome_favorecido',        label: 'Cód. Nome Favorecido',   w: '240px' },
   { key: 'codigo_favorecido',             label: 'CNPJ',                   w: '140px' },
+  { key: 'descricao_processo',            label: 'Descrição Processo',     w: '200px' },
+  { key: 'numero_processo',               label: 'Número Processo',        w: '160px' },
   { key: 'empenhado',         label: 'Empenhado',         numeric: true, w: '140px' },
   { key: 'liquidado',         label: 'Liquidado',         numeric: true, w: '140px' },
   { key: 'pago',              label: 'Pago Exerc.',       numeric: true, w: '140px' },
