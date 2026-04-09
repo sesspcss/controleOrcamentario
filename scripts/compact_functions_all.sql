@@ -13,6 +13,30 @@ ALTER TABLE public.lc131_despesas ADD COLUMN IF NOT EXISTS descricao_processo TE
 ALTER TABLE public.lc131_despesas ADD COLUMN IF NOT EXISTS numero_processo TEXT;
 
 -- ───────────────────────────────────────────────────────────────
+-- 0.5 Função auxiliar — normaliza nome de município (UPPER + sem acentos)
+-- ───────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.norm_munic(t text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT translate(
+    UPPER(TRIM(COALESCE(t, ''))),
+    'ÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÇÑàáâãäåèéêëìíîïòóôõöùúûüçñ',
+    'AAAAAAEEEEIIIIOOOOOUUUUCNaaaaaaeeeeiiiioooooouuuucn'
+  );
+$$;
+
+-- ───────────────────────────────────────────────────────────────
+-- 0.6 Normalizar strings vazias para NULL (executar uma vez)
+-- ───────────────────────────────────────────────────────────────
+UPDATE lc131_despesas SET drs       = NULL WHERE drs       IS NOT NULL AND TRIM(drs)       = '';
+UPDATE lc131_despesas SET rras      = NULL WHERE rras      IS NOT NULL AND TRIM(rras)      = '';
+UPDATE lc131_despesas SET unidade   = NULL WHERE unidade   IS NOT NULL AND TRIM(unidade)   = '';
+UPDATE lc131_despesas SET rotulo    = NULL WHERE rotulo    IS NOT NULL AND TRIM(rotulo)    = '';
+UPDATE lc131_despesas SET regiao_ad = NULL WHERE regiao_ad IS NOT NULL AND TRIM(regiao_ad) = '';
+UPDATE lc131_despesas SET regiao_sa = NULL WHERE regiao_sa IS NOT NULL AND TRIM(regiao_sa) = '';
+UPDATE lc131_despesas SET municipio = NULL WHERE municipio IS NOT NULL AND TRIM(municipio) = '';
+UPDATE lc131_despesas SET cod_ibge  = NULL WHERE cod_ibge  IS NOT NULL AND TRIM(cod_ibge)  = '';
+
+-- ───────────────────────────────────────────────────────────────
 -- 1. lc131_dashboard — retorna KPIs + 18 agregações
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.lc131_dashboard(
@@ -467,14 +491,16 @@ BEGIN
   LOOP
     WITH candidates AS (
       SELECT id FROM lc131_despesas
-      WHERE drs IS NULL OR rotulo IS NULL OR unidade IS NULL
+      WHERE COALESCE(TRIM(drs),'') = ''
+         OR COALESCE(TRIM(rotulo),'') = ''
+         OR COALESCE(TRIM(unidade),'') = ''
       LIMIT batch_size
     ),
     enriched AS (
       SELECT
         lc.id,
-        NULLIF(TRIM(COALESCE(td.drs,  rb1.drs,  rb2.drs,  rb3.drs)),  '') AS e_drs,
-        NULLIF(TRIM(COALESCE(tr.rras, rb1.rras, rb2.rras, rb3.rras)), '') AS e_rras,
+        NULLIF(TRIM(COALESCE(td.drs, td2.drs, rb1.drs,  rb2.drs,  rb3.drs)),  '') AS e_drs,
+        NULLIF(TRIM(COALESCE(tr.rras, tr2.rras, rb1.rras, rb2.rras, rb3.rras)), '') AS e_rras,
         COALESCE(rb1.regiao_ad,     rb2.regiao_ad,     rb3.regiao_ad)     AS e_regiao_ad,
         COALESCE(rb1.regiao_sa,     rb2.regiao_sa,     rb3.regiao_sa)     AS e_regiao_sa,
         COALESCE(rb1.cod_ibge,      rb2.cod_ibge,      rb3.cod_ibge)      AS e_cod_ibge,
@@ -514,8 +540,10 @@ BEGIN
         ) AS e_rotulo
       FROM lc131_despesas lc
       INNER JOIN candidates c ON c.id = lc.id
-      LEFT JOIN tab_drs  td  ON td.municipio = lc.nome_municipio
-      LEFT JOIN tab_rras tr  ON tr.municipio = lc.nome_municipio
+      LEFT JOIN tab_drs  td   ON td.municipio  = norm_munic(lc.nome_municipio)
+      LEFT JOIN tab_drs  td2  ON td2.municipio = norm_munic(lc.municipio)
+      LEFT JOIN tab_rras tr   ON tr.municipio  = norm_munic(lc.nome_municipio)
+      LEFT JOIN tab_rras tr2  ON tr2.municipio = norm_munic(lc.municipio)
       LEFT JOIN bd_ref   rb1 ON rb1.codigo = lc.codigo_projeto_atividade::text
       LEFT JOIN bd_ref   rb2 ON rb2.codigo = lc.codigo_ug::text
       LEFT JOIN bd_ref   rb3 ON rb3.codigo = NULLIF(regexp_replace(
@@ -523,17 +551,17 @@ BEGIN
     )
     UPDATE lc131_despesas tgt
     SET
-      drs           = COALESCE(enriched.e_drs,           tgt.drs),
-      rras          = COALESCE(enriched.e_rras,          tgt.rras),
-      regiao_ad     = COALESCE(enriched.e_regiao_ad,     tgt.regiao_ad),
-      regiao_sa     = COALESCE(enriched.e_regiao_sa,     tgt.regiao_sa),
-      cod_ibge      = COALESCE(enriched.e_cod_ibge,      tgt.cod_ibge),
-      municipio     = COALESCE(enriched.e_municipio,     tgt.municipio),
-      unidade       = COALESCE(enriched.e_unidade,       tgt.unidade),
-      fonte_recurso = COALESCE(enriched.e_fonte_recurso, tgt.fonte_recurso),
-      grupo_despesa = COALESCE(enriched.e_grupo_despesa, tgt.grupo_despesa),
-      tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  tgt.tipo_despesa),
-      rotulo        = COALESCE(enriched.e_rotulo,        tgt.rotulo),
+      drs           = COALESCE(enriched.e_drs,           NULLIF(TRIM(tgt.drs),'')),
+      rras          = COALESCE(enriched.e_rras,          NULLIF(TRIM(tgt.rras),'')),
+      regiao_ad     = COALESCE(enriched.e_regiao_ad,     NULLIF(TRIM(tgt.regiao_ad),'')),
+      regiao_sa     = COALESCE(enriched.e_regiao_sa,     NULLIF(TRIM(tgt.regiao_sa),'')),
+      cod_ibge      = COALESCE(enriched.e_cod_ibge,      NULLIF(TRIM(tgt.cod_ibge),'')),
+      municipio     = COALESCE(enriched.e_municipio,     NULLIF(TRIM(tgt.municipio),'')),
+      unidade       = COALESCE(enriched.e_unidade,       NULLIF(TRIM(tgt.unidade),'')),
+      fonte_recurso = COALESCE(enriched.e_fonte_recurso, NULLIF(TRIM(tgt.fonte_recurso),'')),
+      grupo_despesa = COALESCE(enriched.e_grupo_despesa, NULLIF(TRIM(tgt.grupo_despesa),'')),
+      tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  NULLIF(TRIM(tgt.tipo_despesa),'')),
+      rotulo        = COALESCE(enriched.e_rotulo,        NULLIF(TRIM(tgt.rotulo),'')),
       pago_total    = COALESCE(tgt.pago, 0) + COALESCE(tgt.pago_anos_anteriores, 0)
     FROM enriched
     WHERE tgt.id = enriched.id;
@@ -658,14 +686,16 @@ DECLARE rows_affected bigint;
 BEGIN
   WITH candidates AS (
     SELECT id FROM lc131_despesas
-    WHERE drs IS NULL OR rotulo IS NULL OR unidade IS NULL
+    WHERE COALESCE(TRIM(drs),'') = ''
+       OR COALESCE(TRIM(rotulo),'') = ''
+       OR COALESCE(TRIM(unidade),'') = ''
     LIMIT p_batch_size
   ),
   enriched AS (
     SELECT
       lc.id,
-      NULLIF(TRIM(COALESCE(td.drs,  rb1.drs,  rb2.drs,  rb3.drs)),  '') AS e_drs,
-      NULLIF(TRIM(COALESCE(tr.rras, rb1.rras, rb2.rras, rb3.rras)), '') AS e_rras,
+      NULLIF(TRIM(COALESCE(td.drs, td2.drs, rb1.drs,  rb2.drs,  rb3.drs)),  '') AS e_drs,
+      NULLIF(TRIM(COALESCE(tr.rras, tr2.rras, rb1.rras, rb2.rras, rb3.rras)), '') AS e_rras,
       COALESCE(rb1.regiao_ad,     rb2.regiao_ad,     rb3.regiao_ad)     AS e_regiao_ad,
       COALESCE(rb1.regiao_sa,     rb2.regiao_sa,     rb3.regiao_sa)     AS e_regiao_sa,
       COALESCE(rb1.cod_ibge,      rb2.cod_ibge,      rb3.cod_ibge)      AS e_cod_ibge,
@@ -705,8 +735,10 @@ BEGIN
       ) AS e_rotulo
     FROM lc131_despesas lc
     INNER JOIN candidates c ON c.id = lc.id
-    LEFT JOIN tab_drs  td  ON td.municipio = lc.nome_municipio
-    LEFT JOIN tab_rras tr  ON tr.municipio = lc.nome_municipio
+    LEFT JOIN tab_drs  td   ON td.municipio  = norm_munic(lc.nome_municipio)
+    LEFT JOIN tab_drs  td2  ON td2.municipio = norm_munic(lc.municipio)
+    LEFT JOIN tab_rras tr   ON tr.municipio  = norm_munic(lc.nome_municipio)
+    LEFT JOIN tab_rras tr2  ON tr2.municipio = norm_munic(lc.municipio)
     LEFT JOIN bd_ref   rb1 ON rb1.codigo = lc.codigo_projeto_atividade::text
     LEFT JOIN bd_ref   rb2 ON rb2.codigo = lc.codigo_ug::text
     LEFT JOIN bd_ref   rb3 ON rb3.codigo = NULLIF(regexp_replace(
@@ -714,17 +746,17 @@ BEGIN
   )
   UPDATE lc131_despesas tgt
   SET
-    drs           = COALESCE(enriched.e_drs,           tgt.drs),
-    rras          = COALESCE(enriched.e_rras,          tgt.rras),
-    regiao_ad     = COALESCE(enriched.e_regiao_ad,     tgt.regiao_ad),
-    regiao_sa     = COALESCE(enriched.e_regiao_sa,     tgt.regiao_sa),
-    cod_ibge      = COALESCE(enriched.e_cod_ibge,      tgt.cod_ibge),
-    municipio     = COALESCE(enriched.e_municipio,     tgt.municipio),
-    unidade       = COALESCE(enriched.e_unidade,       tgt.unidade),
-    fonte_recurso = COALESCE(enriched.e_fonte_recurso, tgt.fonte_recurso),
-    grupo_despesa = COALESCE(enriched.e_grupo_despesa, tgt.grupo_despesa),
-    tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  tgt.tipo_despesa),
-    rotulo        = COALESCE(enriched.e_rotulo,        tgt.rotulo),
+    drs           = COALESCE(enriched.e_drs,           NULLIF(TRIM(tgt.drs),'')),
+    rras          = COALESCE(enriched.e_rras,          NULLIF(TRIM(tgt.rras),'')),
+    regiao_ad     = COALESCE(enriched.e_regiao_ad,     NULLIF(TRIM(tgt.regiao_ad),'')),
+    regiao_sa     = COALESCE(enriched.e_regiao_sa,     NULLIF(TRIM(tgt.regiao_sa),'')),
+    cod_ibge      = COALESCE(enriched.e_cod_ibge,      NULLIF(TRIM(tgt.cod_ibge),'')),
+    municipio     = COALESCE(enriched.e_municipio,     NULLIF(TRIM(tgt.municipio),'')),
+    unidade       = COALESCE(enriched.e_unidade,       NULLIF(TRIM(tgt.unidade),'')),
+    fonte_recurso = COALESCE(enriched.e_fonte_recurso, NULLIF(TRIM(tgt.fonte_recurso),'')),
+    grupo_despesa = COALESCE(enriched.e_grupo_despesa, NULLIF(TRIM(tgt.grupo_despesa),'')),
+    tipo_despesa  = COALESCE(enriched.e_tipo_despesa,  NULLIF(TRIM(tgt.tipo_despesa),'')),
+    rotulo        = COALESCE(enriched.e_rotulo,        NULLIF(TRIM(tgt.rotulo),'')),
     pago_total    = COALESCE(tgt.pago, 0) + COALESCE(tgt.pago_anos_anteriores, 0)
   FROM enriched
   WHERE tgt.id = enriched.id;
