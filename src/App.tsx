@@ -571,7 +571,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
     }).setView([-22.3, -48.8], 7);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.attribution({ position: 'bottomleft' }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OSM &copy; CARTO', maxZoom: 18,
     }).addTo(map);
     labelsRef.current = L.layerGroup().addTo(map);
@@ -844,11 +844,11 @@ function InteractiveMap({ anoSel, onNavigate }: {
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 flex-wrap">
         {level !== 'estado' && (
           <button onClick={goBack}
-            className="flex items-center gap-1 px-3 py-2 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-xs font-semibold hover:bg-gray-100 transition shadow-lg border border-gray-200">
+            className="flex items-center gap-1 px-3 py-2 bg-[#1B1B1B]/90 backdrop-blur text-white rounded-lg text-xs font-semibold hover:bg-[#333] transition shadow-lg border border-[#333]">
             <ChevronLeft className="w-4 h-4" /> Voltar
           </button>
         )}
-        <div className="flex items-center gap-1 px-3 py-2 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-xs shadow-lg border border-gray-200">
+        <div className="flex items-center gap-1 px-3 py-2 bg-[#1B1B1B]/90 backdrop-blur text-white rounded-lg text-xs shadow-lg border border-[#333]">
           <button onClick={goHome} className={cn('hover:text-[#118DFF] transition', level === 'estado' && 'text-[#118DFF] font-bold')}>
             Estado SP
           </button>
@@ -869,41 +869,41 @@ function InteractiveMap({ anoSel, onNavigate }: {
           )}
         </div>
         {level === 'estado' && (
-          <div className="flex items-center bg-white/90 backdrop-blur rounded-lg shadow-lg overflow-hidden border border-gray-200">
+          <div className="flex items-center bg-[#1B1B1B]/90 backdrop-blur rounded-lg shadow-lg overflow-hidden border border-[#333]">
             <button onClick={() => setViewMode('drs')}
-              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'drs' ? 'bg-[#118DFF] text-white' : 'text-gray-500 hover:text-gray-900')}>DRS</button>
+              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'drs' ? 'bg-[#118DFF] text-white' : 'text-[#888] hover:text-white')}>DRS</button>
             <button onClick={() => setViewMode('rras')}
-              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'rras' ? 'bg-[#118DFF] text-white' : 'text-gray-500 hover:text-gray-900')}>RRAS</button>
+              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'rras' ? 'bg-[#118DFF] text-white' : 'text-[#888] hover:text-white')}>RRAS</button>
           </div>
         )}
       </div>
 
       {/* Bottom KPI bar */}
       {kpis && !sidebarOpen && !loading && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-6 px-8 py-4 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-6 px-8 py-4 bg-[#1B1B1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#333]">
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase font-bold">Empenhado</p>
-            <p className="text-lg font-bold text-blue-600">{fmt(kpis.empenhado, 'compact')}</p>
+            <p className="text-[9px] text-[#888] uppercase font-bold">Empenhado</p>
+            <p className="text-lg font-bold text-[#89CFF0]">{fmt(kpis.empenhado, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase font-bold">Liquidado</p>
-            <p className="text-lg font-bold text-green-600">{fmt(kpis.liquidado, 'compact')}</p>
+            <p className="text-[9px] text-[#888] uppercase font-bold">Liquidado</p>
+            <p className="text-lg font-bold text-[#90EE90]">{fmt(kpis.liquidado, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase font-bold">Pago Total</p>
-            <p className="text-lg font-bold text-orange-500">{fmt(kpis.pago_total, 'compact')}</p>
+            <p className="text-[9px] text-[#888] uppercase font-bold">Pago Total</p>
+            <p className="text-lg font-bold text-[#FFB347]">{fmt(kpis.pago_total, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase font-bold">DRS</p>
-            <p className="text-lg font-bold text-gray-800">{kpis.drs_count}</p>
+            <p className="text-[9px] text-[#888] uppercase font-bold">DRS</p>
+            <p className="text-lg font-bold text-white">{kpis.drs_count}</p>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+          <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase font-bold">Municípios</p>
-            <p className="text-lg font-bold text-gray-800">{kpis.municipios}</p>
+            <p className="text-[9px] text-[#888] uppercase font-bold">Municípios</p>
+            <p className="text-lg font-bold text-white">{kpis.municipios}</p>
           </div>
         </div>
       )}
@@ -1016,23 +1016,23 @@ function InteractiveMap({ anoSel, onNavigate }: {
 
       {/* Legend */}
       {!loading && (
-        <div className="absolute bottom-6 right-4 z-[1000] bg-white/90 backdrop-blur rounded-xl px-4 py-3 shadow-xl border border-gray-200">
-          <p className="text-[9px] text-gray-500 uppercase font-bold mb-2 tracking-wider">% Execução (Pago/Emp)</p>
+        <div className="absolute bottom-6 right-4 z-[1000] bg-[#1B1B1B]/90 backdrop-blur rounded-xl px-4 py-3 shadow-xl border border-[#333]">
+          <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">% Execução (Pago/Emp)</p>
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#1AAB40]" /><span className="text-[11px] text-gray-700">≥ 80%</span></div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D9B300]" /><span className="text-[11px] text-gray-700">50–80%</span></div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D64550]" /><span className="text-[11px] text-gray-700">{'< 50%'}</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#1AAB40]" /><span className="text-[11px] text-[#CCC]">≥ 80%</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D9B300]" /><span className="text-[11px] text-[#CCC]">50–80%</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D64550]" /><span className="text-[11px] text-[#CCC]">{'< 50%'}</span></div>
           </div>
           {level === 'estado' && drsList.length > 0 && (
             <>
-              <div className="border-t border-gray-200 my-2.5" />
-              <p className="text-[9px] text-gray-500 uppercase font-bold mb-2 tracking-wider">DRS (clique para detalhar)</p>
+              <div className="border-t border-[#333] my-2.5" />
+              <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">DRS (clique para detalhar)</p>
               <div className="flex flex-col gap-0.5 max-h-[280px] overflow-y-auto custom-scrollbar">
                 {regionList.map((d, i) => (
                   <button key={i} onClick={() => drillIntoRegion(d.name)}
-                    className="flex items-center gap-2 hover:bg-gray-100 rounded-lg px-2 py-1 transition text-left">
+                    className="flex items-center gap-2 hover:bg-[#333] rounded-lg px-2 py-1 transition text-left">
                     <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: drsColorMap[d.name] || '#999' }} />
-                    <span className="text-[10px] text-gray-700 truncate">{d.name}</span>
+                    <span className="text-[10px] text-[#CCC] truncate">{d.name}</span>
                   </button>
                 ))}
               </div>
