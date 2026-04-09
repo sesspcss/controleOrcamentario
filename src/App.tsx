@@ -15,7 +15,7 @@ import {
   Download, Filter, X, Upload, FileSpreadsheet,
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
-  Building2, MapPin, Layers, Users, LayoutDashboard,
+  Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
   Table2, Globe, Briefcase, Map as MapIcon,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -132,36 +132,41 @@ interface DetailRow {
   cod_ibge: string; municipio: string;
   codigo_nome_uo: string; codigo_nome_ug: string; codigo_ug: string;
   codigo_nome_projeto_atividade: string; codigo_projeto_atividade: string;
-  codigo_nome_fonte_recurso: string; fonte_recurso: string;
-  codigo_nome_grupo: string; grupo_despesa: string;
+  codigo_nome_fonte_recurso: string; fonte_recurso: string; fonte_simpl: string;
+  codigo_nome_grupo: string; grupo_despesa: string; grupo_simpl: string;
   codigo_nome_elemento: string; codigo_elemento: string;
   tipo_despesa: string; rotulo: string;
+  unidade: string;
   codigo_nome_favorecido: string; codigo_favorecido: string;
+  descricao_processo: string; numero_processo: string;
   empenhado: number; liquidado: number; pago: number;
   pago_anos_anteriores: number; pago_total: number;
 }
 
 const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: string }[] = [
-  { key: 'ano_referencia',                label: 'Ano',          w: '56px'  },
-  { key: 'drs',                           label: 'DRS',          w: '200px' },
-  { key: 'regiao_ad',                     label: 'Reg. Admin.',  w: '140px' },
-  { key: 'rras',                          label: 'RRAS',         w: '100px' },
-  { key: 'regiao_sa',                     label: 'Reg. Saúde',   w: '140px' },
-  { key: 'cod_ibge',                      label: 'Cód. IBGE',    w: '80px'  },
-  { key: 'municipio',                     label: 'Município',    w: '150px' },
-  { key: 'codigo_nome_uo',                label: 'UO',           w: '220px' },
-  { key: 'codigo_nome_ug',                label: 'UG',           w: '220px' },
-  { key: 'codigo_nome_projeto_atividade', label: 'Proj. Ativ.',  w: '220px' },
-  { key: 'codigo_projeto_atividade',      label: 'Cód. Proj.',   w: '100px' },
-  { key: 'codigo_nome_fonte_recurso',     label: 'Fonte',        w: '200px' },
-  { key: 'fonte_recurso',                 label: 'T. Recurso',   w: '140px' },
-  { key: 'codigo_nome_grupo',             label: 'Grupo',        w: '200px' },
-  { key: 'grupo_despesa',                 label: 'T. Grupo',     w: '140px' },
-  { key: 'codigo_nome_elemento',          label: 'Elemento',     w: '200px' },
-  { key: 'tipo_despesa',                  label: 'Tipo Desp.',   w: '140px' },
-  { key: 'rotulo',                        label: 'Rótulo',       w: '140px' },
-  { key: 'codigo_nome_favorecido',        label: 'Favorecido',   w: '220px' },
-  { key: 'codigo_favorecido',             label: 'CNPJ',         w: '130px' },
+  { key: 'ano_referencia',                label: 'Ano',                    w: '56px'  },
+  { key: 'drs',                           label: 'DRS',                    w: '200px' },
+  { key: 'regiao_ad',                     label: 'Região Admin.',          w: '160px' },
+  { key: 'rras',                          label: 'RRAS',                   w: '100px' },
+  { key: 'regiao_sa',                     label: 'Região de Saúde',        w: '160px' },
+  { key: 'cod_ibge',                      label: 'Cód. IBGE',              w: '80px'  },
+  { key: 'municipio',                     label: 'Município',              w: '150px' },
+  { key: 'codigo_nome_uo',                label: 'Cód. Nome UO',           w: '220px' },
+  { key: 'codigo_nome_ug',                label: 'Cód. Nome UG',           w: '220px' },
+  { key: 'codigo_nome_projeto_atividade', label: 'Cód. Nome Proj. Ativ.',  w: '240px' },
+  { key: 'codigo_projeto_atividade',      label: 'Cód. Projeto',           w: '100px' },
+  { key: 'codigo_nome_fonte_recurso',     label: 'Cód. Nome Fonte Recurso',w: '220px' },
+  { key: 'fonte_simpl',                   label: 'Fonte de Recursos',      w: '140px' },
+  { key: 'codigo_nome_grupo',             label: 'Cód. Nome Grupo',        w: '220px' },
+  { key: 'grupo_simpl',                   label: 'Grupo de Despesa',       w: '140px' },
+  { key: 'codigo_nome_elemento',          label: 'Cód. Nome Elemento',     w: '220px' },
+  { key: 'tipo_despesa',                  label: 'Tipo de Despesa',        w: '150px' },
+  { key: 'rotulo',                        label: 'Rótulo',                 w: '150px' },
+  { key: 'unidade',                       label: 'Unidade',                w: '180px' },
+  { key: 'codigo_nome_favorecido',        label: 'Cód. Nome Favorecido',   w: '240px' },
+  { key: 'codigo_favorecido',             label: 'CNPJ',                   w: '140px' },
+  { key: 'descricao_processo',            label: 'Descrição Processo',     w: '200px' },
+  { key: 'numero_processo',               label: 'Número Processo',        w: '160px' },
   { key: 'empenhado',         label: 'Empenhado',         numeric: true, w: '140px' },
   { key: 'liquidado',         label: 'Liquidado',         numeric: true, w: '140px' },
   { key: 'pago',              label: 'Pago Exerc.',       numeric: true, w: '140px' },
@@ -463,18 +468,18 @@ async function fetchIBGE(): Promise<unknown> {
 
 function MiniKpi({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-[#222] rounded-lg px-3 py-2.5">
-      <p className="text-[9px] uppercase font-bold text-[#888]">{label}</p>
-      <p className="text-lg font-bold mt-0.5" style={{ color }}>{value}</p>
+    <div className="bg-[#222] rounded-lg px-4 py-3">
+      <p className="text-[10px] uppercase font-bold text-[#888]">{label}</p>
+      <p className="text-xl font-bold mt-1" style={{ color }}>{value}</p>
     </div>
   );
 }
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-[#333]/50">
-      <span className="text-[11px] text-[#AAA] truncate flex-1" title={label}>{shortLabel(label, 30)}</span>
-      <span className="text-[11px] font-bold text-[#89CFF0] shrink-0">{value}</span>
+    <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-[#333]/50">
+      <span className="text-xs text-[#AAA] truncate flex-1" title={label}>{shortLabel(label, 40)}</span>
+      <span className="text-xs font-bold text-[#89CFF0] shrink-0">{value}</span>
     </div>
   );
 }
@@ -566,7 +571,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
     }).setView([-22.3, -48.8], 7);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.attribution({ position: 'bottomleft' }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OSM &copy; CARTO', maxZoom: 18,
     }).addTo(map);
     labelsRef.current = L.layerGroup().addTo(map);
@@ -649,8 +654,8 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const code = String(feature?.properties?.codarea ?? '');
         const mName = _codeToName[code] || '';
         const rName = regionMap[mName] || '';
-        const color = drsColorMap[rName] || '#282828';
-        return { fillColor: color, fillOpacity: rName ? 0.55 : 0.08, color: '#1a1a1a', weight: 0.4, opacity: 0.8 };
+        const color = drsColorMap[rName] || '#e0e0e0';
+        return { fillColor: color, fillOpacity: rName ? 0.6 : 0.15, color: '#888', weight: 0.6, opacity: 0.6 };
       },
       onEachFeature: (feature, layer) => {
         const code = String(feature?.properties?.codarea ?? '');
@@ -659,13 +664,13 @@ function InteractiveMap({ anoSel, onNavigate }: {
         if (!rName) return;
         const mu = municByName[mName];
         layer.bindTooltip(
-          `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#89CFF0;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'compact')}</strong></div>` : ''}</div>`,
+          `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#2563eb;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'compact')}</strong></div>` : ''}</div>`,
           { className: 'map-tooltip-dark', direction: 'top' }
         );
         layer.on({
           mouseover: (e: L.LeafletMouseEvent) => {
             const t = e.target as L.Path;
-            t.setStyle({ fillOpacity: 0.85, weight: 2, color: '#fff' }); t.bringToFront();
+            t.setStyle({ fillOpacity: 0.85, weight: 2.5, color: '#333' }); t.bringToFront();
           },
           mouseout: (e: L.LeafletMouseEvent) => geoLayerRef.current?.resetStyle(e.target),
           click: () => drillIntoRegion(rName),
@@ -678,10 +683,11 @@ function InteractiveMap({ anoSel, onNavigate }: {
       if (!c) return;
       const icon = L.divIcon({
         className: 'drs-label',
-        html: `<div class="drs-label-inner"><strong>${reg.name.replace(/^DRS\s*/i, '').replace(/^\d+\s*-\s*/, '').trim() || reg.name}</strong><span>${fmt(reg.empenhado, 'compact')}</span></div>`,
-        iconSize: [130, 44], iconAnchor: [65, 22],
+        html: `<div class="drs-label-inner drs-label-clickable"><strong>${reg.name.replace(/^DRS\s*/i, '').replace(/^\d+\s*-\s*/, '').trim() || reg.name}</strong><span>${fmt(reg.empenhado, 'compact')}</span></div>`,
+        iconSize: [150, 48], iconAnchor: [75, 24],
       });
-      L.marker([c.lat, c.lng], { icon, interactive: false }).addTo(labelsRef.current!);
+      const marker = L.marker([c.lat, c.lng], { icon, interactive: true }).addTo(labelsRef.current!);
+      marker.on('click', () => drillIntoRegion(reg.name));
     });
   }
 
@@ -694,7 +700,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
     });
     // Background: all SP dim
     geoLayerRef.current = L.geoJSON(_ibgeGeoJson, {
-      style: () => ({ fillColor: '#1a1a1a', fillOpacity: 0.4, color: '#222', weight: 0.2 }),
+      style: () => ({ fillColor: '#d0d0d0', fillOpacity: 0.3, color: '#aaa', weight: 0.3 }),
     }).addTo(map);
     // Foreground: highlighted region
     const rc = drsColorMap[activeRegion] || '#118DFF';
@@ -704,7 +710,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const mName = _codeToName[code] || '';
         const mu = municByName[mName];
         const color = mu ? execPct(mu.empenhado, mu.pago_total) : rc;
-        return { fillColor: color, fillOpacity: 0.65, color: '#fff', weight: 1.2, opacity: 0.9 };
+        return { fillColor: color, fillOpacity: 0.7, color: '#fff', weight: 1.5, opacity: 1 };
       },
       onEachFeature: (feature, layer) => {
         const code = String(feature?.properties?.codarea ?? '');
@@ -712,11 +718,11 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const mu = municByName[mName];
         const pct = mu && mu.empenhado > 0 ? ((mu.pago_total / mu.empenhado) * 100).toFixed(1) : '0';
         layer.bindTooltip(
-          `<div style="min-width:180px"><strong>${mName}</strong><br/><div style="margin-top:3px;display:grid;grid-template-columns:1fr auto;gap:2px 10px">
-            <span style="color:#89CFF0">Empenhado:</span><strong>${mu ? fmt(mu.empenhado, 'compact') : ' -'}</strong>
-            <span style="color:#90EE90">Liquidado:</span><strong>${mu ? fmt(mu.liquidado, 'compact') : ' -'}</strong>
-            <span style="color:#FFB347">Pago Total:</span><strong>${mu ? fmt(mu.pago_total, 'compact') : ' -'}</strong>
-            <span style="color:#DDD">Execução:</span><strong>${pct}%</strong></div></div>`,
+          `<div style="min-width:200px"><strong style="font-size:13px">${mName}</strong><br/><div style="margin-top:4px;display:grid;grid-template-columns:1fr auto;gap:3px 12px">
+            <span style="color:#2563eb">Empenhado:</span><strong>${mu ? fmt(mu.empenhado, 'compact') : ' -'}</strong>
+            <span style="color:#16a34a">Liquidado:</span><strong>${mu ? fmt(mu.liquidado, 'compact') : ' -'}</strong>
+            <span style="color:#ea580c">Pago Total:</span><strong>${mu ? fmt(mu.pago_total, 'compact') : ' -'}</strong>
+            <span style="color:#555">Execução:</span><strong>${pct}%</strong></div></div>`,
           { className: 'map-tooltip-dark', direction: 'top' }
         );
         layer.on({
@@ -810,10 +816,8 @@ function InteractiveMap({ anoSel, onNavigate }: {
   return (
     <div className="relative w-full" style={{ height: 'calc(100vh - 84px)' }}>
       {/* 3D wrapper */}
-      <div className="absolute inset-0 map-3d-wrapper">
+      <div className="absolute inset-0 map-3d-wrapper map-light">
         <div ref={containerRef} className="w-full h-full" />
-        {/* Top gradient overlay for depth */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/20 z-[400]" />
       </div>
 
       {/* Loading */}
@@ -840,77 +844,77 @@ function InteractiveMap({ anoSel, onNavigate }: {
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 flex-wrap">
         {level !== 'estado' && (
           <button onClick={goBack}
-            className="flex items-center gap-1 px-3 py-2 bg-[#1B1B1B]/90 backdrop-blur text-white rounded-lg text-xs font-semibold hover:bg-[#333] transition shadow-lg border border-[#333]">
+            className="flex items-center gap-1 px-3 py-2 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-xs font-semibold hover:bg-gray-100 transition shadow-lg border border-gray-200">
             <ChevronLeft className="w-4 h-4" /> Voltar
           </button>
         )}
-        <div className="flex items-center gap-1 px-3 py-2 bg-[#1B1B1B]/90 backdrop-blur text-white rounded-lg text-xs shadow-lg border border-[#333]">
+        <div className="flex items-center gap-1 px-3 py-2 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-xs shadow-lg border border-gray-200">
           <button onClick={goHome} className={cn('hover:text-[#118DFF] transition', level === 'estado' && 'text-[#118DFF] font-bold')}>
             Estado SP
           </button>
           {activeRegion && (
             <>
-              <ChevronRight className="w-3 h-3 text-[#555]" />
+              <ChevronRight className="w-3 h-3 text-gray-400" />
               <button onClick={() => { setActiveMunic(null); setMunicDetail(null); }}
-                className={cn('hover:text-[#118DFF] transition truncate max-w-[180px]', !activeMunic && 'text-[#118DFF] font-bold')}>
+                className={cn('hover:text-[#118DFF] transition truncate max-w-[200px]', !activeMunic && 'text-[#118DFF] font-bold')}>
                 {activeRegion}
               </button>
             </>
           )}
           {activeMunic && (
             <>
-              <ChevronRight className="w-3 h-3 text-[#555]" />
+              <ChevronRight className="w-3 h-3 text-gray-400" />
               <span className="text-[#118DFF] font-bold">{activeMunic.municipio}</span>
             </>
           )}
         </div>
         {level === 'estado' && (
-          <div className="flex items-center bg-[#1B1B1B]/90 backdrop-blur rounded-lg shadow-lg overflow-hidden border border-[#333]">
+          <div className="flex items-center bg-white/90 backdrop-blur rounded-lg shadow-lg overflow-hidden border border-gray-200">
             <button onClick={() => setViewMode('drs')}
-              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'drs' ? 'bg-[#118DFF] text-white' : 'text-[#888] hover:text-white')}>DRS</button>
+              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'drs' ? 'bg-[#118DFF] text-white' : 'text-gray-500 hover:text-gray-900')}>DRS</button>
             <button onClick={() => setViewMode('rras')}
-              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'rras' ? 'bg-[#118DFF] text-white' : 'text-[#888] hover:text-white')}>RRAS</button>
+              className={cn('px-3 py-2 text-xs font-bold transition', viewMode === 'rras' ? 'bg-[#118DFF] text-white' : 'text-gray-500 hover:text-gray-900')}>RRAS</button>
           </div>
         )}
       </div>
 
       {/* Bottom KPI bar */}
       {kpis && !sidebarOpen && !loading && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-5 px-6 py-3 bg-[#1B1B1B]/90 backdrop-blur-xl rounded-xl shadow-2xl border border-[#333]">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-6 px-8 py-4 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200">
           <div className="text-center">
-            <p className="text-[9px] text-[#888] uppercase font-bold">Empenhado</p>
-            <p className="text-lg font-bold text-[#89CFF0]">{fmt(kpis.empenhado, 'compact')}</p>
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Empenhado</p>
+            <p className="text-lg font-bold text-blue-600">{fmt(kpis.empenhado, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-[#333]" />
+          <div className="w-px h-8 bg-gray-200" />
           <div className="text-center">
-            <p className="text-[9px] text-[#888] uppercase font-bold">Liquidado</p>
-            <p className="text-lg font-bold text-[#90EE90]">{fmt(kpis.liquidado, 'compact')}</p>
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Liquidado</p>
+            <p className="text-lg font-bold text-green-600">{fmt(kpis.liquidado, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-[#333]" />
+          <div className="w-px h-8 bg-gray-200" />
           <div className="text-center">
-            <p className="text-[9px] text-[#888] uppercase font-bold">Pago Total</p>
-            <p className="text-lg font-bold text-[#FFB347]">{fmt(kpis.pago_total, 'compact')}</p>
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Pago Total</p>
+            <p className="text-lg font-bold text-orange-500">{fmt(kpis.pago_total, 'compact')}</p>
           </div>
-          <div className="w-px h-8 bg-[#333]" />
+          <div className="w-px h-8 bg-gray-200" />
           <div className="text-center">
-            <p className="text-[9px] text-[#888] uppercase font-bold">DRS</p>
-            <p className="text-lg font-bold text-white">{kpis.drs_count}</p>
+            <p className="text-[9px] text-gray-500 uppercase font-bold">DRS</p>
+            <p className="text-lg font-bold text-gray-800">{kpis.drs_count}</p>
           </div>
-          <div className="w-px h-8 bg-[#333]" />
+          <div className="w-px h-8 bg-gray-200" />
           <div className="text-center">
-            <p className="text-[9px] text-[#888] uppercase font-bold">Municípios</p>
-            <p className="text-lg font-bold text-white">{kpis.municipios}</p>
+            <p className="text-[9px] text-gray-500 uppercase font-bold">Municípios</p>
+            <p className="text-lg font-bold text-gray-800">{kpis.municipios}</p>
           </div>
         </div>
       )}
 
       {/* --.-SIDEBAR --.-*/}
       {sidebarOpen && (
-        <div className="absolute top-4 right-4 bottom-4 z-[1000] w-[380px] bg-[#1B1B1B]/95 backdrop-blur-xl rounded-xl shadow-2xl border border-[#333] flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#333] flex items-center justify-between shrink-0">
+        <div className="absolute top-4 right-4 bottom-4 z-[1000] w-[520px] bg-[#1B1B1B]/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#333] flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-[#333] flex items-center justify-between shrink-0">
             <div className="min-w-0">
-              <p className="font-bold text-white text-sm truncate">{activeMunic ? activeMunic.municipio : activeRegion}</p>
-              <p className="text-[10px] text-[#888] mt-0.5">
+              <p className="font-bold text-white text-base truncate">{activeMunic ? activeMunic.municipio : activeRegion}</p>
+              <p className="text-[11px] text-[#888] mt-1">
                 {activeMunic ? `${activeMunic.drs || activeMunic.rras} · ${activeMunic.registros} registros`
                   : `${currentMunics.length} municípios · ${currentRegion?.registros ?? 0} registros`}
               </p>
@@ -920,7 +924,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
             {/* KPIs */}
             {activeMunic ? (
               <div className="grid grid-cols-2 gap-2">
@@ -1012,23 +1016,23 @@ function InteractiveMap({ anoSel, onNavigate }: {
 
       {/* Legend */}
       {!loading && (
-        <div className="absolute bottom-6 right-4 z-[1000] bg-[#1B1B1B]/90 backdrop-blur rounded-lg px-3 py-2 shadow-lg border border-[#333]">
-          <p className="text-[8px] text-[#888] uppercase font-bold mb-1.5 tracking-wider">% Execução (Pago/Emp)</p>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#1AAB40]" /><span className="text-[10px] text-[#CCC]">--80%</span></div>
-            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#D9B300]" /><span className="text-[10px] text-[#CCC]">50 -80%</span></div>
-            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#D64550]" /><span className="text-[10px] text-[#CCC]">{'< 50%'}</span></div>
+        <div className="absolute bottom-6 right-4 z-[1000] bg-white/90 backdrop-blur rounded-xl px-4 py-3 shadow-xl border border-gray-200">
+          <p className="text-[9px] text-gray-500 uppercase font-bold mb-2 tracking-wider">% Execução (Pago/Emp)</p>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#1AAB40]" /><span className="text-[11px] text-gray-700">≥ 80%</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D9B300]" /><span className="text-[11px] text-gray-700">50–80%</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D64550]" /><span className="text-[11px] text-gray-700">{'< 50%'}</span></div>
           </div>
           {level === 'estado' && drsList.length > 0 && (
             <>
-              <div className="border-t border-[#333] my-2" />
-              <p className="text-[8px] text-[#888] uppercase font-bold mb-1.5 tracking-wider">DRS</p>
-              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto custom-scrollbar">
+              <div className="border-t border-gray-200 my-2.5" />
+              <p className="text-[9px] text-gray-500 uppercase font-bold mb-2 tracking-wider">DRS (clique para detalhar)</p>
+              <div className="flex flex-col gap-0.5 max-h-[280px] overflow-y-auto custom-scrollbar">
                 {regionList.map((d, i) => (
                   <button key={i} onClick={() => drillIntoRegion(d.name)}
-                    className="flex items-center gap-1.5 hover:bg-[#333] rounded px-1 py-0.5 transition text-left">
-                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: drsColorMap[d.name] || '#555' }} />
-                    <span className="text-[9px] text-[#CCC] truncate">{d.name}</span>
+                    className="flex items-center gap-2 hover:bg-gray-100 rounded-lg px-2 py-1 transition text-left">
+                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: drsColorMap[d.name] || '#999' }} />
+                    <span className="text-[10px] text-gray-700 truncate">{d.name}</span>
                   </button>
                 ))}
               </div>
@@ -1486,9 +1490,9 @@ export default function App() {
       <header className="sticky top-0 z-40 bg-[#1B1B1B] text-white shadow-md">
         <div className="max-w-screen-2xl mx-auto px-4 h-11 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <BarChart3 className="w-4 h-4 text-[#118DFF]" />
-            <span className="font-bold text-[13px] tracking-tight">LC 131 · Controle Orçamentário</span>
-            <span className="text-[10px] text-[#888] hidden sm:inline">Secretaria de Estado da Saúde · SP</span>
+            <img src="/img/logo1.png" alt="Logo CSS" className="h-[84px] w-auto" />
+            <span className="font-bold text-[13px] tracking-tight">Controle de Despesas</span>
+            <span className="text-[10px] text-[#888] hidden sm:inline">Coordenadoria de Serviços de Saúde · SES/SP</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={filtersOpen ? () => setFiltersOpen(false) : () => { setFiltersOpen(true); if (!Object.keys(distincts).length) loadDistincts(filters, anoSel); }}
@@ -1741,6 +1745,66 @@ export default function App() {
                 </Card>
                 <Card title="Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
                   <HBarChart data={data.porFonte as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="fonte_recurso" height={288} colorOffset={5} />
+                </Card>
+              </div>
+            )}
+
+            {/* Elemento + UO */}
+            {data && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Top 10 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}>
+                  <HBarChart data={data.porElemento.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="elemento" height={288} colorOffset={2} />
+                </Card>
+                <Card title="Top 10 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                  <HBarChart data={data.porUo.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="uo" height={288} colorOffset={4} />
+                </Card>
+              </div>
+            )}
+
+            {/* RRAS + Região Administrativa */}
+            {data && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HBarChart data={data.porRras as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rras" height={288} colorOffset={1} />
+                </Card>
+                <Card title="Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}>
+                  <HBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_ad" height={288} colorOffset={3} />
+                </Card>
+              </div>
+            )}
+
+            {/* Região de Saúde + Tipo Despesa */}
+            {data && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}>
+                  <HBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_sa" height={288} colorOffset={6} />
+                </Card>
+                <Card title="Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}>
+                  <HBarChart data={data.porTipoDespesa as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="tipo_despesa" height={288} colorOffset={0} />
+                </Card>
+              </div>
+            )}
+
+            {/* Rótulo + UG */}
+            {data && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Top 10 Rótulos  - Empenhado" icon={<FileText className="w-4 h-4" />}>
+                  <HBarChart data={data.porRotulo.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rotulo" height={288} colorOffset={7} />
+                </Card>
+                <Card title="Top 10 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                  <HBarChart data={data.porUg.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="ug" height={288} colorOffset={8} />
+                </Card>
+              </div>
+            )}
+
+            {/* Favorecido + Projeto */}
+            {data && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Top 10 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
+                  <HBarChart data={data.porFavorecido.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="favorecido" height={288} colorOffset={9} />
+                </Card>
+                <Card title="Top 10 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HBarChart data={data.porProjeto.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="projeto" height={288} colorOffset={5} />
                 </Card>
               </div>
             )}
@@ -2051,7 +2115,7 @@ export default function App() {
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
           <span className="font-mono">lc131_despesas · odnstbeuiojohutoqvvw.supabase.co</span>
-          <span>LC 131 · Controle Orçamentário SP · {new Date().getFullYear()}</span>
+          <span>Controle de Despesas · Coordenadoria de Serviços de Saúde · SES/SP · {new Date().getFullYear()}</span>
         </div>
       </main>
       )}

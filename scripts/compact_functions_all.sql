@@ -45,6 +45,7 @@ BEGIN
       -- Grupo simplificado
       CASE
         WHEN LEFT(codigo_nome_grupo, 1) = '1' THEN 'Pessoal'
+        WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'Dívida'
         WHEN LEFT(codigo_nome_grupo, 1) = '3' THEN 'Custeio'
         WHEN LEFT(codigo_nome_grupo, 1) = '4' THEN 'Investimento'
         ELSE 'Outros'
@@ -364,7 +365,27 @@ DECLARE result json;
 BEGIN
   WITH filtered AS (
     SELECT *,
-           COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS _pt
+           COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS _pt,
+           -- Fonte simplificada
+           CASE
+             WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
+             WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
+               OR codigo_nome_fonte_recurso ILIKE '%união%'
+               OR codigo_nome_fonte_recurso ILIKE '%uniao%'
+               OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
+               OR codigo_nome_fonte_recurso ILIKE '%transferência%'
+               OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
+               OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
+             ELSE 'Demais Fontes'
+           END AS fonte_simpl,
+           -- Grupo simplificado
+           CASE
+             WHEN LEFT(codigo_nome_grupo, 1) = '1' THEN 'Pessoal'
+             WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'Dívida'
+             WHEN LEFT(codigo_nome_grupo, 1) = '3' THEN 'Custeio'
+             WHEN LEFT(codigo_nome_grupo, 1) = '4' THEN 'Investimento'
+             ELSE 'Outros'
+           END AS grupo_simpl
     FROM lc131_despesas
     WHERE
       (p_ano IS NULL OR ano_referencia = p_ano)
@@ -402,11 +423,13 @@ BEGIN
           drs, regiao_ad, rras, regiao_sa, cod_ibge, municipio,
           codigo_nome_uo, codigo_nome_ug, codigo_ug,
           codigo_nome_projeto_atividade, codigo_projeto_atividade,
-          codigo_nome_fonte_recurso, fonte_recurso,
-          codigo_nome_grupo, grupo_despesa,
+          codigo_nome_fonte_recurso, fonte_recurso, fonte_simpl,
+          codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
           tipo_despesa, rotulo,
+          nome_municipio AS unidade,
           codigo_nome_favorecido, codigo_favorecido,
+          descricao_processo, numero_processo,
           empenhado, liquidado, pago, pago_anos_anteriores, _pt AS pago_total
         FROM filtered
         ORDER BY empenhado DESC NULLS LAST
