@@ -427,9 +427,7 @@ BEGIN
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
           tipo_despesa, rotulo,
-          nome_municipio AS unidade,
           codigo_nome_favorecido, codigo_favorecido,
-          descricao_processo, numero_processo,
           empenhado, liquidado, pago, pago_anos_anteriores, _pt AS pago_total
         FROM filtered
         ORDER BY empenhado DESC NULLS LAST
