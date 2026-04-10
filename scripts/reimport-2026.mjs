@@ -8,8 +8,8 @@ const require2 = createRequire(import.meta.url);
 const XLSX = require2('xlsx');
 
 const sb = createClient(
-  'https://odnstbeuiojohutoqvvw.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbnN0YmV1aW9qb2h1dG9xdnZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTQ1NzgsImV4cCI6MjA5MDA5MDU3OH0._71Nt-rjs3EvOuDcGcQcPFKug-iDg_dEs38UVLBLJEQ'
+  'https://teikzwrfsxjipxozzhbr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3ODkwNDQsImV4cCI6MjA5MTM2NTA0NH0.t3tWIh3F9lmg-a6zzdmoKpupHB9i7hTfvFmPyFbZNZs'
 );
 
 const CHUNK_SIZE = 500;
@@ -24,9 +24,14 @@ const { count } = await sb.from('lc131_despesas').select('*', { count: 'exact', 
 console.log(`\n📊 Registros 2026 atuais: ${count}`);
 
 if (count > 0) {
-  console.log(`⚠️  Ainda existem ${count} registros de 2026!`);
-  console.log('   Verifique se o DELETE foi executado no SQL Editor.');
-  process.exit(1);
+  console.log(`🗑️  Deletando ${count} registros de 2026 via lc131_delete_year...`);
+  const { error: delErr } = await sb.rpc('lc131_delete_year', { p_ano: 2026 });
+  if (delErr) {
+    console.error(`❌ Erro ao deletar: ${delErr.message}`);
+    process.exit(1);
+  }
+  const { count: remaining } = await sb.from('lc131_despesas').select('*', { count: 'exact', head: true }).eq('ano_referencia', 2026);
+  console.log(`   ✅ Deletados. Restam: ${remaining ?? 0} registros de 2026`);
 }
 
 // Read Excel

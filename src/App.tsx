@@ -1160,8 +1160,19 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
         });
       }
 
+      // Detecta o ano do arquivo
+      const detectedYear = uploadRows[0]?.ano_referencia ? Number(uploadRows[0].ano_referencia) : null;
+
       if (uploadMode === 'replace') {
-        await supabase.from('lc131_despesas').delete().not('id','is',null);
+        // Deleta apenas o ano detectado via RPC (SECURITY DEFINER, bypass RLS)
+        if (detectedYear) {
+          setMessage(`Deletando registros de ${detectedYear}...`);
+          const { error: delErr } = await supabase.rpc('lc131_delete_year', { p_ano: detectedYear });
+          if (delErr) throw new Error(`Erro ao deletar ano ${detectedYear}: ${delErr.message}`);
+        } else {
+          throw new Error('Não foi possível detectar o ano do arquivo. Verifique a coluna ano_referencia.');
+        }
+        setMessage('');
         for (let i = 0; i < uploadRows.length; i += CHUNK) {
           const { error } = await supabase.from('lc131_despesas').insert(uploadRows.slice(i, i + CHUNK));
           if (error) throw error;
@@ -1169,45 +1180,23 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
           setProgress(Math.round((uploaded / uploadRows.length) * 100));
         }
       } else {
-        // Incremental: detecta ano e busca fingerprints existentes
-        const year = uploadRows[0]?.ano_referencia ? Number(uploadRows[0].ano_referencia) : null;
-        const FP_KEYS = ['codigo_ug','codigo_projeto_atividade','codigo_elemento','codigo_favorecido','empenhado','liquidado','pago','pago_anos_anteriores'];
-        const fpCols = FP_KEYS.filter(c => validCols.includes(c));
-
-        const computeFp = (r: DataRow) => fpCols.map(c => String(r[c] ?? '')).join('\x00');
-        const existing = new Set<string>();
-
-        if (year && fpCols.length > 0) {
-          setMessage('Verificando registros existentes...');
-          const PAGE = 5000; let off = 0;
-          while (true) {
-            const { data, error } = await supabase.from('lc131_despesas').select(fpCols.join(',')).eq('ano_referencia', year).range(off, off + PAGE - 1);
-            if (error) throw error;
-            if (!data || data.length === 0) break;
-            for (const r of data) existing.add(computeFp(r as DataRow));
-            off += data.length;
-            if (data.length < PAGE) break;
-          }
+        // Incremental: deleta o ano e reimporta tudo (mais confiável que fingerprint)
+        if (detectedYear) {
+          setMessage(`Substituindo registros de ${detectedYear}...`);
+          const { error: delErr } = await supabase.rpc('lc131_delete_year', { p_ano: detectedYear });
+          if (delErr) throw new Error(`Erro ao deletar ano ${detectedYear}: ${delErr.message}`);
+          setMessage('');
         }
-
-        const newRows = existing.size > 0
-          ? uploadRows.filter(r => !existing.has(computeFp(r)))
-          : uploadRows;
-
-        if (newRows.length === 0) {
-          setMessage('Nenhum registro novo. Tudo já importado!'); setStep('done'); return;
-        }
-        setMessage('');
-        for (let i = 0; i < newRows.length; i += CHUNK) {
-          const { error } = await supabase.from('lc131_despesas').insert(newRows.slice(i, i + CHUNK));
+        for (let i = 0; i < uploadRows.length; i += CHUNK) {
+          const { error } = await supabase.from('lc131_despesas').insert(uploadRows.slice(i, i + CHUNK));
           if (error) throw error;
-          uploaded += Math.min(CHUNK, newRows.length - i);
-          setProgress(Math.round((uploaded / newRows.length) * 100));
+          uploaded += Math.min(CHUNK, uploadRows.length - i);
+          setProgress(Math.round((uploaded / uploadRows.length) * 100));
         }
       }
 
-      try { await supabase.rpc('refresh_dashboard'); } catch { /* optional */ }
-      setMessage(uploaded.toLocaleString('pt-BR') + ' registros importados!'); setStep('done');
+      try { await supabase.rpc('refresh_dashboard_batch', { p_batch_size: 10000 }); } catch { /* optional */ }
+      setMessage(uploaded.toLocaleString('pt-BR') + ` registros de ${detectedYear ?? '?'} importados com sucesso!`); setStep('done');
     } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
   };
 
@@ -1255,23 +1244,23 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
               <div className="flex gap-2">
                 <button onClick={() => setUploadMode('incremental')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg border transition ${uploadMode === 'incremental' ? 'bg-[#118DFF] text-white border-[#118DFF]' : 'bg-white text-[#666] border-[#D0D0D0] hover:bg-[#F8FBFF]'}`}>
-                  Atualizar (só novos)
+                  Substituir Ano
                 </button>
                 <button onClick={() => setUploadMode('replace')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg border transition ${uploadMode === 'replace' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-[#666] border-[#D0D0D0] hover:bg-red-50'}`}>
-                  Substituir tudo
+                  Substituir Tudo
                 </button>
               </div>
               <div className={`border rounded-lg p-3 flex items-start gap-2.5 ${uploadMode === 'replace' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
                 <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${uploadMode === 'replace' ? 'text-amber-600' : 'text-blue-600'}`} />
                 <div>
                   <p className={`font-semibold text-sm ${uploadMode === 'replace' ? 'text-amber-800' : 'text-blue-800'}`}>
-                    {uploadMode === 'replace' ? 'Substituição total' : 'Atualização incremental'}
+                    {uploadMode === 'replace' ? 'Substituição total (todos os anos)' : 'Substituição por ano'}
                   </p>
                   <p className={`text-xs mt-0.5 ${uploadMode === 'replace' ? 'text-amber-700' : 'text-blue-700'}`}>
                     {uploadMode === 'replace'
-                      ? <><strong>{dbCount?.toLocaleString('pt-BR') ?? '?'}</strong> registros serão substituídos por{' '}<strong>{rows.length.toLocaleString('pt-BR')}</strong> de <span className="font-mono">{fileName}</span>.</>
-                      : <>Somente registros novos de <span className="font-mono">{fileName}</span> ({rows.length.toLocaleString('pt-BR')} linhas) serão adicionados.</>
+                      ? <>Deleta <strong>todos os {dbCount?.toLocaleString('pt-BR') ?? '?'}</strong> registros e importa <strong>{rows.length.toLocaleString('pt-BR')}</strong> de <span className="font-mono">{fileName}</span>.</>
+                      : <>Deleta apenas os registros do <strong>ano detectado no arquivo</strong> e reimporta <strong>{rows.length.toLocaleString('pt-BR')}</strong> linhas de <span className="font-mono">{fileName}</span>. Outros anos não são afetados.</>
                     }
                   </p>
                 </div>
@@ -1288,7 +1277,7 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
               ) : (
                 <div className={`border rounded-lg p-3 space-y-2 ${uploadMode === 'replace' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
                   <p className={`font-semibold text-sm ${uploadMode === 'replace' ? 'text-red-800' : 'text-blue-800'}`}>
-                    {uploadMode === 'replace' ? 'Tem certeza? Ação irreversível.' : 'Confirma a importação?'}
+                    {uploadMode === 'replace' ? 'Tem certeza? Deleta TODOS os anos.' : 'Confirma substituição do ano?'}
                   </p>
                   <div className="flex gap-2">
                     <button onClick={() => setConfirm(false)} className="flex-1 py-1.5 text-xs font-semibold border border-[#D0D0D0] rounded bg-white">Não</button>
