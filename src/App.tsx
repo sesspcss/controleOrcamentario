@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -968,16 +968,16 @@ function InteractiveMap({ anoSel, onNavigate }: {
             {/* KPIs */}
             {activeMunic ? (
               <div className="grid grid-cols-2 gap-2">
-                <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'compact')} color="#89CFF0" />
-                <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'compact')} color="#90EE90" />
-                <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'compact')} color="#FFB347" />
+                <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'currency')} color="#89CFF0" />
+                <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'currency')} color="#90EE90" />
+                <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'currency')} color="#FFB347" />
                 <MiniKpi label="% Execução" value={(activeMunic.empenhado > 0 ? (activeMunic.pago_total / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.pago_total)} />
               </div>
             ) : currentRegion ? (
               <div className="grid grid-cols-2 gap-2">
-                <MiniKpi label="Empenhado" value={fmt(currentRegion.empenhado, 'compact')} color="#89CFF0" />
-                <MiniKpi label="Liquidado" value={fmt(currentRegion.liquidado, 'compact')} color="#90EE90" />
-                <MiniKpi label="Pago Total" value={fmt(currentRegion.pago_total, 'compact')} color="#FFB347" />
+                <MiniKpi label="Empenhado" value={fmt(currentRegion.empenhado, 'currency')} color="#89CFF0" />
+                <MiniKpi label="Liquidado" value={fmt(currentRegion.liquidado, 'currency')} color="#90EE90" />
+                <MiniKpi label="Pago Total" value={fmt(currentRegion.pago_total, 'currency')} color="#FFB347" />
                 <MiniKpi label="% Execução" value={(currentRegion.empenhado > 0 ? (currentRegion.pago_total / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.pago_total)} />
               </div>
             ) : null}
@@ -997,7 +997,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                         <div className="absolute inset-y-0 left-0 bg-[#118DFF]/10 rounded-lg" style={{ width: barW + '%' }} />
                         <span className="relative w-2 h-2 rounded-full shrink-0" style={{ background: execPct(m.empenhado, m.pago_total) }} />
                         <span className="relative text-white text-[11px] truncate flex-1">{m.municipio}</span>
-                        <span className="relative text-[#89CFF0] text-[11px] font-mono font-bold shrink-0">{fmt(m.empenhado, 'compact')}</span>
+                        <span className="relative text-[#89CFF0] text-[11px] font-mono font-bold shrink-0">{fmt(m.empenhado, 'currency')}</span>
                       </button>
                     );
                   })}
@@ -1018,23 +1018,23 @@ function InteractiveMap({ anoSel, onNavigate }: {
                   <div className="space-y-4">
                     {municDetail.projetos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Briefcase className="w-3 h-3" /> Projetos</p>
-                      {municDetail.projetos.map((p, i) => <DetailItem key={i} label={p.projeto} value={fmt(p.empenhado, 'compact')} />)}
+                      {municDetail.projetos.map((p, i) => <DetailItem key={i} label={p.projeto} value={fmt(p.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.favorecidos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> Favorecidos</p>
-                      {municDetail.favorecidos.map((f, i) => <DetailItem key={i} label={f.favorecido} value={fmt(f.empenhado, 'compact')} />)}
+                      {municDetail.favorecidos.map((f, i) => <DetailItem key={i} label={f.favorecido} value={fmt(f.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.fontes.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Database className="w-3 h-3" /> Fontes</p>
-                      {municDetail.fontes.map((f, i) => <DetailItem key={i} label={f.fonte} value={fmt(f.empenhado, 'compact')} />)}
+                      {municDetail.fontes.map((f, i) => <DetailItem key={i} label={f.fonte} value={fmt(f.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.elementos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Layers className="w-3 h-3" /> Elementos</p>
-                      {municDetail.elementos.map((e, i) => <DetailItem key={i} label={e.elemento} value={fmt(e.empenhado, 'compact')} />)}
+                      {municDetail.elementos.map((e, i) => <DetailItem key={i} label={e.elemento} value={fmt(e.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.grupos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Grupos</p>
-                      {municDetail.grupos.map((g, i) => <DetailItem key={i} label={g.grupo} value={fmt(g.empenhado, 'compact')} />)}
+                      {municDetail.grupos.map((g, i) => <DetailItem key={i} label={g.grupo} value={fmt(g.empenhado, 'currency')} />)}
                     </div>)}
                   </div>
                 ) : null}
@@ -1336,6 +1336,8 @@ export default function App() {
   const [error, setError]                 = useState<string|null>(null);
   const [viewMissing, setViewMissing]     = useState(false);
   const [uploadOpen, setUploadOpen]       = useState(false);
+  const [menuOpen, setMenuOpen]           = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const cacheRef = useRef<Map<string, CachedData>>(new Map());
   const initialLoaded = useRef(false);
   const [data, setData]                   = useState<CachedData|null>(null);
@@ -1560,19 +1562,39 @@ export default function App() {
             <span className="text-[10px] text-[#888] hidden sm:inline">Coordenadoria de Serviços de Saúde · SES/SP</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={filtersOpen ? () => setFiltersOpen(false) : () => { setFiltersOpen(true); if (!Object.keys(distincts).length) loadDistincts(filters, anoSel); }}
-              className={cn('flex items-center gap-1 px-2.5 h-7 rounded text-[11px] font-semibold transition',
-                filtersOpen || activeFilterCount > 0 ? 'bg-[#118DFF] text-white' : 'bg-[#333] text-[#CCC] hover:bg-[#444]')}>
-              <SlidersHorizontal className="w-3 h-3" />
-              <span className="hidden sm:inline">Filtros</span>
-              {activeFilterCount > 0 && <span className="bg-white text-[#118DFF] text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">{activeFilterCount}</span>}
-            </button>
-            <button onClick={handleRefresh} className="w-7 h-7 flex items-center justify-center rounded bg-[#333] hover:bg-[#444] text-[#CCC]">
-              <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin')} />
-            </button>
-            <button onClick={() => setUploadOpen(true)} className="flex items-center gap-1 px-2.5 h-7 rounded bg-[#118DFF] text-white text-[11px] font-semibold hover:bg-[#0D7AE8]">
-              <Upload className="w-3 h-3" /><span className="hidden sm:inline">Importar</span>
-            </button>
+            {activeTab !== 'mapa' && (
+              <button onClick={filtersOpen ? () => setFiltersOpen(false) : () => { setFiltersOpen(true); if (!Object.keys(distincts).length) loadDistincts(filters, anoSel); }}
+                className={cn('flex items-center gap-1 px-2.5 h-7 rounded text-[11px] font-semibold transition',
+                  filtersOpen || activeFilterCount > 0 ? 'bg-[#118DFF] text-white' : 'bg-[#333] text-[#CCC] hover:bg-[#444]')}>
+                <SlidersHorizontal className="w-3 h-3" />
+                <span className="hidden sm:inline">Filtros</span>
+                {activeFilterCount > 0 && <span className="bg-white text-[#118DFF] text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">{activeFilterCount}</span>}
+              </button>
+            )}
+            {/* Hamburger menu */}
+            <div ref={menuRef} className="relative">
+              <button onClick={() => setMenuOpen(v => !v)} className="w-7 h-7 flex items-center justify-center rounded bg-[#333] hover:bg-[#444] text-[#CCC]">
+                <Menu className="w-3.5 h-3.5" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-[39]" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-9 z-40 w-44 bg-[#1B1B1B] border border-[#333] rounded-xl shadow-2xl overflow-hidden">
+                    <button onClick={() => { handleRefresh(); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#CCC] hover:bg-[#333] transition">
+                      <RefreshCw className={cn('w-3.5 h-3.5 shrink-0', loading && 'animate-spin')} />
+                      Atualizar dados
+                    </button>
+                    <div className="border-t border-[#333]" />
+                    <button onClick={() => { setUploadOpen(true); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#118DFF] hover:bg-[#333] transition">
+                      <Upload className="w-3.5 h-3.5 shrink-0" />
+                      Importar planilha
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
