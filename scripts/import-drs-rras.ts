@@ -32,8 +32,8 @@ const require = createRequire(import.meta.url);
 const XLSX = require('xlsx') as typeof import('xlsx');
 
 // ─── Configuração Supabase ───────────────────────────────────────────────────
-const SUPABASE_URL = 'https://odnstbeuiojohutoqvvw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbnN0YmV1aW9qb2h1dG9xdnZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTQ1NzgsImV4cCI6MjA5MDA5MDU3OH0._71Nt-rjs3EvOuDcGcQcPFKug-iDg_dEs38UVLBLJEQ';
+const SUPABASE_URL = 'https://teikzwrfsxjipxozzhbr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3ODkwNDQsImV4cCI6MjA5MTM2NTA0NH0.t3tWIh3F9lmg-a6zzdmoKpupHB9i7hTfvFmPyFbZNZs';
 const CHUNK_SIZE   = 500;
 
 // ─── Normalização da chave municipio ─────────────────────────────────────────

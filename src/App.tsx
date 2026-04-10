@@ -174,6 +174,47 @@ const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: s
   { key: 'pago_total',        label: 'Pago Total',        numeric: true, w: '140px' },
 ];
 
+// -- Direct REST query helpers (bypass slow lc131_detail RPC) --
+const FILTER_TO_COL: Record<string, string> = {
+  p_drs: 'drs', p_regiao_ad: 'regiao_ad', p_rras: 'rras', p_regiao_sa: 'regiao_sa',
+  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa',
+  p_rotulo: 'rotulo', p_uo: 'codigo_nome_uo', p_elemento: 'codigo_nome_elemento',
+  p_favorecido: 'codigo_nome_favorecido',
+};
+
+function buildFonteOrFilter(values: string[]): string {
+  const parts: string[] = [];
+  for (const v of values) {
+    if (v === 'Tesouro') parts.push('codigo_nome_fonte_recurso.ilike.%tesouro%');
+    if (v === 'Federal') parts.push(
+      'codigo_nome_fonte_recurso.ilike.%fed%',
+      'codigo_nome_fonte_recurso.ilike.%união%',
+      'codigo_nome_fonte_recurso.ilike.%uniao%',
+      'codigo_nome_fonte_recurso.ilike.%fundo nacional%',
+      'codigo_nome_fonte_recurso.ilike.%transferência%',
+      'codigo_nome_fonte_recurso.ilike.%transferencia%',
+      'codigo_nome_fonte_recurso.ilike.%SUS%',
+    );
+    if (v === 'Demais Fontes') parts.push(
+      'and(codigo_nome_fonte_recurso.not.ilike.%tesouro%,codigo_nome_fonte_recurso.not.ilike.%fed%,codigo_nome_fonte_recurso.not.ilike.%união%,codigo_nome_fonte_recurso.not.ilike.%uniao%,codigo_nome_fonte_recurso.not.ilike.%fundo nacional%,codigo_nome_fonte_recurso.not.ilike.%transferência%,codigo_nome_fonte_recurso.not.ilike.%transferencia%,codigo_nome_fonte_recurso.not.ilike.%SUS%)',
+    );
+  }
+  return parts.join(',');
+}
+
+function enrichDetailRow(r: Record<string, unknown>): DetailRow {
+  const row = r as unknown as DetailRow;
+  const src = String(row.codigo_nome_fonte_recurso ?? '').toLowerCase();
+  row.fonte_simpl = src.includes('tesouro') ? 'Tesouro'
+    : (src.includes('fed') || src.includes('união') || src.includes('uniao') || src.includes('fundo nacional')
+       || src.includes('transferência') || src.includes('transferencia') || src.includes('sus')) ? 'Federal'
+    : 'Demais Fontes';
+  const g = String(row.codigo_nome_grupo ?? '');
+  row.grupo_simpl = g.startsWith('1') ? 'Pessoal' : g.startsWith('2') ? 'Dívida' : g.startsWith('3') ? 'Custeio' : g.startsWith('4') ? 'Investimento' : 'Outros';
+  row.pago_total = (Number(row.pago) || 0) + (Number(row.pago_anos_anteriores) || 0);
+  return row;
+}
+
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'mapa',          label: 'Mapa',          icon: <MapIcon className="w-3.5 h-3.5" /> },
   { id: 'resumo',        label: 'Resumo',        icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
@@ -1316,6 +1357,19 @@ export default function App() {
   const [tableSearch, setTableSearch]     = useState('');
   const DETAIL_PAGE_SIZE = 200;
 
+  // -- Retry helper for RPC calls (handles upstream timeouts) --
+  const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const { data, error } = await supabase.rpc(fnName, params);
+      if (!error) return { data, error: null };
+      if (error.message?.includes('timeout') || error.message?.includes('upstream') || error.code === 'PGRST000') {
+        if (attempt < retries - 1) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
+      }
+      return { data, error };
+    }
+    return { data: null, error: { code: 'TIMEOUT', message: 'upstream request timeout após múltiplas tentativas' } };
+  }, []);
+
   // -- Load dashboard --
   const loadDashboard = useCallback(async (ano: number | 'todos', activeFilters: Partial<Record<DetailFilterKey, string[]>>) => {
     const cacheKey = JSON.stringify({ ano, ...activeFilters });
@@ -1326,7 +1380,7 @@ export default function App() {
       const params: Record<string, unknown> = {};
       if (ano !== 'todos') params.p_ano = Number(ano);
       Object.entries(activeFilters).forEach(([k, v]) => { if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|'); });
-      const { data: rpc, error: rpcErr } = await supabase.rpc('lc131_dashboard', params);
+      const { data: rpc, error: rpcErr } = await rpcWithRetry('lc131_dashboard', params);
       if (rpcErr) {
         if (rpcErr.code === 'PGRST202' || rpcErr.message?.includes('does not exist')) { setViewMissing(true); setLoading(false); setDashboardLoading(false); return; }
         throw new Error(rpcErr.code + ': ' + rpcErr.message);
@@ -1362,17 +1416,25 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: maxR }, { data: minR }] = await Promise.all([
-        supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: false }).limit(1).single(),
-        supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: true }).limit(1).single(),
-      ]);
-      const maxAno = (maxR?.ano_referencia as number) ?? new Date().getFullYear();
-      const minAno = (minR?.ano_referencia as number) ?? maxAno;
-      const anos = Array.from({ length: maxAno - minAno + 1 }, (_, i) => minAno + i);
-      setAvailableAnos(anos);
-      setAnoSel(maxAno);
-      loadDashboard(maxAno, {});
-      loadDistincts({}, maxAno);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const [{ data: maxR }, { data: minR }] = await Promise.all([
+            supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: false }).limit(1).single(),
+            supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: true }).limit(1).single(),
+          ]);
+          const maxAno = (maxR?.ano_referencia as number) ?? new Date().getFullYear();
+          const minAno = (minR?.ano_referencia as number) ?? maxAno;
+          const anos = Array.from({ length: maxAno - minAno + 1 }, (_, i) => minAno + i);
+          setAvailableAnos(anos);
+          setAnoSel(maxAno);
+          loadDashboard(maxAno, {});
+          loadDistincts({}, maxAno);
+          return;
+        } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+          else { setError('Servidor indisponível. Aguarde alguns minutos e recarregue a página.'); setLoading(false); }
+        }
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1391,7 +1453,7 @@ export default function App() {
       const params: Record<string, unknown> = {};
       if (ano !== 'todos') params.p_ano = Number(ano);
       Object.entries(cf).forEach(([k, v]) => { if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|'); });
-      const { data: rpc } = await supabase.rpc('lc131_distincts', params);
+      const { data: rpc } = await rpcWithRetry('lc131_distincts', params);
       const d = rpc as Record<string, string[]>;
       setDistincts({
         distinct_drs: dedupeAndTrack(d?.distinct_drs ?? [], normalizeDrs, _drsRawVariants),
@@ -1411,14 +1473,29 @@ export default function App() {
   const loadDetail = useCallback(async (page: number, search = '') => {
     setDetailLoading(true); setDetailError(null);
     try {
-      const params: Record<string, unknown> = { p_limit: DETAIL_PAGE_SIZE, p_offset: page * DETAIL_PAGE_SIZE };
-      if (anoSel !== 'todos') params.p_ano = Number(anoSel);
-      FILTER_META.forEach(f => { const v = filters[f.key]; if (Array.isArray(v) && v.length > 0) params[f.key] = expandFilterValues(f.key, v).join('|'); });
-      if (search.trim()) params.p_codigo_ug = search.trim();
-      const { data: rpc, error: rpcErr } = await supabase.rpc('lc131_detail', params);
-      if (rpcErr) throw new Error(rpcErr.message);
-      const d = rpc as { total: number; rows: DetailRow[] };
-      setDetailTotal(d.total ?? 0); setDetailRows(d.rows ?? []); setDetailPage(page);
+      // Direct REST query – avoids the slow COUNT(*) in lc131_detail RPC
+      let query = supabase.from('lc131_despesas')
+        .select('*', { count: 'estimated' })
+        .order('empenhado', { ascending: false, nullsFirst: false })
+        .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
+
+      if (anoSel !== 'todos') query = query.eq('ano_referencia', Number(anoSel));
+
+      for (const f of FILTER_META) {
+        if (f.key === 'p_codigo_ug' && search.trim()) continue; // search overrides UG filter
+        const v = filters[f.key];
+        if (!Array.isArray(v) || v.length === 0) continue;
+        const expanded = expandFilterValues(f.key, v);
+        if (f.key === 'p_fonte_recurso') { query = query.or(buildFonteOrFilter(expanded)); }
+        else if (f.key === 'p_codigo_ug') { query = query.in('codigo_ug', expanded); }
+        else { const col = FILTER_TO_COL[f.key]; if (col) query = query.in(col, expanded); }
+      }
+      if (search.trim()) query = query.in('codigo_ug', [search.trim()]);
+
+      const { data, count, error } = await query;
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));
+      setDetailTotal(count ?? rows.length); setDetailRows(rows); setDetailPage(page);
     } catch (e: unknown) { setDetailError((e as Error).message); }
     finally { setDetailLoading(false); }
   }, [anoSel, filters]);
@@ -1565,7 +1642,11 @@ export default function App() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div className="flex-1"><p className="font-semibold text-red-700 text-sm">Erro</p><p className="text-xs text-red-400 font-mono">{error}</p></div>
+            <div className="flex-1"><p className="font-semibold text-red-700 text-sm">Erro</p><p className="text-xs text-red-400 font-mono">{
+              error.includes('timeout') || error.includes('upstream')
+                ? 'Servidor sobrecarregado. Aguarde alguns segundos e clique em Retry.'
+                : error
+            }</p></div>
             <button onClick={handleRefresh} className="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded">Retry</button>
           </div>
         )}
@@ -2035,7 +2116,13 @@ export default function App() {
               {detailError ? (
                 <div className="p-5 flex items-start gap-2 text-red-400">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div><p className="font-semibold text-sm">Erro</p><p className="text-xs font-mono mt-0.5">{detailError}</p></div>
+                  <div><p className="font-semibold text-sm">Erro</p><p className="text-xs font-mono mt-0.5">{
+                    detailError.includes('timeout') || detailError.includes('upstream')
+                      ? 'Servidor sobrecarregado. Aguarde alguns segundos e tente novamente.'
+                      : detailError
+                  }</p>
+                  <button onClick={() => loadDetail(detailPage, tableSearch)} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -2102,7 +2189,7 @@ export default function App() {
 
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
-          <span className="font-mono">lc131_despesas · odnstbeuiojohutoqvvw.supabase.co</span>
+          <span className="font-mono">lc131_despesas · teikzwrfsxjipxozzhbr.supabase.co</span>
           <span>Controle de Despesas · Coordenadoria de Serviços de Saúde · SES/SP · {new Date().getFullYear()}</span>
         </div>
       </main>
