@@ -1559,7 +1559,7 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <img src="/img/logo1.png" alt="Logo CSS" className="h-[84px] w-auto" />
             <span className="font-bold text-[13px] tracking-tight">Controle de Despesas</span>
-            <span className="text-[10px] text-[#888] hidden sm:inline">Coordenadoria de Serviços de Saúde · SES/SP</span>
+            <span className="text-[12px] text-[#888] hidden sm:inline">Coordenadoria de Gestão Orçamentária e Financeira</span>
           </div>
           <div className="flex items-center gap-2">
             {activeTab !== 'mapa' && (
@@ -2212,7 +2212,7 @@ export default function App() {
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
           <span className="font-mono">lc131_despesas · teikzwrfsxjipxozzhbr.supabase.co</span>
-          <span>Controle de Despesas · Coordenadoria de Serviços de Saúde · SES/SP · {new Date().getFullYear()}</span>
+          <span>Controle de Despesas · Coordenadoria de Gestão Orçamentária e Financeira · SES/SP · {new Date().getFullYear()}</span>
         </div>
       </main>
       )}
