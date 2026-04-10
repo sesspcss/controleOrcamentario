@@ -255,7 +255,7 @@ const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: 
             <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: p.color }} />
             <span className="truncate max-w-[100px]">{p.name}</span>
           </span>
-          <span className="font-bold text-[#333] shrink-0">{typeof p.value === 'number' ? fmt(p.value, 'compact') : p.value}</span>
+          <span className="font-bold text-[#333] shrink-0">{typeof p.value === 'number' ? fmt(p.value, 'currency') : p.value}</span>
         </div>
       ))}
     </div>
@@ -383,7 +383,7 @@ function DonutLegend({ data, nameKey, colors }: { data: Record<string, unknown>[
           <div key={i} className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: colors[name] || CHART_COLORS[i] }} />
             <span className="text-[12px] text-[#333] font-medium flex-1">{name}</span>
-            <span className="text-[12px] font-bold text-[#333] shrink-0">{fmt(val, 'compact')}</span>
+            <span className="text-[12px] font-bold text-[#333] shrink-0">{fmt(val, 'currency')}</span>
             <span className="text-[10px] text-[#999] w-10 text-right shrink-0">{pct.toFixed(0)}%</span>
           </div>
         );
@@ -923,17 +923,17 @@ function InteractiveMap({ anoSel, onNavigate }: {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-6 px-8 py-4 bg-[#1B1B1B]/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#333]">
           <div className="text-center">
             <p className="text-[9px] text-[#888] uppercase font-bold">Empenhado</p>
-            <p className="text-lg font-bold text-[#89CFF0]">{fmt(kpis.empenhado, 'compact')}</p>
+            <p className="text-lg font-bold text-[#89CFF0]">{fmt(kpis.empenhado, 'currency')}</p>
           </div>
           <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
             <p className="text-[9px] text-[#888] uppercase font-bold">Liquidado</p>
-            <p className="text-lg font-bold text-[#90EE90]">{fmt(kpis.liquidado, 'compact')}</p>
+            <p className="text-lg font-bold text-[#90EE90]">{fmt(kpis.liquidado, 'currency')}</p>
           </div>
           <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
             <p className="text-[9px] text-[#888] uppercase font-bold">Pago Total</p>
-            <p className="text-lg font-bold text-[#FFB347]">{fmt(kpis.pago_total, 'compact')}</p>
+            <p className="text-lg font-bold text-[#FFB347]">{fmt(kpis.pago_total, 'currency')}</p>
           </div>
           <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
@@ -1681,9 +1681,9 @@ export default function App() {
               {loading && !data
                 ? [...Array(6)].map((_, i) => <div key={i} className="bg-white rounded-lg border border-[#E5E5E5] h-20 animate-pulse" />)
                 : kpis && <>
-                  <KpiCard label="Empenhado"    value={fmt(kpis.empenhado, 'compact')} icon={<DollarSign className="w-4 h-4" />} color="#118DFF" sub={fmt(kpis.total) + ' registros'} />
-                  <KpiCard label="Liquidado"    value={fmt(kpis.liquidado, 'compact')} icon={<CheckCircle2 className="w-4 h-4" />} color="#1AAB40" sub={pctLiq.toFixed(1) + '% do empenhado'} />
-                  <KpiCard label="Pago Total"   value={fmt(kpis.pago_total, 'compact')} icon={<TrendingUp className="w-4 h-4" />} color="#E66C37" sub={pctPago.toFixed(1) + '% do empenhado'} />
+                  <KpiCard label="Empenhado"    value={fmt(kpis.empenhado, 'currency')} icon={<DollarSign className="w-4 h-4" />} color="#118DFF" sub={fmt(kpis.total) + ' registros'} />
+                  <KpiCard label="Liquidado"    value={fmt(kpis.liquidado, 'currency')} icon={<CheckCircle2 className="w-4 h-4" />} color="#1AAB40" sub={pctLiq.toFixed(1) + '% do empenhado'} />
+                  <KpiCard label="Pago Total"   value={fmt(kpis.pago_total, 'currency')} icon={<TrendingUp className="w-4 h-4" />} color="#E66C37" sub={pctPago.toFixed(1) + '% do empenhado'} />
                   <KpiCard label="% Execução"   value={pctPago.toFixed(1) + '%'} icon={<BarChart3 className="w-4 h-4" />} color="#6B007B" sub="pago / empenhado" />
                   <KpiCard label="Municípios"   value={fmt(kpis.municipios)} icon={<MapPin className="w-4 h-4" />} color="#197278" sub={(data?.porDrs.length ?? 0) + ' DRS'} />
                   <KpiCard label="Registros"    value={fmt(kpis.total)} icon={<Database className="w-4 h-4" />} color="#744EC2" sub={availableAnos.length + ' anos'} />
@@ -1973,9 +1973,9 @@ export default function App() {
                             <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                             {row.drs}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-sm">{fmt(row.empenhado, 'compact')}</td>
-                          <td className="px-3 py-2 text-right font-mono text-[#1AAB40] text-sm">{fmt(row.liquidado, 'compact')}</td>
-                          <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-sm">{fmt(row.pago_total, 'compact')}</td>
+                          <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-sm">{fmt(row.empenhado, 'currency')}</td>
+                          <td className="px-3 py-2 text-right font-mono text-[#1AAB40] text-sm">{fmt(row.liquidado, 'currency')}</td>
+                          <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-sm">{fmt(row.pago_total, 'currency')}</td>
                           <td className="px-3 py-2 text-right">
                             <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold',
                               pct >= 80 ? 'bg-green-50 text-green-700' : pct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
@@ -1994,9 +1994,9 @@ export default function App() {
                   {kpis && (
                     <tfoot><tr className="bg-[#1B1B1B] text-white">
                       <td className="px-3 py-2.5" colSpan={2}><span className="text-[10px] font-bold text-[#888]">TOTAL</span></td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(kpis.empenhado, 'compact')}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-green-300">{fmt(kpis.liquidado, 'compact')}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(kpis.pago_total, 'compact')}</td>
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(kpis.empenhado, 'currency')}</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-green-300">{fmt(kpis.liquidado, 'currency')}</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(kpis.pago_total, 'currency')}</td>
                       <td className="px-3 py-2.5 text-right text-sm font-bold">{kpis.empenhado > 0 ? ((kpis.pago_total / kpis.empenhado) * 100).toFixed(1) : '0'}%</td>
                       <td className="hidden md:table-cell" />
                     </tr></tfoot>
@@ -2104,8 +2104,8 @@ export default function App() {
                       <tr key={i} className="hover:bg-blue-50/30">
                         <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
                         <td className="px-3 py-2 text-[#333] max-w-xs truncate" title={row.favorecido}>{row.favorecido}</td>
-                        <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF]">{fmt(row.empenhado, 'compact')}</td>
-                        <td className="px-3 py-2 text-right font-mono text-[#E66C37]">{fmt(row.pago_total, 'compact')}</td>
+                        <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF]">{fmt(row.empenhado, 'currency')}</td>
+                        <td className="px-3 py-2 text-right font-mono text-[#E66C37]">{fmt(row.pago_total, 'currency')}</td>
                         <td className="px-3 py-2 text-right font-mono text-[#999]">{fmt(row.contratos)}</td>
                       </tr>
                     ))}
