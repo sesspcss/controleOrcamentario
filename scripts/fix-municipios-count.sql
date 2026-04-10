@@ -1,0 +1,270 @@
+-- =======================================================================
+-- FIX: municipios count in lc131_dashboard
+-- Problem: COUNT uses raw municipio values, causing inflated count (e.g. 725)
+--          because the same city appears with different accents/casing.
+-- Fix: use norm_munic() to normalize before counting + add nome_municipio fallback
+-- Execute in Supabase SQL Editor
+-- =======================================================================
+
+-- 1. Normalize municipio column for all rows (deduplicate accent/case variations)
+UPDATE lc131_despesas
+SET municipio = public.norm_munic(municipio)
+WHERE municipio IS NOT NULL AND TRIM(municipio) <> '';
+
+-- 2. For rows where municipio is still NULL, fill from nome_municipio
+UPDATE lc131_despesas
+SET municipio = public.norm_munic(nome_municipio)
+WHERE (municipio IS NULL OR TRIM(municipio) = '')
+  AND nome_municipio IS NOT NULL AND TRIM(nome_municipio) <> '';
+
+-- 3. Update lc131_dashboard: change municipios count to use norm_munic
+--    (This re-deploys the function with the normalized count)
+CREATE OR REPLACE FUNCTION public.lc131_dashboard(
+  p_ano           integer DEFAULT NULL,
+  p_drs           text    DEFAULT NULL,
+  p_regiao_ad     text    DEFAULT NULL,
+  p_rras          text    DEFAULT NULL,
+  p_regiao_sa     text    DEFAULT NULL,
+  p_municipio     text    DEFAULT NULL,
+  p_grupo_despesa text    DEFAULT NULL,
+  p_tipo_despesa  text    DEFAULT NULL,
+  p_rotulo        text    DEFAULT NULL,
+  p_fonte_recurso text    DEFAULT NULL,
+  p_codigo_ug     text    DEFAULT NULL,
+  p_uo            text    DEFAULT NULL,
+  p_elemento      text    DEFAULT NULL,
+  p_favorecido    text    DEFAULT NULL
+)
+RETURNS json LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public SET statement_timeout = 0
+AS $$
+DECLARE result json;
+BEGIN
+  WITH base AS (
+    SELECT
+      ano_referencia,
+      drs, regiao_ad, rras, regiao_sa, municipio, nome_municipio,
+      codigo_nome_grupo, codigo_nome_fonte_recurso,
+      codigo_nome_elemento, codigo_nome_uo, codigo_ug,
+      tipo_despesa, rotulo,
+      codigo_nome_favorecido, codigo_nome_projeto_atividade,
+      codigo_nome_ug,
+      COALESCE(empenhado, 0) AS empenhado,
+      COALESCE(liquidado, 0) AS liquidado,
+      COALESCE(pago, 0)      AS pago,
+      COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS _pt,
+      -- Grupo simplificado
+      CASE
+        WHEN LEFT(codigo_nome_grupo, 1) = '1' THEN 'Pessoal'
+        WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'Dívida'
+        WHEN LEFT(codigo_nome_grupo, 1) = '3' THEN 'Custeio'
+        WHEN LEFT(codigo_nome_grupo, 1) = '4' THEN 'Investimento'
+        ELSE 'Outros'
+      END AS _gs,
+      -- Fonte simplificada
+      CASE
+        WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
+        WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
+          OR codigo_nome_fonte_recurso ILIKE '%união%'
+          OR codigo_nome_fonte_recurso ILIKE '%uniao%'
+          OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
+          OR codigo_nome_fonte_recurso ILIKE '%transferência%'
+          OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
+          OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
+        ELSE 'Demais Fontes'
+      END AS _fs
+    FROM lc131_despesas
+    WHERE
+      (p_ano IS NULL OR ano_referencia = p_ano)
+      AND (p_drs           IS NULL OR drs                       = ANY(string_to_array(p_drs, '|')))
+      AND (p_regiao_ad     IS NULL OR regiao_ad                 = ANY(string_to_array(p_regiao_ad, '|')))
+      AND (p_rras          IS NULL OR rras                      = ANY(string_to_array(p_rras, '|')))
+      AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
+      AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
+      AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
+      AND (p_fonte_recurso IS NULL OR (
+            CASE
+              WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
+              WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
+                OR codigo_nome_fonte_recurso ILIKE '%união%'
+                OR codigo_nome_fonte_recurso ILIKE '%uniao%'
+                OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
+                OR codigo_nome_fonte_recurso ILIKE '%transferência%'
+                OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
+                OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
+              ELSE 'Demais Fontes'
+            END) = ANY(string_to_array(p_fonte_recurso, '|')))
+      AND (p_codigo_ug     IS NULL OR codigo_ug::text           = ANY(string_to_array(p_codigo_ug, '|')))
+      AND (p_uo            IS NULL OR codigo_nome_uo            = ANY(string_to_array(p_uo, '|')))
+      AND (p_elemento      IS NULL OR codigo_nome_elemento      = ANY(string_to_array(p_elemento, '|')))
+      AND (p_favorecido    IS NULL OR codigo_nome_favorecido    = ANY(string_to_array(p_favorecido, '|')))
+  )
+  SELECT json_build_object(
+    'kpis', (
+      SELECT json_build_object(
+        'empenhado',  SUM(empenhado),
+        'liquidado',  SUM(liquidado),
+        'pago',       SUM(pago),
+        'pago_total', SUM(_pt),
+        'total',      COUNT(*),
+        -- Use norm_munic to deduplicate accent/case variations, and fall back to nome_municipio
+        'municipios', COUNT(DISTINCT NULLIF(
+          norm_munic(COALESCE(NULLIF(TRIM(municipio),''), NULLIF(TRIM(nome_municipio),'')))
+        , ''))
+      ) FROM base
+    ),
+    'por_ano', (
+      SELECT json_agg(r ORDER BY r.ano) FROM (
+        SELECT ano_referencia::int AS ano,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago, SUM(_pt) AS pago_total, COUNT(*) AS registros
+        FROM base WHERE ano_referencia IS NOT NULL GROUP BY ano_referencia
+      ) r
+    ),
+    'por_grupo_simpl', (
+      SELECT json_agg(r ORDER BY r.empenhado DESC) FROM (
+        SELECT _gs AS grupo_simpl,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo<>''
+        GROUP BY _gs
+      ) r
+    ),
+    'por_fonte_simpl', (
+      SELECT json_agg(r ORDER BY r.empenhado DESC) FROM (
+        SELECT _fs AS fonte_simpl,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_fonte_recurso IS NOT NULL AND codigo_nome_fonte_recurso<>''
+        GROUP BY _fs
+      ) r
+    ),
+    'por_grupo', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_grupo AS grupo_despesa,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo<>''
+        GROUP BY codigo_nome_grupo ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_drs', (
+      SELECT json_agg(r) FROM (
+        SELECT drs,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE drs IS NOT NULL AND drs<>''
+        GROUP BY drs ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_municipio', (
+      SELECT json_agg(r) FROM (
+        SELECT norm_munic(COALESCE(NULLIF(TRIM(municipio),''), NULLIF(TRIM(nome_municipio),''))) AS municipio,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE COALESCE(NULLIF(TRIM(municipio),''), NULLIF(TRIM(nome_municipio),'')) IS NOT NULL
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_fonte', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_fonte_recurso AS fonte_recurso,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_fonte_recurso IS NOT NULL AND codigo_nome_fonte_recurso<>''
+        GROUP BY codigo_nome_fonte_recurso ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_elemento', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_elemento AS elemento,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_elemento IS NOT NULL AND codigo_nome_elemento<>''
+        GROUP BY codigo_nome_elemento ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_regiao_ad', (
+      SELECT json_agg(r) FROM (
+        SELECT regiao_ad,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE regiao_ad IS NOT NULL AND regiao_ad<>''
+        GROUP BY regiao_ad ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_uo', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_uo AS uo,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_uo IS NOT NULL AND codigo_nome_uo<>''
+        GROUP BY codigo_nome_uo ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_rras', (
+      SELECT json_agg(r) FROM (
+        SELECT rras,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE rras IS NOT NULL AND rras<>''
+        GROUP BY rras ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_tipo_despesa', (
+      SELECT json_agg(r) FROM (
+        SELECT tipo_despesa,
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+        FROM base WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>''
+        GROUP BY tipo_despesa ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_rotulo', (
+      SELECT json_agg(r) FROM (
+        SELECT rotulo,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE rotulo IS NOT NULL AND rotulo<>''
+        GROUP BY rotulo ORDER BY 2 DESC LIMIT 12
+      ) r
+    ),
+    'por_favorecido', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_favorecido AS favorecido,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total, COUNT(*) AS contratos
+        FROM base WHERE codigo_nome_favorecido IS NOT NULL AND codigo_nome_favorecido<>''
+        GROUP BY codigo_nome_favorecido ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_projeto', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_projeto_atividade AS projeto,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total, COUNT(*) AS registros
+        FROM base WHERE codigo_nome_projeto_atividade IS NOT NULL AND codigo_nome_projeto_atividade<>''
+        GROUP BY codigo_nome_projeto_atividade ORDER BY 2 DESC LIMIT 20
+      ) r
+    ),
+    'por_ug', (
+      SELECT json_agg(r) FROM (
+        SELECT codigo_nome_ug AS ug,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE codigo_nome_ug IS NOT NULL AND codigo_nome_ug<>''
+        GROUP BY codigo_nome_ug ORDER BY 2 DESC LIMIT 15
+      ) r
+    ),
+    'por_regiao_sa', (
+      SELECT json_agg(r) FROM (
+        SELECT regiao_sa,
+          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+        FROM base WHERE regiao_sa IS NOT NULL AND regiao_sa<>''
+        GROUP BY regiao_sa ORDER BY 2 DESC LIMIT 20
+      ) r
+    )
+  ) INTO result;
+  RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
+
+-- Verify new count for 2026
+SELECT
+  ano_referencia,
+  COUNT(DISTINCT NULLIF(norm_munic(COALESCE(NULLIF(TRIM(municipio),''), NULLIF(TRIM(nome_municipio),''))), '')) AS municipios_normalized,
+  COUNT(DISTINCT NULLIF(municipio, '')) AS municipios_raw
+FROM lc131_despesas
+WHERE ano_referencia IN (2022, 2023, 2024, 2025, 2026)
+GROUP BY ano_referencia ORDER BY ano_referencia;
+
+NOTIFY pgrst, 'reload schema';

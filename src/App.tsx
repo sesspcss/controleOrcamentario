@@ -824,7 +824,18 @@ function InteractiveMap({ anoSel, onNavigate }: {
       setMunicDetail({
         projetos: ((d.por_projeto as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0) })),
         favorecidos: ((d.por_favorecido as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0) })),
-        fontes: ((d.por_fonte as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ fonte: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0) })),
+        fontes: (() => {
+          const raw = (d.por_fonte as Record<string, unknown>[] ?? []);
+          const acc: Record<string, number> = {};
+          for (const r of raw) {
+            const s = String(r.fonte ?? r.fonte_recurso ?? '').toLowerCase();
+            const cat = s.includes('tesouro') ? 'Tesouro'
+              : (s.includes('fed') || s.includes('unia') || s.includes('uniao') || s.includes('fundo nacional') || s.includes('transfere') || s.includes('sus')) ? 'Federal'
+              : 'Demais Fontes';
+            acc[cat] = (acc[cat] ?? 0) + Number(r.empenhado ?? 0);
+          }
+          return Object.entries(acc).map(([fonte, empenhado]) => ({ fonte, empenhado })).sort((a, b) => b.empenhado - a.empenhado);
+        })(),
         elementos: ((d.por_elemento as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0) })),
         grupos: ((d.por_grupo as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ grupo: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0) })),
       });
