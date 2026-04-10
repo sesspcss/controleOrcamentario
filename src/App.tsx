@@ -824,7 +824,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       setMunicDetail({
         projetos: ((d.por_projeto as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0) })),
         favorecidos: ((d.por_favorecido as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0) })),
-        fontes: ((d.por_fonte as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ fonte: String(r.fonte_recurso), empenhado: Number(r.empenhado ?? 0) })),
+        fontes: ((d.por_fonte as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ fonte: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0) })),
         elementos: ((d.por_elemento as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0) })),
         grupos: ((d.por_grupo as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ grupo: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0) })),
       });
@@ -1395,7 +1395,7 @@ export default function App() {
         porGrupo: ((d.por_grupo as Record<string,unknown>[] ?? [])).map(r => ({ grupo_despesa: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porDrs: (() => { const raw = ((d.por_drs as Record<string,unknown>[] ?? [])).map(r => ({ drs: normalizeDrs(String(r.drs)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.drs); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.drs, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porMunic: ((d.por_municipio as Record<string,unknown>[] ?? [])).map(r => ({ municipio: String(r.municipio), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte_recurso), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porElemento: ((d.por_elemento as Record<string,unknown>[] ?? [])).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porRegiaoAd: ((d.por_regiao_ad as Record<string,unknown>[] ?? [])).map(r => ({ regiao_ad: String(r.regiao_ad), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porUo: ((d.por_uo as Record<string,unknown>[] ?? [])).map(r => ({ uo: String(r.uo), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
