@@ -51,7 +51,7 @@ function shortLabel(v: string, max = 20): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 function stripNumPrefix(s: string): string {
-  return String(s ?? '').replace(/^\d+[\s./]*[-–:]\s*/, '').trim();
+  return String(s ?? '').replace(/^[A-Za-z]{0,2}\d+[\s./]*[-–:]\s*/, '').trim();
 }
 
 // --- Power BI Color Palette ---------------------------------------------------
@@ -317,11 +317,12 @@ function MultiSelect({ label, options, value, onChange, loading }: {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const filtered = options.filter(Boolean).filter(o => !search || o.toLowerCase().includes(search.toLowerCase()));
+  const filtered = options.filter(Boolean).filter(o => !search || stripNumPrefix(o).toLowerCase().includes(search.toLowerCase()) || o.toLowerCase().includes(search.toLowerCase()));
   const hasValue = value.length > 0;
   const toggle = (opt: string) => value.includes(opt) ? onChange(value.filter(v => v !== opt)) : onChange([...value, opt]);
+  const _s0 = hasValue && value.length === 1 ? stripNumPrefix(value[0]) : '';
   const displayLabel = hasValue
-    ? value.length === 1 ? (value[0].length > 14 ? value[0].slice(0, 13) + '\u2026' : value[0]) : value.length + ' sel.'
+    ? value.length === 1 ? (_s0.length > 14 ? _s0.slice(0, 13) + '\u2026' : _s0) : value.length + ' sel.'
     : 'Todos';
 
   return (
@@ -353,7 +354,7 @@ function MultiSelect({ label, options, value, onChange, loading }: {
             : filtered.map(o => (
               <label key={o} className="flex items-center gap-2 px-2 py-1.5 hover:bg-blue-50 cursor-pointer">
                 <input type="checkbox" checked={value.includes(o)} onChange={() => toggle(o)} className="w-3 h-3 rounded accent-[#118DFF] shrink-0" />
-                <span className="text-[11px] text-[#333] whitespace-normal break-words leading-tight" title={o}>{o}</span>
+                <span className="text-[11px] text-[#333] whitespace-normal break-words leading-tight" title={stripNumPrefix(o)}>{stripNumPrefix(o)}</span>
               </label>
             ))}
           </div>
@@ -1098,7 +1099,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                     </div>)}
                     {municDetail.favorecidos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> Favorecidos</p>
-                      {municDetail.favorecidos.map((f, i) => <DetailItem key={i} label={f.favorecido} value={fmt(f.empenhado, 'currency')} />)}
+                      {municDetail.favorecidos.map((f, i) => <DetailItem key={i} label={stripNumPrefix(f.favorecido)} value={fmt(f.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.fontes.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Database className="w-3 h-3" /> Fontes</p>
@@ -1106,7 +1107,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                     </div>)}
                     {municDetail.elementos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Layers className="w-3 h-3" /> Elementos</p>
-                      {municDetail.elementos.map((e, i) => <DetailItem key={i} label={e.elemento} value={fmt(e.empenhado, 'currency')} />)}
+                      {municDetail.elementos.map((e, i) => <DetailItem key={i} label={stripNumPrefix(e.elemento)} value={fmt(e.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.grupos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Grupos</p>
@@ -2482,12 +2483,12 @@ export default function App() {
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
                   <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Maior favorecido</p>
-                  <p className="text-[11px] font-bold text-[#118DFF] truncate">{topFav?.favorecido ?? '-'}</p>
+                  <p className="text-[11px] font-bold text-[#118DFF] truncate">{stripNumPrefix(topFav?.favorecido ?? '-')}</p>
                   <p className="text-[11px] text-[#666] mt-0.5">{fmt(topFav?.empenhado ?? 0, 'compact')}</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
                   <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Mais contratos</p>
-                  <p className="text-[11px] font-bold text-[#6B007B] truncate">{maxContratos?.favorecido ?? '-'}</p>
+                  <p className="text-[11px] font-bold text-[#6B007B] truncate">{stripNumPrefix(maxContratos?.favorecido ?? '-')}</p>
                   <p className="text-[11px] text-[#666] mt-0.5">{maxContratos?.contratos ?? 0} contratos · média {avgContratos.toFixed(0)}/forn.</p>
                 </div>
               </div>
@@ -2535,7 +2536,7 @@ export default function App() {
                           <div className="flex-1 relative h-5 bg-[#F0F0F0] rounded overflow-hidden">
                             <div className="absolute top-0 left-0 h-full bg-[#118DFF] opacity-25 rounded" style={{ width: cum + '%' }} />
                             <div className="absolute top-0 left-0 h-full bg-[#118DFF] rounded" style={{ width: share + '%', opacity: 0.7 }} />
-                            <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-semibold text-[#333] truncate max-w-[70%]">{r.favorecido}</span>
+                            <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-semibold text-[#333] truncate max-w-[70%]">{stripNumPrefix(r.favorecido)}</span>
                           </div>
                           <span className="text-[10px] text-[#118DFF] font-bold w-12 text-right shrink-0">{share.toFixed(1)}%</span>
                           <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color: c }}>{execPct.toFixed(0)}%</span>
@@ -2584,7 +2585,7 @@ export default function App() {
                             <td className="px-3 py-2 max-w-xs">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[10px]" title="Porte">{porte}</span>
-                                <span className="text-[#333] text-[12px] truncate" title={row.favorecido}>{row.favorecido}</span>
+                                <span className="text-[#333] text-[12px] truncate" title={stripNumPrefix(row.favorecido)}>{stripNumPrefix(row.favorecido)}</span>
                               </div>
                             </td>
                             <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-[12px]">{fmt(row.empenhado, 'currency')}</td>
@@ -2679,12 +2680,14 @@ export default function App() {
                               }
                               const s = String(v ?? '');
                               const empty = !s || s === 'null' || s === 'undefined';
+                              const isCodeName = (col.key as string).startsWith('codigo_nome_');
+                              const display = isCodeName ? stripNumPrefix(s) : s;
                               return <td key={col.key} className="px-2.5 py-2 border-r border-[#F0F0F0]"
-                                style={{ maxWidth: col.w, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s}>
+                                style={{ maxWidth: col.w, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={display}>
                                 {empty ? <span className="text-[#DDD]"> -</span>
-                                  : col.key === 'drs' ? <span className="font-semibold text-[#118DFF]">{s}</span>
-                                  : col.key === 'municipio' ? <span className="font-medium text-[#333]">{s}</span>
-                                  : <span className="text-[#555]">{s}</span>}
+                                  : col.key === 'drs' ? <span className="font-semibold text-[#118DFF]">{display}</span>
+                                  : col.key === 'municipio' ? <span className="font-medium text-[#333]">{display}</span>
+                                  : <span className="text-[#555]">{display}</span>}
                               </td>;
                             })}
                           </tr>
