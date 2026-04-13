@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon, Menu,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -1413,6 +1413,9 @@ export default function App() {
   const [error, setError]                 = useState<string|null>(null);
   const [viewMissing, setViewMissing]     = useState(false);
   const [uploadOpen, setUploadOpen]       = useState(false);
+  const [pwdGateOpen, setPwdGateOpen]     = useState(false);
+  const [pwdInput, setPwdInput]           = useState('');
+  const [pwdError, setPwdError]           = useState(false);
   const [menuOpen, setMenuOpen]           = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const cacheRef = useRef<Map<string, CachedData>>(new Map());
@@ -1663,7 +1666,7 @@ export default function App() {
                       Atualizar dados
                     </button>
                     <div className="border-t border-[#333]" />
-                    <button onClick={() => { setUploadOpen(true); setMenuOpen(false); }}
+                    <button onClick={() => { setPwdInput(''); setPwdError(false); setPwdGateOpen(true); setMenuOpen(false); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#118DFF] hover:bg-[#333] transition">
                       <Upload className="w-3.5 h-3.5 shrink-0" />
                       Importar planilha
@@ -2724,6 +2727,36 @@ export default function App() {
       )}
 
       {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} />}
+
+      {/* Password gate modal */}
+      {pwdGateOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) { setPwdGateOpen(false); setPwdInput(''); setPwdError(false); } }}>
+          <div className="bg-white rounded-xl shadow-2xl w-80 p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-[#118DFF] shrink-0" />
+              <p className="font-bold text-[#333] text-sm">Acesso restrito</p>
+            </div>
+            <p className="text-[11px] text-[#999] -mt-2">Informe a senha para importar planilha.</p>
+            <form onSubmit={e => { e.preventDefault(); if (pwdInput === 'cgof@#$2026') { setPwdGateOpen(false); setPwdInput(''); setPwdError(false); setUploadOpen(true); } else { setPwdError(true); setPwdInput(''); } }}>
+              <input
+                autoFocus
+                type="password"
+                placeholder="Senha"
+                value={pwdInput}
+                onChange={ev => { setPwdInput(ev.target.value); setPwdError(false); }}
+                className={cn('w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118DFF] transition', pwdError ? 'border-red-400 bg-red-50' : 'border-[#D0D0D0]')}
+              />
+              {pwdError && <p className="text-[11px] text-red-500 mt-1">Senha incorreta. Tente novamente.</p>}
+              <div className="flex gap-2 mt-4">
+                <button type="button" onClick={() => { setPwdGateOpen(false); setPwdInput(''); setPwdError(false); }}
+                  className="flex-1 px-3 py-2 text-[12px] font-semibold border border-[#D0D0D0] rounded-lg hover:bg-[#F0F0F0] transition">Cancelar</button>
+                <button type="submit"
+                  className="flex-1 px-3 py-2 text-[12px] font-semibold bg-[#118DFF] text-white rounded-lg hover:bg-[#0070d8] transition">Entrar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
