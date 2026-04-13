@@ -50,6 +50,9 @@ function shortLabel(v: string, max = 20): string {
   const s = String(v ?? '');
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
+function stripNumPrefix(s: string): string {
+  return String(s ?? '').replace(/^\d+[\s./]*[-–:]\s*/, '').trim();
+}
 
 // --- Power BI Color Palette ---------------------------------------------------
 const CHART_COLORS = [
@@ -248,7 +251,7 @@ const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: 
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-[#E5E5E5] shadow-lg rounded-lg px-3 py-2 text-xs min-w-[150px] max-w-xs">
-      {label && <p className="font-semibold text-[#333] mb-1 text-[11px] border-b border-[#F0F0F0] pb-1 truncate">{label}</p>}
+      {label && <p className="font-semibold text-[#333] mb-1 text-[11px] border-b border-[#F0F0F0] pb-1 truncate">{stripNumPrefix(String(label))}</p>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-3 mt-0.5">
           <span className="flex items-center gap-1.5 text-[#666]">
@@ -360,11 +363,47 @@ function HBarChart({ data, xKey, labelKey, height = 300, colorOffset = 0 }: {
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
           <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey={labelKey} width={140} axisLine={false} tickLine={false}
-            tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(String(v), 22)} />
+            tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 22)} />
           <Tooltip content={<ChartTooltip />} />
           <Bar dataKey={xKey} name="Empenhado" radius={[0, 4, 4, 0]} maxBarSize={14}>
             {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + colorOffset) % CHART_COLORS.length]} />)}
           </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function GroupedBarChart({ data, categoryKey, series, height = 320, angleLabels = false }: {
+  data: Record<string, unknown>[];
+  categoryKey: string;
+  series: { key: string; name: string; color: string }[];
+  height?: number;
+  angleLabels?: boolean;
+}) {
+  if (!data?.length) return <div className="flex items-center justify-center h-24 text-[#CCC]"><Database className="w-6 h-6" /></div>;
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: angleLabels ? 72 : 28 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
+          <XAxis
+            dataKey={categoryKey}
+            tick={{ fontSize: 10, fill: '#555' }}
+            tickFormatter={v => shortLabel(stripNumPrefix(String(v)), angleLabels ? 16 : 24)}
+            angle={angleLabels ? -35 : 0}
+            textAnchor={angleLabels ? 'end' : 'middle'}
+            interval={0}
+            axisLine={false}
+            tickLine={false}
+            height={angleLabels ? 70 : 30}
+          />
+          <YAxis tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 12 }} />
+          {series.map(s => (
+            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={36} />
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -1818,21 +1857,16 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <BarChart data={data.porGrupo.slice(0,10)} layout="vertical" margin={{ left: 0, right: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
-                        <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="grupo_despesa" width={150} axisLine={false} tickLine={false}
-                          tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(v, 24)} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
-                        <Bar dataKey="empenhado" name="Empenhado" fill="#118DFF" radius={[0,3,3,0]} maxBarSize={9} />
-                        <Bar dataKey="liquidado" name="Liquidado" fill="#1AAB40" radius={[0,3,3,0]} maxBarSize={9} />
-                        <Bar dataKey="pago_total" name="Pago Total" fill="#E66C37" radius={[0,3,3,0]} maxBarSize={9} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <GroupedBarChart
+                    data={data.porGrupo.slice(0,10) as unknown as Record<string,unknown>[]}
+                    categoryKey="grupo_despesa"
+                    series={[
+                      { key: 'empenhado', name: 'Empenhado',  color: '#118DFF' },
+                      { key: 'liquidado', name: 'Liquidado',  color: '#1AAB40' },
+                      { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
+                    ]}
+                    height={288}
+                  />
                 </Card>
                 <Card title="Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
                   <HBarChart data={data.porFonte as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="fonte_recurso" height={288} colorOffset={5} />
@@ -2015,21 +2049,17 @@ export default function App() {
                 <HBarChart data={data.porElemento as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="elemento" height={360} colorOffset={2} />
               </Card>
               <Card title="Unidade Orçamentária (UO)  - Emp/Liq/Pago" icon={<Building2 className="w-4 h-4" />}>
-                <div className="h-[360px]">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <BarChart data={data.porUo.slice(0,12)} layout="vertical" margin={{ left: 0, right: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
-                      <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="uo" width={148} axisLine={false} tickLine={false}
-                        tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(v, 24)} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 10 }} />
-                      <Bar dataKey="empenhado" name="Empenhado" fill="#118DFF" radius={[0,3,3,0]} maxBarSize={9} />
-                      <Bar dataKey="liquidado" name="Liquidado" fill="#1AAB40" radius={[0,3,3,0]} maxBarSize={9} />
-                      <Bar dataKey="pago_total" name="Pago Total" fill="#E66C37" radius={[0,3,3,0]} maxBarSize={9} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <GroupedBarChart
+                  data={data.porUo.slice(0,12) as unknown as Record<string,unknown>[]}
+                  categoryKey="uo"
+                  series={[
+                    { key: 'empenhado', name: 'Empenhado',  color: '#118DFF' },
+                    { key: 'liquidado', name: 'Liquidado',  color: '#1AAB40' },
+                    { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
+                  ]}
+                  height={360}
+                  angleLabels
+                />
               </Card>
             </div>
 
@@ -2055,7 +2085,7 @@ export default function App() {
                         return (
                           <div key={i} className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CHART_COLORS[(i+4) % CHART_COLORS.length] }} />
-                            <span className="text-[11px] text-[#555] flex-1 truncate">{g.tipo_despesa}</span>
+                            <span className="text-[11px] text-[#555] flex-1 truncate">{stripNumPrefix(g.tipo_despesa)}</span>
                             <span className="text-[10px] font-bold text-[#333]">{pct.toFixed(0)}%</span>
                           </div>
                         );

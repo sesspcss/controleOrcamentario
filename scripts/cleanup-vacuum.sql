@@ -1,0 +1,23 @@
+-- ================================================================
+-- VACUUM FULL — Execute cada linha INDIVIDUALMENTE no SQL Editor
+--
+-- MOTIVO: VACUUM não pode rodar dentro de transação (erro 25001).
+-- O Supabase SQL Editor envolve múltiplos comandos em transação,
+-- então cada VACUUM deve ser colado e executado SEPARADAMENTE.
+--
+-- SEQUÊNCIA:
+--   1. Cole a linha abaixo e clique Run (aguarde 2-5 min):
+--        VACUUM FULL public.lc131_despesas;
+--
+--   2. Cole e execute:
+--        VACUUM FULL public.bd_ref;
+--
+--   3. Cole e execute:
+--        VACUUM FULL public.tab_municipios;
+--
+-- EFEITO: Reescreve cada tabela do zero, eliminando dead tuples
+-- acumulados pelos delete+reinsert. Maior ganho de espaço (~50-150 MB).
+-- Nenhum dado é perdido.
+-- ================================================================
+
+VACUUM FULL public.lc131_despesas;
