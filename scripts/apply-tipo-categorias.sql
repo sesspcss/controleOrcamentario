@@ -20,9 +20,9 @@ AS $$
 
     -- ── INTRAORÇAMENTÁRIA ─────────────────────────────────────────────
     WHEN p_descricao ILIKE '%INTRAORCAMENTARIA%BATA CINZA%'
-      OR p_descricao ILIKE '%BATA CINZA%PPP%'                 THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
-    WHEN p_descricao ILIKE '%INTRAORCAMENTARIA%'
-      OR p_descricao ILIKE '%INTRAORÇAMENT%'                   THEN 'INTRAORÇAMENTÁRIA'
+      OR p_descricao ILIKE '%BATA CINZA%PPP%'
+      OR p_descricao = 'INTRA'                                 THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
+    WHEN p_descricao ILIKE '%SECRETARIA DESENVOLVIMENTO SOCIAL%' THEN 'INTRAORÇAMENTÁRIA'
 
     -- ── FUNDO A FUNDO (variantes específicas primeiro) ────────────────
     WHEN p_descricao ILIKE '%FUNDO A FUNDO%DEMANDAS PARLAMENTARES%'
@@ -32,7 +32,8 @@ AS $$
     WHEN p_descricao ILIKE '%FUNDO A FUNDO PAB%'               THEN 'FUNDO A FUNDO PAB'
     WHEN p_descricao ILIKE '%RESIDENCIA TERAPEUTICA%'
       OR p_descricao ILIKE '%RESIDÊNCIA TERAPÊUTICA%'
-      OR p_descricao ILIKE '%FUNDO A FUNDO RESIDENCIA%'        THEN 'RESIDÊNCIA TERAPÊUTICA'
+      OR p_descricao ILIKE '%FUNDO A FUNDO RESIDENCIA%'
+      OR p_descricao ILIKE '%RESOLUCAO SS N. 31%'               THEN 'RESIDÊNCIA TERAPÊUTICA'
     WHEN p_descricao ILIKE '%FUNDO A FUNDO%'
       OR p_descricao ILIKE '%TRANSFERENCIAS FUNDO A FUNDO%'
       OR p_descricao ILIKE '%REPASSE FUNDO A FUNDO%'           THEN 'FUNDO A FUNDO'
@@ -105,7 +106,9 @@ AS $$
     -- ── EMENDA PARLAMENTAR ────────────────────────────────────────────
     WHEN p_descricao ILIKE '%EMENDA PARLAMENTAR%'
       OR p_descricao ILIKE '%EMENDAS PARLAMENTARES%'
-      OR p_descricao ILIKE '%EMENDA PARL%'                      THEN 'EMENDA'
+      OR p_descricao ILIKE '%EMENDA PARL%'
+      OR p_descricao ILIKE '%SAUDE HUMANA CUSTEIO%'
+      OR p_descricao ILIKE '%RESOLUCAO SS 50%'                  THEN 'EMENDA'
 
     -- ── PPP ───────────────────────────────────────────────────────────
     WHEN p_descricao ILIKE '%PPP%'                              THEN 'PPP'
@@ -116,14 +119,20 @@ AS $$
       OR p_descricao ILIKE '%GESTAO PLENA%'                     THEN 'GESTÃO ESTADUAL'
 
     -- ── CIRURGIAS ELETIVAS ────────────────────────────────────────────
-    WHEN p_descricao ILIKE '%CIRURGIA ELETIVA%'                 THEN 'CIRURGIAS ELETIVAS'
+    WHEN p_descricao ILIKE '%CIRURGIA ELETIVA%'
+      OR p_descricao ILIKE '%CORUJAO DA SAUDE%'                 THEN 'CIRURGIAS ELETIVAS'
 
     -- ── PISO ENFERMAGEM ───────────────────────────────────────────────
     WHEN p_descricao ILIKE '%PISO ENFERM%'
-      OR p_descricao ILIKE '%PISO DA ENFERM%'                   THEN 'PISO ENFERMAGEM'
+      OR p_descricao ILIKE '%PISO DA ENFERM%'
+      OR p_descricao ILIKE '%RESOLUCAO SS 124%'
+      OR p_descricao ILIKE '%RESOLUCAO SS N. 124%'              THEN 'PISO ENFERMAGEM'
 
     -- ── CASAS DE APOIO ────────────────────────────────────────────────
     WHEN p_descricao ILIKE '%CASAS DE APOIO%'                   THEN 'CASAS DE APOIO'
+
+    -- ── AEDES AEGYPTI ────────────────────────────────────────────────
+    WHEN p_descricao ILIKE '%AEDES AEGYPTI%'                   THEN 'AEDES AEGYPTI'
 
     -- ── SISTEMA PRISIONAL ─────────────────────────────────────────────
     WHEN p_descricao ILIKE '%SISTEMA PRISIONAL%'                THEN 'SISTEMA PRISIONAL'
@@ -133,7 +142,9 @@ AS $$
       AND p_descricao ILIKE '%BAURU%'                           THEN 'AÇÃO CIVIL - BAURU'
 
     -- ── DÍVIDA ────────────────────────────────────────────────────────
-    WHEN p_descricao ILIKE '%DIVIDA%'                           THEN 'DIVIDA EXTERNA E INTERNA'
+    WHEN p_descricao ILIKE '%DIVIDA%'
+      OR p_descricao ILIKE '%INTRAORCAMENTARIA%'
+      OR p_descricao ILIKE '%INTRAORÇAMENT%'                    THEN 'DIVIDA EXTERNA E INTERNA'
 
     -- ── PROGRAMAS DE SAÚDE ────────────────────────────────────────────
     WHEN p_descricao ILIKE '%DOSE CERTA%'                       THEN 'DOSE CERTA'
@@ -145,7 +156,9 @@ AS $$
     WHEN p_descricao ILIKE '%SORRIA SP%'                        THEN 'SORRIA SP'
     WHEN p_descricao ILIKE '%IGM SUS PAULISTA%'                 THEN 'IGM SUS PAULISTA'
     WHEN p_descricao ILIKE '%TABELA SUS%'
-      OR p_descricao ILIKE '%TABELASUS%'                        THEN 'TABELA SUS PAULISTA'
+      OR p_descricao ILIKE '%TABELASUS%'
+      OR p_descricao ILIKE '%RESOLUCAO SS 164%'
+      OR p_descricao ILIKE '%RESOLUCAO SS N. 198%'              THEN 'TABELA SUS PAULISTA'
     WHEN p_descricao ILIKE '%REPELENTE%'                        THEN 'REPELENTE'
     WHEN (p_descricao ILIKE '% TEA'
        OR p_descricao ILIKE '% TEA %'
