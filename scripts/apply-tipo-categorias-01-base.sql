@@ -5,6 +5,7 @@ DROP TABLE    IF EXISTS public.tipo_despesa_ref CASCADE;
 DROP FUNCTION IF EXISTS public.normalize_tipo_despesa_text(text);
 DROP FUNCTION IF EXISTS public.canonicalize_tipo_despesa(text);
 DROP FUNCTION IF EXISTS public.refresh_tipo_despesa_classif_batch(integer);
+DROP TRIGGER  IF EXISTS trg_set_tipo_despesa_classif ON public.lc131_despesas;
 DROP FUNCTION IF EXISTS public.set_tipo_despesa_classif();
 
 CREATE OR REPLACE FUNCTION public.classify_tipo_despesa(
