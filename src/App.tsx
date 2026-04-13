@@ -191,7 +191,7 @@ const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: s
 // -- Direct REST query helpers (bypass slow lc131_detail RPC) --
 const FILTER_TO_COL: Record<string, string> = {
   p_drs: 'drs', p_regiao_ad: 'regiao_ad', p_rras: 'rras', p_regiao_sa: 'regiao_sa',
-  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa',
+  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'descricao_processo',
   p_rotulo: 'rotulo', p_uo: 'codigo_nome_uo', p_elemento: 'codigo_nome_elemento',
   p_favorecido: 'codigo_nome_favorecido',
 };
