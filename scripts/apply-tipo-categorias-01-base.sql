@@ -160,7 +160,10 @@ $$;
 GRANT EXECUTE ON FUNCTION public.classify_tipo_despesa(text, text) TO anon, authenticated;
 
 ALTER TABLE public.lc131_despesas
-  ADD COLUMN IF NOT EXISTS tipo_despesa_classif text;
+  DROP COLUMN IF EXISTS tipo_despesa_classif;
+
+ALTER TABLE public.lc131_despesas
+  ADD COLUMN tipo_despesa_classif text;
 
 CREATE OR REPLACE FUNCTION public.set_tipo_despesa_classif()
 RETURNS trigger
