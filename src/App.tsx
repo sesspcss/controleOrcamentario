@@ -51,7 +51,7 @@ function shortLabel(v: string, max = 20): string {
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 function stripNumPrefix(s: string): string {
-  return String(s ?? '').replace(/^[A-Za-z]{0,2}\d+[\s./]*[-–:]\s*/, '').trim();
+  return String(s ?? '').replace(/^[A-Za-z]{0,2}\d+[\s./]*[-–:]\s*/, '').trim().toUpperCase();
 }
 
 // --- Power BI Color Palette ---------------------------------------------------
