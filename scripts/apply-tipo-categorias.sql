@@ -1,25 +1,101 @@
 -- ================================================================
 -- PATCH: Tipo de Despesa com classificação por descricao_processo
--- Cria: classify_tipo_despesa()
+-- Cria: tipo_despesa_ref, normalize_tipo_despesa_text(),
+--       canonicalize_tipo_despesa(), classify_tipo_despesa()
 -- Atualiza: lc131_dashboard, lc131_distincts, lc131_detail
--- Rodar no Supabase SQL Editor (uma vez)
+-- Passo 1: rodar este arquivo no Supabase SQL Editor
+-- Passo 2: executar `npx tsx scripts/import-tipo-despesa.ts`
 -- ================================================================
 SET statement_timeout = 0;
 
 -- ───────────────────────────────────────────────────────────────
--- 0. Função auxiliar de classificação
+-- 0. Normalização e tabela de referência
+-- ───────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.normalize_tipo_despesa_text(p_text text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = public
+AS $$
+  SELECT NULLIF(
+    TRIM(
+      regexp_replace(
+        translate(
+          UPPER(COALESCE(p_text, '')),
+          'ÁÀÃÂÄÉÈẼÊËÍÌĨÎÏÓÒÕÔÖÚÙŨÛÜÇÑÝáàãâäéèẽêëíìĩîïóòõôöúùũûüçñýÿ',
+          'AAAAAEEEEEIIIIIOOOOOUUUUUCNYAAAAAEEEEEIIIIIOOOOOUUUUUCNYY'
+        ),
+        '\s+',
+        ' ',
+        'g'
+      )
+    ),
+    ''
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION public.canonicalize_tipo_despesa(p_tipo text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = public
+AS $$
+  SELECT CASE public.normalize_tipo_despesa_text(p_tipo)
+    WHEN 'EMENDAS' THEN 'EMENDA'
+    WHEN 'GESTAO ESTADUAL' THEN 'GESTÃO ESTADUAL'
+    WHEN 'TABELASUS PAULISTA' THEN 'TABELA SUS PAULISTA'
+    WHEN 'PISO DA ENFERMAGEM' THEN 'PISO ENFERMAGEM'
+    WHEN 'RLM FERNANDOPOLIS' THEN 'RLM FERNANDÓPOLIS'
+    WHEN 'RLM PARIQUERA ACU' THEN 'RLM PARIQUERA ACÚ'
+    ELSE NULLIF(TRIM(p_tipo), '')
+  END
+$$;
+
+CREATE TABLE IF NOT EXISTS public.tipo_despesa_ref (
+  descricao_processo_norm    text PRIMARY KEY,
+  descricao_processo_exemplo text NOT NULL,
+  tipo_despesa               text NOT NULL,
+  ocorrencias                integer NOT NULL DEFAULT 1,
+  atualizado_em              timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tipo_despesa_ref_tipo
+  ON public.tipo_despesa_ref (tipo_despesa);
+
+COMMENT ON TABLE public.tipo_despesa_ref IS
+  'Mapa normalizado descricao_processo -> tipo_despesa importado da planilha TIPO_DESPESA.xlsx';
+
+
+-- ───────────────────────────────────────────────────────────────
+-- 1. Função auxiliar de classificação
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.classify_tipo_despesa(
   p_descricao text,
   p_tipo      text
 ) RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE
+LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT CASE
+DECLARE
+  v_desc_norm text;
+  v_tipo_ref  text;
+BEGIN
+  v_desc_norm := public.normalize_tipo_despesa_text(p_descricao);
+
+  IF v_desc_norm IS NOT NULL THEN
+    SELECT ref.tipo_despesa
+      INTO v_tipo_ref
+    FROM public.tipo_despesa_ref AS ref
+    WHERE ref.descricao_processo_norm = v_desc_norm;
+
+    IF v_tipo_ref IS NOT NULL THEN
+      RETURN v_tipo_ref;
+    END IF;
+  END IF;
+
+  RETURN public.canonicalize_tipo_despesa(
+    CASE
 
     -- ── INTRAORÇAMENTÁRIA - BATA CINZA PPP ───────────────────────────
-    WHEN p_descricao = 'INTRA'
+    WHEN v_desc_norm = 'INTRA'
       OR p_descricao ILIKE '%BATA CINZA%'                      THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
 
     -- ── INTRAORÇAMENTÁRIA ────────────────────────────────────────────
@@ -29,7 +105,7 @@ AS $$
       OR p_descricao ILIKE '%TRANSFERENCIA INTRAORCAMENTARIA%' THEN 'INTRAORÇAMENTÁRIA'
 
     -- ── DÍVIDA EXTERNA E INTERNA (exact match: sem espaço) ───────────
-    WHEN p_descricao = 'INTRAORCAMENTARIA'                      THEN 'DIVIDA EXTERNA E INTERNA'
+    WHEN v_desc_norm = 'INTRAORCAMENTARIA'                    THEN 'DIVIDA EXTERNA E INTERNA'
 
     -- ── FUNDO A FUNDO PAB ─────────────────────────────────────────────
     WHEN p_descricao ILIKE '%FUNDO A FUNDO PAB%'               THEN 'FUNDO A FUNDO PAB'
@@ -202,12 +278,17 @@ AS $$
       OR p_descricao ILIKE '%ASSOCIACAO DE AMIGOS DO AUTISTA%' THEN 'TEA'
 
     -- ── FALLBACK: usa tipo_despesa enriquecido do bd_ref ──────────────
-    ELSE COALESCE(NULLIF(TRIM(p_tipo), ''), NULL)
+    ELSE p_tipo
 
-  END
+    END
+  );
+END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.classify_tipo_despesa(text, text) TO anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.normalize_tipo_despesa_text(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.canonicalize_tipo_despesa(text) TO anon, authenticated;
 
 
 -- ───────────────────────────────────────────────────────────────

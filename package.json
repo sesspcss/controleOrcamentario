@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "import-lc131": "tsx scripts/import-lc131.ts"
+    "import-lc131": "tsx scripts/import-lc131.ts",
+    "import-tipo-despesa": "tsx scripts/import-tipo-despesa.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
