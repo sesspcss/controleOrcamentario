@@ -66,6 +66,17 @@ const GRUPO_COLORS: Record<string, string> = {
 const FONTE_COLORS: Record<string, string> = {
   Tesouro: '#118DFF', Federal: '#12239E', 'Demais Fontes': '#E66C37',
 };
+// Series padrão para gráficos com 3 grandezas (emp + liq + pago)
+const S3 = [
+  { key: 'empenhado',  name: 'Empenhado',  color: '#118DFF' },
+  { key: 'liquidado',  name: 'Liquidado',  color: '#1AAB40' },
+  { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
+];
+// Series padrão para gráficos com 2 grandezas (emp + pago)
+const S2 = [
+  { key: 'empenhado',  name: 'Empenhado',  color: '#118DFF' },
+  { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
+];
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
@@ -403,6 +414,32 @@ function GroupedBarChart({ data, categoryKey, series, height = 320, angleLabels 
           <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 12 }} />
           {series.map(s => (
             <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={36} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function HGroupedBarChart({ data, yKey, series, height = 300 }: {
+  data: Record<string, unknown>[];
+  yKey: string;
+  series: { key: string; name: string; color: string }[];
+  height?: number;
+}) {
+  if (!data?.length) return <div className="flex items-center justify-center h-24 text-[#CCC]"><Database className="w-6 h-6" /></div>;
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 10, top: 4, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
+          <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey={yKey} width={125} axisLine={false} tickLine={false}
+            tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 18)} />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 8 }} />
+          {series.map(s => (
+            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[0, 3, 3, 0]} maxBarSize={10} />
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -1832,7 +1869,7 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 10 DRS  - Empenhado" icon={<MapPin className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
-                  <HBarChart data={data.porDrs.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="drs" height={320} />
+                  <HGroupedBarChart data={data.porDrs.slice(0,10) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={320} />
                 </Card>
                 <Card title="Top 10 Municípios - Empenhado" icon={<Building2 className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#1AAB40] bg-green-50 px-1.5 py-0.5 rounded">{data.porMunic.length}</span>}>
@@ -1869,7 +1906,7 @@ export default function App() {
                   />
                 </Card>
                 <Card title="Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
-                  <HBarChart data={data.porFonte as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="fonte_recurso" height={288} colorOffset={5} />
+                  <HGroupedBarChart data={data.porFonte as unknown as Record<string,unknown>[]} yKey="fonte_recurso" series={S2} height={288} />
                 </Card>
               </div>
             )}
@@ -1878,10 +1915,10 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 10 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}>
-                  <HBarChart data={data.porElemento.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="elemento" height={288} colorOffset={2} />
+                  <HGroupedBarChart data={data.porElemento.slice(0,10) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={288} />
                 </Card>
                 <Card title="Top 10 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
-                  <HBarChart data={data.porUo.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="uo" height={288} colorOffset={4} />
+                  <HGroupedBarChart data={data.porUo.slice(0,10) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={288} />
                 </Card>
               </div>
             )}
@@ -1890,10 +1927,10 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}>
-                  <HBarChart data={data.porRras as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rras" height={288} colorOffset={1} />
+                  <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={288} />
                 </Card>
                 <Card title="Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}>
-                  <HBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_ad" height={288} colorOffset={3} />
+                  <HGroupedBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={288} />
                 </Card>
               </div>
             )}
@@ -1902,10 +1939,10 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}>
-                  <HBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_sa" height={288} colorOffset={6} />
+                  <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={288} />
                 </Card>
                 <Card title="Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}>
-                  <HBarChart data={data.porTipoDespesa as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="tipo_despesa" height={288} colorOffset={0} />
+                  <HGroupedBarChart data={data.porTipoDespesa as unknown as Record<string,unknown>[]} yKey="tipo_despesa" series={S3} height={288} />
                 </Card>
               </div>
             )}
@@ -1914,10 +1951,10 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 10 Rótulos  - Empenhado" icon={<FileText className="w-4 h-4" />}>
-                  <HBarChart data={data.porRotulo.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rotulo" height={288} colorOffset={7} />
+                  <HGroupedBarChart data={data.porRotulo.slice(0,10) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={288} />
                 </Card>
                 <Card title="Top 10 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
-                  <HBarChart data={data.porUg.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="ug" height={288} colorOffset={8} />
+                  <HGroupedBarChart data={data.porUg.slice(0,10) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={288} />
                 </Card>
               </div>
             )}
@@ -1926,10 +1963,10 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 10 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
-                  <HBarChart data={data.porFavorecido.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="favorecido" height={288} colorOffset={9} />
+                  <HGroupedBarChart data={data.porFavorecido.slice(0,10) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={288} />
                 </Card>
                 <Card title="Top 10 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
-                  <HBarChart data={data.porProjeto.slice(0,10) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="projeto" height={288} colorOffset={5} />
+                  <HGroupedBarChart data={data.porProjeto.slice(0,10) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={288} />
                 </Card>
               </div>
             )}
@@ -1942,11 +1979,11 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Card title="Empenhado por DRS" icon={<MapPin className="w-4 h-4" />}
                 badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
-                <HBarChart data={data.porDrs as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="drs" height={420} />
+                <HGroupedBarChart data={data.porDrs as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={420} />
               </Card>
               <Card title="Empenhado por Região Administrativa" icon={<Globe className="w-4 h-4" />}
                 badge={<span className="text-[10px] font-bold text-[#6B007B] bg-purple-50 px-1.5 py-0.5 rounded">{data.porRegiaoAd.length}</span>}>
-                <HBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_ad" height={420} colorOffset={3} />
+                <HGroupedBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={420} />
               </Card>
             </div>
 
@@ -1954,13 +1991,13 @@ export default function App() {
               {data.porRras.length > 0 && (
                 <Card title="Empenhado por RRAS" icon={<Layers className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length}</span>}>
-                  <HBarChart data={data.porRras as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rras" height={380} colorOffset={6} />
+                  <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={380} />
                 </Card>
               )}
               {data.porRegiaoSa.length > 0 && (
                 <Card title="Empenhado por Região de Saúde" icon={<MapPin className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}>
-                  <HBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="regiao_sa" height={380} colorOffset={9} />
+                  <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={380} />
                 </Card>
               )}
             </div>
@@ -2046,7 +2083,7 @@ export default function App() {
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Card title="Elemento de Despesa  - Top 12" icon={<Layers className="w-4 h-4" />}>
-                <HBarChart data={data.porElemento as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="elemento" height={360} colorOffset={2} />
+                <HGroupedBarChart data={data.porElemento as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={360} />
               </Card>
               <Card title="Unidade Orçamentária (UO)  - Emp/Liq/Pago" icon={<Building2 className="w-4 h-4" />}>
                 <GroupedBarChart
@@ -2095,16 +2132,16 @@ export default function App() {
                 ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
               </Card>
               <Card title="Rótulo LC 131" icon={<BarChart3 className="w-4 h-4" />}>
-                <HBarChart data={data.porRotulo as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="rotulo" height={280} colorOffset={8} />
+                <HGroupedBarChart data={data.porRotulo as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={280} />
               </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Card title="Top 15 Projetos/Atividades" icon={<Briefcase className="w-4 h-4" />}>
-                <HBarChart data={data.porProjeto.slice(0,15) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="projeto" height={420} colorOffset={1} />
+                <HGroupedBarChart data={data.porProjeto.slice(0,15) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={420} />
               </Card>
               <Card title="Top 15 Unidades Gestoras (UG)" icon={<Building2 className="w-4 h-4" />}>
-                <HBarChart data={data.porUg.slice(0,15) as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="ug" height={420} colorOffset={7} />
+                <HGroupedBarChart data={data.porUg.slice(0,15) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={420} />
               </Card>
             </div>
           </>
@@ -2115,7 +2152,7 @@ export default function App() {
           <>
             <Card title="Top 20 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
               badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">Top {data.porFavorecido.length}</span>}>
-              <HBarChart data={data.porFavorecido as unknown as Record<string,unknown>[]} xKey="empenhado" labelKey="favorecido" height={520} colorOffset={2} />
+              <HGroupedBarChart data={data.porFavorecido as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={520} />
             </Card>
 
             {/* Favorecido ranking table */}
