@@ -1,67 +1,17 @@
 -- ================================================================
--- PATCH: Tipo de Despesa com classificação por descricao_processo
--- Cria: tipo_despesa_ref, normalize_tipo_despesa_text(),
---       canonicalize_tipo_despesa(), classify_tipo_despesa()
--- Atualiza: lc131_dashboard, lc131_distincts, lc131_detail
--- Passo 1: rodar este arquivo no Supabase SQL Editor
--- Passo 2: executar `npx tsx scripts/import-tipo-despesa.ts`
+-- PATCH v3: Performance + classificação tipo_despesa
+-- - classify_tipo_despesa: IMMUTABLE SQL (sem lookup de tabela)
+-- - Coluna tipo_despesa_classif: GENERATED STORED + índice
+-- - RPCs: zero chamadas de função em tempo real
+-- - Remove tipo_despesa_ref (reduz banco)
+-- Rodar no Supabase SQL Editor (~1-3 min na 1ª vez)
 -- ================================================================
 SET statement_timeout = 0;
 
--- ───────────────────────────────────────────────────────────────
--- 0. Normalização e tabela de referência
--- ───────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.normalize_tipo_despesa_text(p_text text)
-RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE
-SET search_path = public
-AS $$
-  SELECT NULLIF(
-    TRIM(
-      regexp_replace(
-        translate(
-          UPPER(COALESCE(p_text, '')),
-          'ÁÀÃÂÄÉÈẼÊËÍÌĨÎÏÓÒÕÔÖÚÙŨÛÜÇÑÝáàãâäéèẽêëíìĩîïóòõôöúùũûüçñýÿ',
-          'AAAAAEEEEEIIIIIOOOOOUUUUUCNYAAAAAEEEEEIIIIIOOOOOUUUUUCNYY'
-        ),
-        '\s+',
-        ' ',
-        'g'
-      )
-    ),
-    ''
-  )
-$$;
-
-CREATE OR REPLACE FUNCTION public.canonicalize_tipo_despesa(p_tipo text)
-RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE
-SET search_path = public
-AS $$
-  SELECT CASE public.normalize_tipo_despesa_text(p_tipo)
-    WHEN 'EMENDAS' THEN 'EMENDA'
-    WHEN 'GESTAO ESTADUAL' THEN 'GESTÃO ESTADUAL'
-    WHEN 'TABELASUS PAULISTA' THEN 'TABELA SUS PAULISTA'
-    WHEN 'PISO DA ENFERMAGEM' THEN 'PISO ENFERMAGEM'
-    WHEN 'RLM FERNANDOPOLIS' THEN 'RLM FERNANDÓPOLIS'
-    WHEN 'RLM PARIQUERA ACU' THEN 'RLM PARIQUERA ACÚ'
-    ELSE NULLIF(TRIM(p_tipo), '')
-  END
-$$;
-
-CREATE TABLE IF NOT EXISTS public.tipo_despesa_ref (
-  descricao_processo_norm    text PRIMARY KEY,
-  descricao_processo_exemplo text NOT NULL,
-  tipo_despesa               text NOT NULL,
-  ocorrencias                integer NOT NULL DEFAULT 1,
-  atualizado_em              timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_tipo_despesa_ref_tipo
-  ON public.tipo_despesa_ref (tipo_despesa);
-
-COMMENT ON TABLE public.tipo_despesa_ref IS
-  'Mapa normalizado descricao_processo -> tipo_despesa importado da planilha TIPO_DESPESA.xlsx';
+-- ── Limpar artefatos de versões anteriores ─────────────────────
+DROP TABLE    IF EXISTS public.tipo_despesa_ref CASCADE;
+DROP FUNCTION IF EXISTS public.normalize_tipo_despesa_text(text);
+DROP FUNCTION IF EXISTS public.canonicalize_tipo_despesa(text);
 
 
 -- ───────────────────────────────────────────────────────────────
@@ -71,32 +21,14 @@ CREATE OR REPLACE FUNCTION public.classify_tipo_despesa(
   p_descricao text,
   p_tipo      text
 ) RETURNS text
-LANGUAGE plpgsql STABLE SECURITY DEFINER
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public
-AS $$
-DECLARE
-  v_desc_norm text;
-  v_tipo_ref  text;
-BEGIN
-  v_desc_norm := public.normalize_tipo_despesa_text(p_descricao);
-
-  IF v_desc_norm IS NOT NULL THEN
-    SELECT ref.tipo_despesa
-      INTO v_tipo_ref
-    FROM public.tipo_despesa_ref AS ref
-    WHERE ref.descricao_processo_norm = v_desc_norm;
-
-    IF v_tipo_ref IS NOT NULL THEN
-      RETURN v_tipo_ref;
-    END IF;
-  END IF;
-
-  RETURN public.canonicalize_tipo_despesa(
-    CASE
+AS $
+SELECT CASE
 
     -- ── INTRAORÇAMENTÁRIA - BATA CINZA PPP ───────────────────────────
-    WHEN v_desc_norm = 'INTRA'
-      OR p_descricao ILIKE '%BATA CINZA%'                      THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
+  WHEN p_descricao ILIKE 'INTRA'
+    OR p_descricao ILIKE '%BATA CINZA%'                      THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
 
     -- ── INTRAORÇAMENTÁRIA ────────────────────────────────────────────
     WHEN p_descricao ILIKE '%TRANSFERENCIA INTRA ORCAMENTARIA%'
@@ -105,7 +37,8 @@ BEGIN
       OR p_descricao ILIKE '%TRANSFERENCIA INTRAORCAMENTARIA%' THEN 'INTRAORÇAMENTÁRIA'
 
     -- ── DÍVIDA EXTERNA E INTERNA (exact match: sem espaço) ───────────
-    WHEN v_desc_norm = 'INTRAORCAMENTARIA'                    THEN 'DIVIDA EXTERNA E INTERNA'
+  WHEN p_descricao ILIKE 'INTRAORCAMENTARIA'
+    OR p_descricao ILIKE 'INTRAORÇAMENTÁRIA'              THEN 'DIVIDA EXTERNA E INTERNA'
 
     -- ── FUNDO A FUNDO PAB ─────────────────────────────────────────────
     WHEN p_descricao ILIKE '%FUNDO A FUNDO PAB%'               THEN 'FUNDO A FUNDO PAB'
@@ -277,18 +210,26 @@ BEGIN
       OR p_descricao ILIKE '%ATENDIMENTO DE PACIENTES AUTISTA%'
       OR p_descricao ILIKE '%ASSOCIACAO DE AMIGOS DO AUTISTA%' THEN 'TEA'
 
-    -- ── FALLBACK: usa tipo_despesa enriquecido do bd_ref ──────────────
-    ELSE p_tipo
-
-    END
-  );
-END;
-$$;
+  -- ── FALLBACK: tipo_despesa de bd_ref ───────────────────────────────
+  ELSE p_tipo
+END
+$;
 
 GRANT EXECUTE ON FUNCTION public.classify_tipo_despesa(text, text) TO anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.normalize_tipo_despesa_text(text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.canonicalize_tipo_despesa(text) TO anon, authenticated;
+-- ───────────────────────────────────────────────────────────────
+-- 1. Coluna materializada – computa uma vez, filtra por índice
+--    (DROP + ADD recria GENERATED com a função atualizada)
+-- ───────────────────────────────────────────────────────────────
+ALTER TABLE public.lc131_despesas DROP COLUMN IF EXISTS tipo_despesa_classif;
+ALTER TABLE public.lc131_despesas
+  ADD COLUMN tipo_despesa_classif text
+  GENERATED ALWAYS AS (public.classify_tipo_despesa(descricao_processo, tipo_despesa)) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_lc131_tipo_despesa_classif
+  ON public.lc131_despesas (tipo_despesa_classif);
+
+ANALYZE public.lc131_despesas;
 
 
 -- ───────────────────────────────────────────────────────────────
@@ -325,7 +266,7 @@ BEGIN
       descricao_processo,
       codigo_nome_favorecido, codigo_nome_projeto_atividade,
       codigo_nome_ug,
-      classify_tipo_despesa(descricao_processo, tipo_despesa) AS tipo_classif,
+      tipo_despesa_classif,
       COALESCE(empenhado, 0) AS empenhado,
       COALESCE(liquidado, 0) AS liquidado,
       COALESCE(pago, 0)      AS pago,
@@ -357,7 +298,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR classify_tipo_despesa(descricao_processo, tipo_despesa) = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -477,10 +418,10 @@ BEGIN
     ),
     'por_tipo_despesa', (
       SELECT json_agg(r) FROM (
-        SELECT tipo_classif AS tipo_despesa,
+        SELECT tipo_despesa_classif AS tipo_despesa,
           SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
-        FROM base WHERE tipo_classif IS NOT NULL AND tipo_classif<>''
-        GROUP BY tipo_classif ORDER BY 2 DESC LIMIT 60
+        FROM base WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>''
+        GROUP BY tipo_despesa_classif ORDER BY 2 DESC LIMIT 60
       ) r
     ),
     'por_rotulo', (
@@ -529,9 +470,9 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
-
-
--- ───────────────────────────────────────────────────────────────
+  ELSE p_tipo
+END
+$$;
 -- 2. lc131_distincts
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.lc131_distincts(
@@ -560,7 +501,7 @@ BEGIN
            codigo_nome_grupo, rotulo,
            descricao_processo,
            tipo_despesa,
-           classify_tipo_despesa(descricao_processo, tipo_despesa) AS tipo_classif,
+           tipo_despesa_classif,
            codigo_nome_fonte_recurso, codigo_ug,
            codigo_nome_uo, codigo_nome_elemento,
            codigo_nome_favorecido
@@ -573,7 +514,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR classify_tipo_despesa(descricao_processo, tipo_despesa) = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -599,7 +540,7 @@ BEGIN
     'distinct_regiao_sa',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT regiao_sa                 AS d FROM filtered WHERE regiao_sa IS NOT NULL AND regiao_sa<>'') x),
     'distinct_municipio',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT municipio                 AS d FROM filtered WHERE municipio IS NOT NULL AND municipio<>'') x),
     'distinct_grupo',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_grupo         AS d FROM filtered WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo<>'') x),
-    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_classif              AS d FROM filtered WHERE tipo_classif IS NOT NULL AND tipo_classif<>'') x),
+    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa_classif      AS d FROM filtered WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>'') x),
     'distinct_rotulo',     (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rotulo                    AS d FROM filtered WHERE rotulo IS NOT NULL AND rotulo<>'') x),
     'distinct_fonte',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT
                               CASE
@@ -655,7 +596,6 @@ BEGIN
   WITH filtered AS (
     SELECT *,
            COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS _pt,
-           classify_tipo_despesa(descricao_processo, tipo_despesa) AS tipo_classif,
            CASE
              WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
              WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
@@ -683,7 +623,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR classify_tipo_despesa(descricao_processo, tipo_despesa) = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -714,7 +654,7 @@ BEGIN
           codigo_nome_fonte_recurso, fonte_recurso, fonte_simpl,
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
-          tipo_classif AS tipo_despesa, rotulo,
+          tipo_despesa_classif AS tipo_despesa, rotulo,
           unidade,
           codigo_nome_favorecido, codigo_favorecido,
           descricao_processo, numero_processo,
