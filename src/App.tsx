@@ -372,9 +372,9 @@ function HBarChart({ data, xKey, labelKey, height = 300, colorOffset = 0 }: {
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 2, bottom: 2 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
-          <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+          <XAxis type="number" tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey={labelKey} width={140} axisLine={false} tickLine={false}
-            tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 22)} />
+            tick={{ fontSize: 10, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 22)} />
           <Tooltip content={<ChartTooltip />} />
           <Bar dataKey={xKey} name="Empenhado" radius={[0, 4, 4, 0]} maxBarSize={14}>
             {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + colorOffset) % CHART_COLORS.length]} />)}
@@ -409,7 +409,7 @@ function GroupedBarChart({ data, categoryKey, series, height = 320, angleLabels 
             tickLine={false}
             height={angleLabels ? 70 : 30}
           />
-          <YAxis tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
           <Tooltip content={<ChartTooltip />} />
           <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 12 }} />
           {series.map(s => (
@@ -433,13 +433,13 @@ function HGroupedBarChart({ data, yKey, series, height = 300 }: {
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout="vertical" margin={{ left: 0, right: 10, top: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
-          <XAxis type="number" tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey={yKey} width={125} axisLine={false} tickLine={false}
-            tick={{ fontSize: 9, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 18)} />
+          <XAxis type="number" tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey={yKey} width={135} axisLine={false} tickLine={false}
+            tick={{ fontSize: 10, fill: '#555' }} tickFormatter={v => shortLabel(stripNumPrefix(String(v)), 20)} />
           <Tooltip content={<ChartTooltip />} />
           <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 8 }} />
           {series.map(s => (
-            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[0, 3, 3, 0]} maxBarSize={10} />
+            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[0, 3, 3, 0]} maxBarSize={16} />
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -1867,21 +1867,21 @@ export default function App() {
             {/* DRS + Municípios resumo */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 10 DRS  - Empenhado" icon={<MapPin className="w-4 h-4" />}
+                <Card title="Top 5 DRS  - Empenhado" icon={<MapPin className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
-                  <HGroupedBarChart data={data.porDrs.slice(0,10) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={320} />
+                  <HGroupedBarChart data={data.porDrs.slice(0,5) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={220} />
                 </Card>
-                <Card title="Top 10 Municípios - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                <Card title="Top 5 Municípios - Empenhado" icon={<Building2 className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#1AAB40] bg-green-50 px-1.5 py-0.5 rounded">{data.porMunic.length}</span>}>
-                  <div className="h-[320px]">
+                  <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <BarChart data={data.porMunic.slice(0,10)} margin={{ left: 6, right: 10, top: 2 }}>
+                      <BarChart data={data.porMunic.slice(0,5)} margin={{ left: 6, right: 10, top: 2 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                        <XAxis dataKey="municipio" tick={{ fontSize: 8, fill: '#999' }} angle={-30} textAnchor="end" height={50} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="municipio" tick={{ fontSize: 10, fill: '#999' }} angle={-30} textAnchor="end" height={50} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="empenhado" name="Empenhado" radius={[4,4,0,0]} maxBarSize={28}>
-                          {data.porMunic.slice(0,10).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                        <Bar dataKey="empenhado" name="Empenhado" radius={[4,4,0,0]} maxBarSize={36}>
+                          {data.porMunic.slice(0,5).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -1893,20 +1893,16 @@ export default function App() {
             {/* Grupo detalhado + Fonte detalhada */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}>
-                  <GroupedBarChart
-                    data={data.porGrupo.slice(0,10) as unknown as Record<string,unknown>[]}
-                    categoryKey="grupo_despesa"
-                    series={[
-                      { key: 'empenhado', name: 'Empenhado',  color: '#118DFF' },
-                      { key: 'liquidado', name: 'Liquidado',  color: '#1AAB40' },
-                      { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
-                    ]}
-                    height={288}
+                <Card title="Top 5 Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}>
+                  <HGroupedBarChart
+                    data={data.porGrupo.slice(0,5) as unknown as Record<string,unknown>[]}
+                    yKey="grupo_despesa"
+                    series={S3}
+                    height={220}
                   />
                 </Card>
-                <Card title="Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porFonte as unknown as Record<string,unknown>[]} yKey="fonte_recurso" series={S2} height={288} />
+                <Card title="Top 5 Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porFonte.slice(0,5) as unknown as Record<string,unknown>[]} yKey="fonte_recurso" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -1914,11 +1910,11 @@ export default function App() {
             {/* Elemento + UO */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 10 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porElemento.slice(0,10) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={288} />
+                <Card title="Top 5 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porElemento.slice(0,5) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={200} />
                 </Card>
-                <Card title="Top 10 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porUo.slice(0,10) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={288} />
+                <Card title="Top 5 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porUo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={220} />
                 </Card>
               </div>
             )}
@@ -1926,11 +1922,11 @@ export default function App() {
             {/* RRAS + Região Administrativa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={288} />
+                <Card title="Top 5 RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRras.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={220} />
                 </Card>
-                <Card title="Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={288} />
+                <Card title="Top 5 Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRegiaoAd.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -1938,11 +1934,11 @@ export default function App() {
             {/* Região de Saúde + Tipo Despesa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={288} />
+                <Card title="Top 5 Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRegiaoSa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={200} />
                 </Card>
-                <Card title="Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porTipoDespesa as unknown as Record<string,unknown>[]} yKey="tipo_despesa" series={S3} height={288} />
+                <Card title="Top 5 Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porTipoDespesa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="tipo_despesa" series={S3} height={220} />
                 </Card>
               </div>
             )}
@@ -1950,11 +1946,11 @@ export default function App() {
             {/* Rótulo + UG */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 10 Rótulos  - Empenhado" icon={<FileText className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRotulo.slice(0,10) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={288} />
+                <Card title="Top 5 Rótulos  - Empenhado" icon={<FileText className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
                 </Card>
-                <Card title="Top 10 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porUg.slice(0,10) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={288} />
+                <Card title="Top 5 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -1962,11 +1958,11 @@ export default function App() {
             {/* Favorecido + Projeto */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 10 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porFavorecido.slice(0,10) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={288} />
+                <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={200} />
                 </Card>
-                <Card title="Top 10 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porProjeto.slice(0,10) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={288} />
+                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -1977,41 +1973,41 @@ export default function App() {
         {activeTab === 'regional' && data && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Empenhado por DRS" icon={<MapPin className="w-4 h-4" />}
+              <Card title="Top 5 DRS - Empenhado" icon={<MapPin className="w-4 h-4" />}
                 badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
-                <HGroupedBarChart data={data.porDrs as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={420} />
+                <HGroupedBarChart data={data.porDrs.slice(0,5) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={260} />
               </Card>
-              <Card title="Empenhado por Região Administrativa" icon={<Globe className="w-4 h-4" />}
+              <Card title="Top 5 Região Administrativa - Empenhado" icon={<Globe className="w-4 h-4" />}
                 badge={<span className="text-[10px] font-bold text-[#6B007B] bg-purple-50 px-1.5 py-0.5 rounded">{data.porRegiaoAd.length}</span>}>
-                <HGroupedBarChart data={data.porRegiaoAd as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={420} />
+                <HGroupedBarChart data={data.porRegiaoAd.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={260} />
               </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {data.porRras.length > 0 && (
-                <Card title="Empenhado por RRAS" icon={<Layers className="w-4 h-4" />}
+                <Card title="Top 5 RRAS - Empenhado" icon={<Layers className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length}</span>}>
-                  <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={380} />
+                  <HGroupedBarChart data={data.porRras.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={260} />
                 </Card>
               )}
               {data.porRegiaoSa.length > 0 && (
-                <Card title="Empenhado por Região de Saúde" icon={<MapPin className="w-4 h-4" />}
+                <Card title="Top 5 Região de Saúde - Empenhado" icon={<MapPin className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}>
-                  <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={380} />
+                  <HGroupedBarChart data={data.porRegiaoSa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={260} />
                 </Card>
               )}
             </div>
 
-            <Card title="Top 15 Municípios" icon={<Building2 className="w-4 h-4" />}>
-              <div className="h-[400px]">
+            <Card title="Top 5 Municípios" icon={<Building2 className="w-4 h-4" />}>
+              <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <BarChart data={data.porMunic.slice(0,15)} margin={{ left: 6, right: 10, top: 2 }}>
+                  <BarChart data={data.porMunic.slice(0,5)} margin={{ left: 6, right: 10, top: 2 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                    <XAxis dataKey="municipio" tick={{ fontSize: 8, fill: '#999' }} angle={-35} textAnchor="end" height={60} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="municipio" tick={{ fontSize: 10, fill: '#999' }} angle={-35} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="empenhado" name="Empenhado" radius={[4,4,0,0]} maxBarSize={32}>
-                      {data.porMunic.slice(0,15).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    <Bar dataKey="empenhado" name="Empenhado" radius={[4,4,0,0]} maxBarSize={40}>
+                      {data.porMunic.slice(0,5).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -2082,21 +2078,11 @@ export default function App() {
         {activeTab === 'despesas' && data && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Elemento de Despesa  - Top 12" icon={<Layers className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porElemento as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={360} />
+              <Card title="Top 5 Elementos de Despesa" icon={<Layers className="w-4 h-4" />}>
+                <HGroupedBarChart data={data.porElemento.slice(0,5) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={220} />
               </Card>
-              <Card title="Unidade Orçamentária (UO)  - Emp/Liq/Pago" icon={<Building2 className="w-4 h-4" />}>
-                <GroupedBarChart
-                  data={data.porUo.slice(0,12) as unknown as Record<string,unknown>[]}
-                  categoryKey="uo"
-                  series={[
-                    { key: 'empenhado', name: 'Empenhado',  color: '#118DFF' },
-                    { key: 'liquidado', name: 'Liquidado',  color: '#1AAB40' },
-                    { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
-                  ]}
-                  height={360}
-                  angleLabels
-                />
+              <Card title="Top 5 Unidade Orçamentária (UO)  - Emp/Liq/Pago" icon={<Building2 className="w-4 h-4" />}>
+                <HGroupedBarChart data={data.porUo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={240} />
               </Card>
             </div>
 
@@ -2116,7 +2102,7 @@ export default function App() {
                       </ResponsiveContainer>
                     </div>
                     <div className="flex-1 flex flex-col gap-1.5">
-                      {data.porTipoDespesa.slice(0,8).map((g, i) => {
+                      {data.porTipoDespesa.slice(0,5).map((g, i) => {
                         const tot = data.porTipoDespesa.reduce((s, r) => s + r.empenhado, 0);
                         const pct = tot > 0 ? (g.empenhado / tot) * 100 : 0;
                         return (
@@ -2131,17 +2117,17 @@ export default function App() {
                   </div>
                 ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
               </Card>
-              <Card title="Rótulo LC 131" icon={<BarChart3 className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porRotulo as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={280} />
+              <Card title="Top 5 Rótulos LC 131" icon={<BarChart3 className="w-4 h-4" />}>
+                <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
               </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Top 15 Projetos/Atividades" icon={<Briefcase className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porProjeto.slice(0,15) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={420} />
+              <Card title="Top 5 Projetos/Atividades" icon={<Briefcase className="w-4 h-4" />}>
+                <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={220} />
               </Card>
-              <Card title="Top 15 Unidades Gestoras (UG)" icon={<Building2 className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porUg.slice(0,15) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={420} />
+              <Card title="Top 5 Unidades Gestoras (UG)" icon={<Building2 className="w-4 h-4" />}>
+                <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={220} />
               </Card>
             </div>
           </>
@@ -2150,9 +2136,9 @@ export default function App() {
         {/* ---------- TAB: FORNECEDORES ---------- */}
         {activeTab === 'fornecedores' && data && (
           <>
-            <Card title="Top 20 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
-              badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">Top {data.porFavorecido.length}</span>}>
-              <HGroupedBarChart data={data.porFavorecido as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={520} />
+            <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
+              badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">Top {Math.min(data.porFavorecido.length, 5)}</span>}>
+              <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={220} />
             </Card>
 
             {/* Favorecido ranking table */}
