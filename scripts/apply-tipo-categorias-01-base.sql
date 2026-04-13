@@ -186,10 +186,11 @@ FOR EACH ROW
 EXECUTE FUNCTION public.set_tipo_despesa_classif();
 
 CREATE OR REPLACE FUNCTION public.refresh_tipo_despesa_classif_batch(
-  p_batch_size integer DEFAULT 5000
+  p_batch_size integer DEFAULT 500
 ) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
+SET statement_timeout = 0
 AS $$
 DECLARE
   v_rows integer;
@@ -199,7 +200,7 @@ BEGIN
     FROM public.lc131_despesas AS d
     WHERE d.tipo_despesa_classif IS DISTINCT FROM public.classify_tipo_despesa(d.descricao_processo, d.tipo_despesa)
     ORDER BY d.id
-    LIMIT GREATEST(COALESCE(p_batch_size, 5000), 1)
+    LIMIT GREATEST(COALESCE(p_batch_size, 500), 1)
   ), updated AS (
     UPDATE public.lc131_despesas AS d
        SET tipo_despesa_classif = public.classify_tipo_despesa(d.descricao_processo, d.tipo_despesa)
