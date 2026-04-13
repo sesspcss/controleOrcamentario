@@ -191,10 +191,189 @@ const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: s
 // -- Direct REST query helpers (bypass slow lc131_detail RPC) --
 const FILTER_TO_COL: Record<string, string> = {
   p_drs: 'drs', p_regiao_ad: 'regiao_ad', p_rras: 'rras', p_regiao_sa: 'regiao_sa',
-  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa',
+  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa_classif',
   p_rotulo: 'rotulo', p_uo: 'codigo_nome_uo', p_elemento: 'codigo_nome_elemento',
   p_favorecido: 'codigo_nome_favorecido',
 };
+
+const EMPTY_DISTINCTS: Record<string, string[]> = {
+  distinct_drs: [],
+  distinct_regiao_ad: [],
+  distinct_rras: [],
+  distinct_regiao_sa: [],
+  distinct_municipio: [],
+  distinct_grupo: [],
+  distinct_tipo: [],
+  distinct_rotulo: [],
+  distinct_fonte: [],
+  distinct_codigo_ug: [],
+  distinct_uo: [],
+  distinct_elemento: [],
+  distinct_favorecido: [],
+};
+
+function uniqueSorted(values: Array<unknown>): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map(v => String(v ?? '').trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function firstFilled(...values: Array<unknown>): string {
+  for (const value of values) {
+    const clean = String(value ?? '').trim();
+    if (clean) return clean;
+  }
+  return '';
+}
+
+function normalizeTipoText(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+function classifyTipoDespesaClient(descricao: unknown, tipo: unknown): string {
+  const rawTipo = String(tipo ?? '').trim();
+  if (rawTipo) return rawTipo;
+
+  const d = normalizeTipoText(descricao);
+  if (!d) return 'OUTROS';
+
+  if (d.includes('BATA CINZA')) return 'INTRAORÇAMENTÁRIA - BATA CINZA PPP';
+  if (d.includes('TRANSFERENCIA INTRA ORCAMENTARIA') || d.includes('INTRA ORCAMENTARIA')) return 'INTRAORÇAMENTÁRIA';
+  if (d.includes('FUNDO A FUNDO PAB')) return 'FUNDO A FUNDO PAB';
+  if (d.includes('RESIDENCIA TERAPEUTICA')) return 'RESIDÊNCIA TERAPÊUTICA';
+  if (d.includes('FUNDO A FUNDO') && d.includes('DEMANDA')) return 'FUNDO A FUNDO - DEMANDAS PARLAMENTARES';
+  if (d.includes('FUNDO A FUNDO') && d.includes('EMENDA')) return 'FUNDO A FUNDO - EMENDA';
+  if (d.includes('FUNDO A FUNDO')) return 'FUNDO A FUNDO';
+  if (d.includes('RLM FERNANDOPOLIS') || d.includes('FERNANDOPOLIS')) return 'RLM FERNANDÓPOLIS';
+  if (d.includes('RLM MOGI MIRIM') || (d.includes('LUCY MONTORO') && d.includes('MOGI MIRIM'))) return 'RLM MOGI MIRIM';
+  if (d.includes('RLM SAO JOSE DOS CAMPOS') || (d.includes('RLM') && d.includes('SAO JOSE DOS CAMPOS'))) return 'RLM SÃO JOSÉ DOS CAMPOS';
+  if (d.includes('RLM') && d.includes('RIO PRETO')) return 'RLM SAO JOSE DO RIO PRETO';
+  if ((d.includes('RLM') || d.includes('LUCY MONTORO')) && d.includes('DIADEMA')) return 'RLM DIADEMA';
+  if (d.includes('RLM TAUBATE') || (d.includes('LUCY MONTORO') && d.includes('TAUBATE'))) return 'RLM TAUBATE';
+  if (d.includes('RLM BOTUCATU') || (d.includes('LUCY MONTORO') && d.includes('BOTUCATU'))) return 'RLM BOTUCATU';
+  if (d.includes('PARIQUERA')) return 'RLM PARIQUERA ACÚ';
+  if (d.includes('RLM SOROCABA') || (d.includes('LUCY MONTORO') && d.includes('SOROCABA'))) return 'RLM SOROCABA';
+  if (d.includes('RLM') && (d.includes('PRESIDENTE PRUDENTE') || d.includes('PRES. PRUDENTE'))) return 'RLM PRESIDENTE PRUDENTE';
+  if (d.includes('RLM SANTOS') || (d.includes('LUCY MONTORO') && d.includes('SANTOS'))) return 'RLM SANTOS';
+  if ((d.includes('RLM') || d.includes('LUCY MONTORO')) && d.includes('MARILIA')) return 'RLM MARILIA';
+  if ((d.includes('RLM') || d.includes('LUCY MONTORO')) && d.includes('CAMPINAS')) return 'RLM CAMPINAS';
+  if (d.includes('LUCY MONTORO') || d.includes('RLM') || d.includes('INST. REAB. LUCY')) return 'REDE LUCY MONTORO';
+  if (d.includes('FAMEMA')) return 'HCFAMEMA';
+  if (d.includes('NAOR BOTUCATU') || d.includes('HCBOTUCATU')) return 'HCBOTUCATU';
+  if (d.includes('HC SAO PAULO') || d.includes('HCSP')) return 'HCSP';
+  if (d.includes('RIBEIRAO')) return 'HCRIBEIRÃO';
+  if (d.includes('HEMOCENTRO')) return 'AUTARQUIA - HEMOCENTRO';
+  if (d.includes('FURP')) return 'AUTARQUIA - FURP';
+  if (d.includes('ONCOCENT')) return 'AUTARQUIA - ONCOCENTRO';
+  if (d.includes('GESTAO ESTADUAL') || d.includes('GESTAO PLENA')) return 'GESTÃO ESTADUAL';
+  if (d.includes('CONVENIO')) return 'CONVÊNIO';
+  if (d.includes('EMENDA')) return 'EMENDA';
+  if (d.includes('PEROLA BYINGTON') || d.includes('PPP')) return 'PPP';
+  if (d.includes('CORUJAO') || d.includes('CIRURGIA ELETIVA') || d.includes('MUTIRAO CIRURGIA')) return 'CIRURGIAS ELETIVAS';
+  if (d.includes('PISO') && d.includes('ENFERM')) return 'PISO ENFERMAGEM';
+  if (d.includes('CASAS DE APOIO')) return 'CASAS DE APOIO';
+  if (d.includes('AEDES AEGYPTI')) return 'AEDES AEGYPTI';
+  if (d.includes('SISTEMA PRISIONAL')) return 'SISTEMA PRISIONAL';
+  if ((d.includes('ACAO CIVIL') || d.includes('AÇÃO CIVIL')) && d.includes('BAURU')) return 'AÇÃO CIVIL - BAURU';
+  if (d.includes('DOSE CERTA')) return 'DOSE CERTA';
+  if (d.includes('GLICEMIA')) return 'GLICEMIA';
+  if (d.includes('QUALIS MAIS')) return 'QUALIS MAIS';
+  if (d.includes('ATENCAO BASICA')) return 'ATENÇÃO BÁSICA';
+  if (d.includes('SORRIA SP')) return 'SORRIA SP';
+  if (d.includes('IGM SUS PAULISTA')) return 'IGM SUS PAULISTA';
+  if (d.includes('TABELA SUS')) return 'TABELA SUS PAULISTA';
+  if (d.includes('REPELENTE')) return 'REPELENTE';
+  if (d.includes('TEA') || d.includes('AUTISTA')) return 'TEA';
+
+  return 'OUTROS';
+}
+
+function buildDistinctState(d?: Record<string, unknown>): Record<string, string[]> {
+  return {
+    distinct_drs: dedupeAndTrack((d?.distinct_drs as string[] ?? []), normalizeDrs, _drsRawVariants),
+    distinct_regiao_ad: uniqueSorted(d?.distinct_regiao_ad as string[] ?? []),
+    distinct_rras: dedupeAndTrack((d?.distinct_rras as string[] ?? []), normalizeRras, _rrasRawVariants),
+    distinct_regiao_sa: uniqueSorted(d?.distinct_regiao_sa as string[] ?? []),
+    distinct_municipio: uniqueSorted(d?.distinct_municipio as string[] ?? []),
+    distinct_grupo: uniqueSorted(d?.distinct_grupo as string[] ?? []),
+    distinct_tipo: uniqueSorted(d?.distinct_tipo as string[] ?? []),
+    distinct_rotulo: uniqueSorted(d?.distinct_rotulo as string[] ?? []),
+    distinct_fonte: uniqueSorted(d?.distinct_fonte as string[] ?? []),
+    distinct_codigo_ug: uniqueSorted(d?.distinct_codigo_ug as string[] ?? []),
+    distinct_uo: uniqueSorted(d?.distinct_uo as string[] ?? []),
+    distinct_elemento: uniqueSorted(d?.distinct_elemento as string[] ?? []),
+    distinct_favorecido: uniqueSorted(d?.distinct_favorecido as string[] ?? []),
+  };
+}
+
+function buildDistinctStateFromRows(rows: Record<string, unknown>[]): Record<string, string[]> {
+  return {
+    distinct_drs: dedupeAndTrack(rows.map(r => String(r.drs ?? '')).filter(Boolean), normalizeDrs, _drsRawVariants),
+    distinct_regiao_ad: uniqueSorted(rows.map(r => r.regiao_ad)),
+    distinct_rras: dedupeAndTrack(rows.map(r => String(r.rras ?? '')).filter(Boolean), normalizeRras, _rrasRawVariants),
+    distinct_regiao_sa: uniqueSorted(rows.map(r => r.regiao_sa)),
+    distinct_municipio: uniqueSorted(rows.map(r => r.municipio)),
+    distinct_grupo: uniqueSorted(rows.map(r => r.codigo_nome_grupo ?? r.grupo_despesa)),
+    distinct_tipo: uniqueSorted(rows.map(r => firstFilled(r.tipo_despesa_classif, r.tipo_despesa, classifyTipoDespesaClient(r.descricao_processo, r.tipo_despesa)))),
+    distinct_rotulo: uniqueSorted(rows.map(r => r.rotulo)),
+    distinct_fonte: uniqueSorted(rows.map(r => r.codigo_nome_fonte_recurso ?? r.fonte_recurso)),
+    distinct_codigo_ug: uniqueSorted(rows.map(r => r.codigo_ug)),
+    distinct_uo: uniqueSorted(rows.map(r => r.codigo_nome_uo ?? r.uo)),
+    distinct_elemento: uniqueSorted(rows.map(r => r.codigo_nome_elemento ?? r.elemento)),
+    distinct_favorecido: uniqueSorted(rows.map(r => r.codigo_nome_favorecido ?? r.favorecido)),
+  };
+}
+
+function hasAnyDistinctOptions(nextDistincts: Record<string, string[]>): boolean {
+  return Object.values(nextDistincts).some(list => Array.isArray(list) && list.length > 0);
+}
+
+function pruneFiltersByDistincts(
+  currentFilters: Partial<Record<DetailFilterKey, string[]>>,
+  nextDistincts: Record<string, string[]>,
+): Partial<Record<DetailFilterKey, string[]>> {
+  const pruned: Partial<Record<DetailFilterKey, string[]>> = {};
+  for (const meta of FILTER_META) {
+    const selected = currentFilters[meta.key] ?? [];
+    if (!selected.length) continue;
+    const allowed = new Set(nextDistincts[meta.distinctKey] ?? []);
+    const kept = allowed.size ? selected.filter(v => allowed.has(v)) : selected;
+    if (kept.length) pruned[meta.key] = kept;
+  }
+  return pruned;
+}
+
+function applyFiltersToQuery(
+  query: any,
+  activeFilters: Partial<Record<DetailFilterKey, string[]>>,
+  search = '',
+  useClassifiedTipo = true,
+) {
+  for (const f of FILTER_META) {
+    if (f.key === 'p_codigo_ug' && search.trim()) continue;
+    const v = activeFilters[f.key];
+    if (!Array.isArray(v) || v.length === 0) continue;
+    const expanded = expandFilterValues(f.key, v);
+    if (f.key === 'p_fonte_recurso') query = query.or(buildFonteOrFilter(expanded));
+    else if (f.key === 'p_codigo_ug') query = query.in('codigo_ug', expanded);
+    else {
+      const col = f.key === 'p_tipo_despesa'
+        ? (useClassifiedTipo ? 'tipo_despesa_classif' : 'tipo_despesa')
+        : FILTER_TO_COL[f.key];
+      if (col) query = query.in(col, expanded);
+    }
+  }
+  if (search.trim()) query = query.in('codigo_ug', [search.trim()]);
+  return query;
+}
 
 function buildFonteOrFilter(values: string[]): string {
   const parts: string[] = [];
@@ -225,6 +404,7 @@ function enrichDetailRow(r: Record<string, unknown>): DetailRow {
     : 'Demais Fontes';
   const g = String(row.codigo_nome_grupo ?? '');
   row.grupo_simpl = g.startsWith('1') ? 'Pessoal' : g.startsWith('2') ? 'Dívida' : g.startsWith('3') ? 'Custeio' : g.startsWith('4') ? 'Investimento' : 'Outros';
+  row.tipo_despesa = firstFilled((r as Record<string, unknown>).tipo_despesa_classif, row.tipo_despesa, classifyTipoDespesaClient(row.descricao_processo, row.tipo_despesa));
   row.pago_total = (Number(row.pago) || 0) + (Number(row.pago_anos_anteriores) || 0);
   return row;
 }
@@ -329,10 +509,9 @@ function MultiSelect({ label, options, value, onChange, loading }: {
     <div className="flex flex-col gap-0.5 min-w-0 relative" ref={ref}>
       <label className="text-[9px] font-bold text-[#999] uppercase tracking-wider truncate">{label}</label>
       <button type="button" onClick={() => setOpen(v => !v)}
-        disabled={loading && options.length === 0}
         className={cn('w-full text-left text-[11px] border rounded-md px-2 py-1.5 pr-6 focus:outline-none focus:ring-1 focus:ring-[#118DFF] transition bg-white relative',
           hasValue ? 'border-[#118DFF] bg-blue-50 text-[#118DFF] font-semibold' : 'border-[#D0D0D0] text-[#666] hover:border-[#118DFF]',
-          loading && options.length === 0 && 'opacity-50')}>
+          loading && options.length === 0 && 'border-[#118DFF]')}>
         <span className="truncate block">{displayLabel}</span>
         <ChevronDown className={cn('absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#999] transition-transform', open && 'rotate-180')} />
       </button>
@@ -350,8 +529,11 @@ function MultiSelect({ label, options, value, onChange, loading }: {
             </button>
           )}
           <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 ? <p className="px-2 py-3 text-[11px] text-[#999] text-center">Nenhum</p>
-            : filtered.map(o => (
+            {filtered.length === 0 ? (
+              <p className="px-2 py-3 text-[11px] text-[#999] text-center">
+                {loading ? 'Carregando opções...' : options.length === 0 ? 'Sem opções para os filtros atuais' : 'Nenhum resultado'}
+              </p>
+            ) : filtered.map(o => (
               <label key={o} className="flex items-center gap-2 px-2 py-1.5 hover:bg-blue-50 cursor-pointer">
                 <input type="checkbox" checked={value.includes(o)} onChange={() => toggle(o)} className="w-3 h-3 rounded accent-[#118DFF] shrink-0" />
                 <span className="text-[11px] text-[#333] whitespace-normal break-words leading-tight" title={stripNumPrefix(o)}>{stripNumPrefix(o)}</span>
@@ -1535,22 +1717,58 @@ export default function App() {
       const params: Record<string, unknown> = {};
       if (ano !== 'todos') params.p_ano = Number(ano);
       Object.entries(cf).forEach(([k, v]) => { if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|'); });
-      const { data: rpc } = await rpcWithRetry('lc131_distincts', params);
-      const d = rpc as Record<string, string[]>;
-      setDistincts({
-        distinct_drs: dedupeAndTrack(d?.distinct_drs ?? [], normalizeDrs, _drsRawVariants),
-        distinct_regiao_ad: d?.distinct_regiao_ad ?? [],
-        distinct_rras: dedupeAndTrack(d?.distinct_rras ?? [], normalizeRras, _rrasRawVariants),
-        distinct_regiao_sa: d?.distinct_regiao_sa ?? [],
-        distinct_municipio: d?.distinct_municipio ?? [], distinct_grupo: d?.distinct_grupo ?? [],
-        distinct_tipo: d?.distinct_tipo ?? [], distinct_rotulo: d?.distinct_rotulo ?? [],
-        distinct_fonte: d?.distinct_fonte ?? [], distinct_codigo_ug: d?.distinct_codigo_ug ?? [],
-        distinct_uo: d?.distinct_uo ?? [], distinct_elemento: d?.distinct_elemento ?? [],
-        distinct_favorecido: d?.distinct_favorecido ?? [],
-      });
-    } catch { /* silent */ }
-    finally { setDistinctsLoading(false); }
-  }, []);
+
+      let nextDistincts = EMPTY_DISTINCTS;
+      const { data: rpc, error: rpcErr } = await rpcWithRetry('lc131_distincts', params);
+      if (!rpcErr) nextDistincts = buildDistinctState(rpc as Record<string, unknown> | undefined);
+
+      if (!hasAnyDistinctOptions(nextDistincts) || (nextDistincts.distinct_tipo?.length ?? 0) === 0) {
+        let query = supabase.from('lc131_despesas')
+          .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, tipo_despesa_classif, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
+          .limit(5000);
+        if (ano !== 'todos') query = query.eq('ano_referencia', Number(ano));
+        query = applyFiltersToQuery(query, cf, '', true);
+
+        let { data: fallbackRows, error: fallbackErr } = await query;
+
+        if (fallbackErr?.message?.includes('tipo_despesa_classif')) {
+          let legacyQuery = supabase.from('lc131_despesas')
+            .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
+            .limit(5000);
+          if (ano !== 'todos') legacyQuery = legacyQuery.eq('ano_referencia', Number(ano));
+          legacyQuery = applyFiltersToQuery(legacyQuery, cf, '', false);
+          const legacyRes = await legacyQuery;
+          fallbackRows = legacyRes.data;
+          fallbackErr = legacyRes.error;
+        }
+
+        if (!fallbackErr && Array.isArray(fallbackRows)) {
+          nextDistincts = buildDistinctStateFromRows(fallbackRows as Record<string, unknown>[]);
+        }
+      }
+
+      if ((nextDistincts.distinct_tipo?.length ?? 0) === 0 && data?.porTipoDespesa?.length) {
+        nextDistincts = {
+          ...nextDistincts,
+          distinct_tipo: uniqueSorted(data.porTipoDespesa.map(r => r.tipo_despesa)),
+        };
+      }
+
+      setDistincts(nextDistincts);
+      const pruned = pruneFiltersByDistincts(cf, nextDistincts);
+      if (JSON.stringify(pruned) !== JSON.stringify(cf)) setFilters(pruned);
+      return nextDistincts;
+    } catch {
+      const fallbackFromCharts = {
+        ...EMPTY_DISTINCTS,
+        distinct_tipo: uniqueSorted(data?.porTipoDespesa?.map(r => r.tipo_despesa) ?? []),
+      };
+      setDistincts(fallbackFromCharts);
+      return fallbackFromCharts;
+    } finally {
+      setDistinctsLoading(false);
+    }
+  }, [data, rpcWithRetry]);
 
   const loadDetail = useCallback(async (page: number, search = '') => {
     setDetailLoading(true); setDetailError(null);
@@ -1562,19 +1780,24 @@ export default function App() {
         .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
 
       if (anoSel !== 'todos') query = query.eq('ano_referencia', Number(anoSel));
+      query = applyFiltersToQuery(query, filters, search, true);
 
-      for (const f of FILTER_META) {
-        if (f.key === 'p_codigo_ug' && search.trim()) continue; // search overrides UG filter
-        const v = filters[f.key];
-        if (!Array.isArray(v) || v.length === 0) continue;
-        const expanded = expandFilterValues(f.key, v);
-        if (f.key === 'p_fonte_recurso') { query = query.or(buildFonteOrFilter(expanded)); }
-        else if (f.key === 'p_codigo_ug') { query = query.in('codigo_ug', expanded); }
-        else { const col = FILTER_TO_COL[f.key]; if (col) query = query.in(col, expanded); }
+      let { data, count, error } = await query;
+
+      if (error?.message?.includes('tipo_despesa_classif')) {
+        let legacyQuery = supabase.from('lc131_despesas')
+          .select('*', { count: 'estimated' })
+          .order('empenhado', { ascending: false, nullsFirst: false })
+          .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
+
+        if (anoSel !== 'todos') legacyQuery = legacyQuery.eq('ano_referencia', Number(anoSel));
+        legacyQuery = applyFiltersToQuery(legacyQuery, filters, search, false);
+        const legacyRes = await legacyQuery;
+        data = legacyRes.data;
+        count = legacyRes.count;
+        error = legacyRes.error;
       }
-      if (search.trim()) query = query.in('codigo_ug', [search.trim()]);
 
-      const { data, count, error } = await query;
       if (error) throw new Error(error.message);
       const rows = (data ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));
       setDetailTotal(count ?? rows.length); setDetailRows(rows); setDetailPage(page);
@@ -1590,12 +1813,20 @@ export default function App() {
     return () => clearTimeout(detailDeb.current);
   }, [filters, anoSel, activeTab]);
 
-  const setFilter = (key: DetailFilterKey, val: string[]) => {
-    const nf = { ...filters }; if (val.length > 0) nf[key] = val; else delete nf[key]; setFilters(nf); loadDistincts(nf, anoSel);
+  useEffect(() => {
+    if (!initialLoaded.current) return;
+    loadDistincts(filters, anoSel);
+  }, [anoSel, loadDistincts]);
+
+  const setFilter = async (key: DetailFilterKey, val: string[]) => {
+    const nf = { ...filters };
+    if (val.length > 0) nf[key] = val; else delete nf[key];
+    setFilters(nf);
+    await loadDistincts(nf, anoSel);
   };
-  const clearFilters = () => { setFilters({}); loadDistincts({}, anoSel); };
+  const clearFilters = async () => { setFilters({}); await loadDistincts({}, anoSel); };
   const activeFilterCount = Object.values(filters).filter(v => Array.isArray(v) && v.length > 0).length;
-  const handleRefresh = () => { cacheRef.current.clear(); setData(null); loadDashboard(anoSel, filters); };
+  const handleRefresh = () => { cacheRef.current.clear(); setData(null); loadDashboard(anoSel, filters); loadDistincts(filters, anoSel); };
 
   const switchTab = (t: Tab) => {
     setActiveTab(t);
