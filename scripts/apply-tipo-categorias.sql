@@ -4,6 +4,13 @@
 -- - Coluna tipo_despesa_classif: GENERATED STORED + índice
 -- - RPCs: zero chamadas de função em tempo real
 -- - Remove tipo_despesa_ref (reduz banco)
+-- Se o SQL Editor falhar com "Failed to fetch", rode em sequência:
+--   1) scripts/apply-tipo-categorias-01-base.sql
+--   2) npm run backfill-tipo-despesa
+--   3) scripts/apply-tipo-categorias-01b-index.sql
+--   4) scripts/apply-tipo-categorias-02-dashboard.sql
+--   5) scripts/apply-tipo-categorias-03-distincts.sql
+--   6) scripts/apply-tipo-categorias-04-detail.sql
 -- Rodar no Supabase SQL Editor (~1-3 min na 1ª vez)
 -- ================================================================
 SET statement_timeout = 0;
@@ -23,7 +30,7 @@ CREATE OR REPLACE FUNCTION public.classify_tipo_despesa(
 ) RETURNS text
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public
-AS $
+AS $$
 SELECT CASE
 
     -- ── INTRAORÇAMENTÁRIA - BATA CINZA PPP ───────────────────────────
@@ -213,7 +220,7 @@ SELECT CASE
   -- ── FALLBACK: tipo_despesa de bd_ref ───────────────────────────────
   ELSE p_tipo
 END
-$;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.classify_tipo_despesa(text, text) TO anon, authenticated;
 
@@ -470,9 +477,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
-  ELSE p_tipo
-END
-$$;
 -- 2. lc131_distincts
 -- ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.lc131_distincts(

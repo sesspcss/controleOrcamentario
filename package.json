@@ -10,7 +10,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "import-lc131": "tsx scripts/import-lc131.ts",
-    "import-tipo-despesa": "tsx scripts/import-tipo-despesa.ts"
+    "import-tipo-despesa": "tsx scripts/import-tipo-despesa.ts",
+    "backfill-tipo-despesa": "node scripts/run-tipo-despesa-classif-batch.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
