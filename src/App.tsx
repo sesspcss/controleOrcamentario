@@ -1970,204 +1970,654 @@ export default function App() {
         )}
 
         {/* ---------- TAB: REGIONAL ---------- */}
-        {activeTab === 'regional' && data && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Top 5 DRS - Empenhado" icon={<MapPin className="w-4 h-4" />}
-                badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
-                <HGroupedBarChart data={data.porDrs.slice(0,5) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={260} />
-              </Card>
-              <Card title="Top 5 Região Administrativa - Empenhado" icon={<Globe className="w-4 h-4" />}
-                badge={<span className="text-[10px] font-bold text-[#6B007B] bg-purple-50 px-1.5 py-0.5 rounded">{data.porRegiaoAd.length}</span>}>
-                <HGroupedBarChart data={data.porRegiaoAd.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={260} />
-              </Card>
-            </div>
+        {activeTab === 'regional' && data && (() => {
+          const totalEmpDrs = data.porDrs.reduce((s, r) => s + r.empenhado, 0);
+          const avgExecDrs = data.porDrs.length > 0
+            ? data.porDrs.reduce((s, r) => s + (r.empenhado > 0 ? r.pago_total / r.empenhado : 0), 0) / data.porDrs.length * 100
+            : 0;
+          const topDrs = [...data.porDrs].sort((a, b) => b.empenhado - a.empenhado)[0];
+          const worstExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (a.pago_total / a.empenhado) - (b.pago_total / b.empenhado))[0];
+          const bestExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (b.pago_total / b.empenhado) - (a.pago_total / a.empenhado))[0];
+          const drsExecData = data.porDrs.map(r => ({
+            ...r,
+            pct_exec: r.empenhado > 0 ? Math.round(r.pago_total / r.empenhado * 100) : 0,
+            gap: r.empenhado - r.pago_total,
+          }));
+          const municTop10 = data.porMunic.slice(0, 10);
+          const totalMunic = data.porMunic.reduce((s, r) => s + r.empenhado, 0);
+          // Pareto: top 20% DRS share
+          const drsCount = data.porDrs.length;
+          const top20pctDrs = Math.max(1, Math.round(drsCount * 0.2));
+          const top20empSum = [...data.porDrs].sort((a,b)=>b.empenhado-a.empenhado).slice(0,top20pctDrs).reduce((s,r)=>s+r.empenhado,0);
+          const concentracao = totalEmpDrs > 0 ? (top20empSum / totalEmpDrs * 100) : 0;
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {data.porRras.length > 0 && (
-                <Card title="Top 5 RRAS - Empenhado" icon={<Layers className="w-4 h-4" />}
-                  badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length}</span>}>
-                  <HGroupedBarChart data={data.porRras.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={260} />
-                </Card>
-              )}
-              {data.porRegiaoSa.length > 0 && (
-                <Card title="Top 5 Região de Saúde - Empenhado" icon={<MapPin className="w-4 h-4" />}
-                  badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}>
-                  <HGroupedBarChart data={data.porRegiaoSa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={260} />
-                </Card>
-              )}
-            </div>
-
-            <Card title="Top 5 Municípios" icon={<Building2 className="w-4 h-4" />}>
-              <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <BarChart data={data.porMunic.slice(0,5)} margin={{ left: 6, right: 10, top: 2 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                    <XAxis dataKey="municipio" tick={{ fontSize: 10, fill: '#999' }} angle={-35} textAnchor="end" height={60} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="empenhado" name="Empenhado" radius={[4,4,0,0]} maxBarSize={40}>
-                      {data.porMunic.slice(0,5).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+          return (
+            <>
+              {/* KPIs regionais */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">DRS com mais recursos</p>
+                  <p className="font-bold text-[#118DFF] text-sm truncate">{topDrs?.drs?.replace(/^DRS \d+ - /, '') ?? '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{fmt(topDrs?.empenhado ?? 0, 'compact')}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Execução média DRS</p>
+                  <p className="font-bold text-[22px] leading-none" style={{ color: avgExecDrs >= 70 ? '#1AAB40' : avgExecDrs >= 40 ? '#D9B300' : '#D64550' }}>{avgExecDrs.toFixed(1)}%</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">pago / empenhado</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Melhor execução</p>
+                  <p className="font-bold text-[#1AAB40] text-sm truncate">{bestExecDrs?.drs?.replace(/^DRS \d+ - /, '') ?? '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{bestExecDrs ? (bestExecDrs.pago_total / bestExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Menor execução</p>
+                  <p className="font-bold text-[#D64550] text-sm truncate">{worstExecDrs?.drs?.replace(/^DRS \d+ - /, '') ?? '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{worstExecDrs ? (worstExecDrs.pago_total / worstExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
+                </div>
               </div>
-            </Card>
 
-            {/* DRS Ranking Table */}
-            <Card title="Ranking DRS" noPad icon={<BarChart3 className="w-4 h-4" />}
-              badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porDrs.length} DRS</span>}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
-                    <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase">#</th>
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">DRS</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#1AAB40] uppercase">Liquidado</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">% Exec.</th>
-                    <th className="px-3 py-2.5 w-24 hidden md:table-cell"></th>
-                  </tr></thead>
-                  <tbody className="divide-y divide-[#F0F0F0]">
-                    {data.porDrs.map((row, i) => {
-                      const totalEmp = data.porDrs.reduce((s, r) => s + r.empenhado, 0);
-                      const pct = row.empenhado > 0 ? (row.pago_total / row.empenhado) * 100 : 0;
-                      const barW = totalEmp > 0 ? (row.empenhado / totalEmp) * 100 : 0;
+              {/* Taxa de execução por DRS - heatmap horizontal */}
+              <Card title="Taxa de Execução por DRS  (Pago / Empenhado)" icon={<BarChart3 className="w-4 h-4" />}
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Concentração top-20%: {concentracao.toFixed(0)}%</span>}>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead><tr>
+                      <th className="text-left text-[10px] font-bold text-[#999] uppercase pb-2 pr-3">DRS</th>
+                      <th className="text-right text-[10px] font-bold text-[#118DFF] uppercase pb-2 px-3 w-36">Empenhado</th>
+                      <th className="text-right text-[10px] font-bold text-[#E66C37] uppercase pb-2 px-3 w-32">Pago Total</th>
+                      <th className="text-right text-[10px] font-bold text-[#999] uppercase pb-2 px-3 w-20">Exec.</th>
+                      <th className="text-[10px] font-bold text-[#999] uppercase pb-2 pl-3">Barra de Execução</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-[#F7F7F7]">
+                      {drsExecData.sort((a, b) => b.pct_exec - a.pct_exec).map((row, i) => {
+                        const color = row.pct_exec >= 80 ? '#1AAB40' : row.pct_exec >= 50 ? '#D9B300' : '#D64550';
+                        const shareW = totalEmpDrs > 0 ? (row.empenhado / totalEmpDrs) * 100 : 0;
+                        return (
+                          <tr key={i} className="hover:bg-blue-50/20">
+                            <td className="py-1.5 pr-3 text-[11px] font-medium text-[#333] whitespace-nowrap">{row.drs.replace(/^DRS \d+ - /, '')}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-[11px] text-[#118DFF]">{fmt(row.empenhado, 'compact')}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-[11px] text-[#E66C37]">{fmt(row.pago_total, 'compact')}</td>
+                            <td className="py-1.5 px-3 text-right">
+                              <span className="text-[11px] font-bold" style={{ color }}>{row.pct_exec}%</span>
+                            </td>
+                            <td className="py-1.5 pl-3 w-full min-w-[180px]">
+                              <div className="relative h-4 bg-[#F0F0F0] rounded overflow-hidden">
+                                <div className="absolute top-0 left-0 h-full rounded opacity-20 bg-blue-400" style={{ width: shareW + '%' }} />
+                                <div className="absolute top-0 left-0 h-full rounded" style={{ width: row.pct_exec + '%', background: color, opacity: 0.85 }} />
+                                <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-bold text-white drop-shadow">{row.pct_exec}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {/* DRS empenhado vs gap (não pago) — stacked */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Empenhado vs Pago por DRS  (Gap em vermelho)" icon={<MapPin className="w-4 h-4" />}>
+                  <div style={{ height: 320 }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart data={drsExecData.sort((a,b)=>b.empenhado-a.empenhado)} layout="vertical"
+                        margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0F0F0" />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: '#999' }} tickFormatter={fmtAxis} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="drs" width={130} axisLine={false} tickLine={false}
+                          tick={{ fontSize: 10, fill: '#555' }} tickFormatter={v => shortLabel(String(v).replace(/^DRS \d+ - /, ''), 17)} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="pago_total" name="Pago Total" fill="#1AAB40" radius={[0,0,0,0]} stackId="a" maxBarSize={16} />
+                        <Bar dataKey="gap" name="Não Pago" fill="#D6455080" radius={[0,3,3,0]} stackId="a" maxBarSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+
+                {/* Top 10 municípios com share */}
+                <Card title="Top 10 Municípios por Empenhado" icon={<Building2 className="w-4 h-4" />}
+                  badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porMunic.length} municípios</span>}>
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    {municTop10.map((m, i) => {
+                      const share = totalMunic > 0 ? (m.empenhado / totalMunic) * 100 : 0;
+                      const pctPg = m.empenhado > 0 ? (m.pago_total / m.empenhado) * 100 : 0;
                       return (
-                        <tr key={i} className="hover:bg-blue-50/30">
-                          <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
-                          <td className="px-3 py-2 font-semibold text-[#333] text-sm flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                            {row.drs}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-sm">{fmt(row.empenhado, 'currency')}</td>
-                          <td className="px-3 py-2 text-right font-mono text-[#1AAB40] text-sm">{fmt(row.liquidado, 'currency')}</td>
-                          <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-sm">{fmt(row.pago_total, 'currency')}</td>
-                          <td className="px-3 py-2 text-right">
-                            <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold',
-                              pct >= 80 ? 'bg-green-50 text-green-700' : pct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
-                              {pct.toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 hidden md:table-cell">
-                            <div className="w-full h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: barW + '%', background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                            </div>
-                          </td>
-                        </tr>
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-[10px] text-[#999] font-mono w-4 shrink-0">{i+1}</span>
+                          <span className="text-[11px] font-medium text-[#333] w-28 shrink-0 truncate">{m.municipio}</span>
+                          <div className="flex-1 relative h-5 bg-[#F0F0F0] rounded overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full bg-blue-400 opacity-30 rounded" style={{ width: share + '%' }} />
+                            <div className="absolute top-0 left-0 h-full bg-[#1AAB40] opacity-70 rounded" style={{ width: Math.min(pctPg, 100) * share / 100 + '%' }} />
+                            <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-bold text-[#333]">{fmt(m.empenhado, 'compact')} · {share.toFixed(1)}%</span>
+                          </div>
+                          <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color: pctPg >= 70 ? '#1AAB40' : '#D9B300' }}>{pctPg.toFixed(0)}%</span>
+                        </div>
                       );
                     })}
-                  </tbody>
-                  {kpis && (
-                    <tfoot><tr className="bg-[#1B1B1B] text-white">
-                      <td className="px-3 py-2.5" colSpan={2}><span className="text-[10px] font-bold text-[#888]">TOTAL</span></td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(kpis.empenhado, 'currency')}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-green-300">{fmt(kpis.liquidado, 'currency')}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(kpis.pago_total, 'currency')}</td>
-                      <td className="px-3 py-2.5 text-right text-sm font-bold">{kpis.empenhado > 0 ? ((kpis.pago_total / kpis.empenhado) * 100).toFixed(1) : '0'}%</td>
-                      <td className="hidden md:table-cell" />
-                    </tr></tfoot>
-                  )}
-                </table>
+                  </div>
+                </Card>
               </div>
-            </Card>
-          </>
-        )}
+
+              {/* RRAS + Região de Saúde side by side - full */}
+              {(data.porRras.length > 0 || data.porRegiaoSa.length > 0) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {data.porRras.length > 0 && (
+                    <Card title="RRAS — Empenhado / Liquidado / Pago" icon={<Layers className="w-4 h-4" />}
+                      badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length}</span>}>
+                      <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3}
+                        height={Math.max(200, data.porRras.length * 40)} />
+                    </Card>
+                  )}
+                  {data.porRegiaoSa.length > 0 && (
+                    <Card title="Regiões de Saúde — Empenhado / Pago" icon={<MapPin className="w-4 h-4" />}
+                      badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}>
+                      <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2}
+                        height={Math.max(200, data.porRegiaoSa.length * 40)} />
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Ranking DRS completo com semáforo */}
+              <Card title="Ranking Completo de DRS" noPad icon={<BarChart3 className="w-4 h-4" />}
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porDrs.length} DRS</span>}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
+                      <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase">#</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">DRS</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#1AAB40] uppercase">Liquidado</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Gap (R$)</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">% Exec.</th>
+                      <th className="px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase hidden md:table-cell">Participação</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-[#F0F0F0]">
+                      {[...data.porDrs].sort((a,b)=>b.empenhado-a.empenhado).map((row, i) => {
+                        const pct = row.empenhado > 0 ? (row.pago_total / row.empenhado) * 100 : 0;
+                        const barW = totalEmpDrs > 0 ? (row.empenhado / totalEmpDrs) * 100 : 0;
+                        const gap = row.empenhado - row.pago_total;
+                        const color = pct >= 80 ? '#1AAB40' : pct >= 50 ? '#D9B300' : '#D64550';
+                        return (
+                          <tr key={i} className="hover:bg-blue-50/30">
+                            <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
+                            <td className="px-3 py-2 font-semibold text-[#333] text-[12px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} title={pct >= 80 ? 'Alta execução' : pct >= 50 ? 'Execução média' : 'Baixa execução'} />
+                                {row.drs}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-[12px]">{fmt(row.empenhado, 'currency')}</td>
+                            <td className="px-3 py-2 text-right font-mono text-[#1AAB40] text-[12px]">{fmt(row.liquidado, 'currency')}</td>
+                            <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-[12px]">{fmt(row.pago_total, 'currency')}</td>
+                            <td className="px-3 py-2 text-right font-mono text-[#D64550] text-[12px]">{fmt(gap, 'currency')}</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: color + '18', color }}>{pct.toFixed(1)}%</span>
+                            </td>
+                            <td className="px-3 py-2 hidden md:table-cell">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-24 h-2 bg-[#F0F0F0] rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full bg-[#118DFF]" style={{ width: barW + '%' }} />
+                                </div>
+                                <span className="text-[10px] text-[#999]">{barW.toFixed(1)}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {kpis && (
+                      <tfoot><tr className="bg-[#1B1B1B] text-white">
+                        <td className="px-3 py-2.5" colSpan={2}><span className="text-[10px] font-bold text-[#888]">TOTAL</span></td>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(kpis.empenhado, 'currency')}</td>
+                        <td className="px-3 py-2.5 text-right font-mono text-green-300">{fmt(kpis.liquidado, 'currency')}</td>
+                        <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(kpis.pago_total, 'currency')}</td>
+                        <td className="px-3 py-2.5 text-right font-mono text-red-300">{fmt(kpis.empenhado - kpis.pago_total, 'currency')}</td>
+                        <td className="px-3 py-2.5 text-right font-bold">{kpis.empenhado > 0 ? ((kpis.pago_total / kpis.empenhado) * 100).toFixed(1) : '0'}%</td>
+                        <td className="hidden md:table-cell" />
+                      </tr></tfoot>
+                    )}
+                  </table>
+                </div>
+              </Card>
+            </>
+          );
+        })()}
 
         {/* ---------- TAB: DESPESAS ---------- */}
-        {activeTab === 'despesas' && data && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Top 5 Elementos de Despesa" icon={<Layers className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porElemento.slice(0,5) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={220} />
-              </Card>
-              <Card title="Top 5 Unidade Orçamentária (UO)  - Emp/Liq/Pago" icon={<Building2 className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porUo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={240} />
-              </Card>
-            </div>
+        {activeTab === 'despesas' && data && (() => {
+          const totalEmpElem = data.porElemento.reduce((s, r) => s + r.empenhado, 0);
+          const totalEmpGrupo = data.porGrupo.reduce((s, r) => s + r.empenhado, 0);
+          const elemExecData = data.porElemento.map(r => ({
+            ...r,
+            pct_exec: r.empenhado > 0 ? Math.round(r.pago_total / r.empenhado * 100) : 0,
+            gap: r.empenhado - r.pago_total,
+            share: totalEmpElem > 0 ? r.empenhado / totalEmpElem * 100 : 0,
+          }));
+          // Execução por grupo detalhado
+          const grupoExec = data.porGrupo.map(r => ({
+            ...r,
+            pct_exec: r.empenhado > 0 ? r.pago_total / r.empenhado * 100 : 0,
+            liq_pct: r.empenhado > 0 ? r.liquidado / r.empenhado * 100 : 0,
+            gap: r.empenhado - r.pago_total,
+          })).sort((a, b) => b.empenhado - a.empenhado);
+          const globalExec = kpis && kpis.empenhado > 0 ? kpis.pago_total / kpis.empenhado * 100 : 0;
+          const globalLiq = kpis && kpis.empenhado > 0 ? kpis.liquidado / kpis.empenhado * 100 : 0;
+          const topElem = elemExecData.sort((a, b) => b.empenhado - a.empenhado)[0];
+          const worstElem = elemExecData.filter(r => r.empenhado > 0).sort((a, b) => a.pct_exec - b.pct_exec)[0];
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Tipo de Despesa" icon={<Briefcase className="w-4 h-4" />}>
-                {data.porTipoDespesa.length > 0 ? (
-                  <div className="flex items-start gap-5">
-                    <div className="w-36 h-36 shrink-0">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                        <PieChart>
-                          <Pie data={data.porTipoDespesa} cx="50%" cy="50%" outerRadius={65} innerRadius={30}
-                            dataKey="empenhado" nameKey="tipo_despesa" paddingAngle={2} strokeWidth={0}>
-                            {data.porTipoDespesa.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i+4) % CHART_COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip content={<ChartTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      {data.porTipoDespesa.slice(0,5).map((g, i) => {
+          return (
+            <>
+              {/* KPIs despesas */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Taxa Liquidação</p>
+                  <p className="text-[22px] font-bold leading-none" style={{ color: globalLiq >= 70 ? '#1AAB40' : globalLiq >= 40 ? '#D9B300' : '#D64550' }}>{globalLiq.toFixed(1)}%</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">liquidado / empenhado</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Taxa Execução</p>
+                  <p className="text-[22px] font-bold leading-none" style={{ color: globalExec >= 70 ? '#1AAB40' : globalExec >= 40 ? '#D9B300' : '#D64550' }}>{globalExec.toFixed(1)}%</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">pago / empenhado</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Maior elemento</p>
+                  <p className="text-[12px] font-bold text-[#118DFF] truncate">{stripNumPrefix(topElem?.elemento ?? '-')}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{fmt(topElem?.share, 'number') ? topElem.share.toFixed(1) + '% do total' : '-'}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Elemento c/ menor exec.</p>
+                  <p className="text-[12px] font-bold text-[#D64550] truncate">{stripNumPrefix(worstElem?.elemento ?? '-')}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{worstElem ? worstElem.pct_exec + '% execução' : '-'}</p>
+                </div>
+              </div>
+
+              {/* Funil de execução Emp → Liq → Pago */}
+              <Card title="Funil de Execução Orçamentária" icon={<TrendingUp className="w-4 h-4" />}
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Valores globais do filtro</span>}>
+                <div className="flex flex-col gap-2 mt-1">
+                  {kpis && (() => {
+                    const stages = [
+                      { label: 'Empenhado', value: kpis.empenhado, color: '#118DFF', pct: 100 },
+                      { label: 'Liquidado', value: kpis.liquidado, color: '#1AAB40', pct: kpis.empenhado > 0 ? kpis.liquidado / kpis.empenhado * 100 : 0 },
+                      { label: 'Pago Total', value: kpis.pago_total, color: '#E66C37', pct: kpis.empenhado > 0 ? kpis.pago_total / kpis.empenhado * 100 : 0 },
+                    ];
+                    return stages.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <span className="text-[11px] font-semibold text-[#555] w-24 shrink-0">{s.label}</span>
+                        <div className="flex-1 relative h-8 bg-[#F0F0F0] rounded overflow-hidden">
+                          <div className="absolute top-0 left-0 h-full rounded transition-all" style={{ width: s.pct + '%', background: s.color, opacity: 0.82 }} />
+                          <div className="absolute inset-0 flex items-center px-3 justify-between">
+                            <span className="text-[11px] font-bold text-white drop-shadow">{fmt(s.value, 'compact')}</span>
+                            <span className="text-[10px] font-bold text-white drop-shadow">{s.pct.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        {i < stages.length - 1 && (
+                          <span className="text-[10px] text-[#999] w-20 text-right shrink-0">
+                            ▼ {i === 0
+                              ? (kpis.empenhado > 0 ? ((kpis.empenhado - kpis.liquidado) / kpis.empenhado * 100).toFixed(1) : '0') + '% não liq.'
+                              : (kpis.liquidado > 0 ? ((kpis.liquidado - kpis.pago_total) / kpis.liquidado * 100).toFixed(1) : '0') + '% não pago'}
+                          </span>
+                        )}
+                        {i === stages.length - 1 && (
+                          <span className="text-[10px] text-[#D64550] font-bold w-20 text-right shrink-0">
+                            Gap: {fmt(kpis.empenhado - kpis.pago_total, 'compact')}
+                          </span>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </Card>
+
+              {/* Grupos + Elementos grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Grupo detalhado com barra de execução */}
+                <Card title="Grupos de Despesa — Análise de Execução" icon={<Layers className="w-4 h-4" />}>
+                  <div className="flex flex-col gap-2 mt-1">
+                    {grupoExec.map((g, i) => {
+                      const color = g.pct_exec >= 80 ? '#1AAB40' : g.pct_exec >= 50 ? '#D9B300' : '#D64550';
+                      const shareW = totalEmpGrupo > 0 ? (g.empenhado / totalEmpGrupo) * 100 : 0;
+                      return (
+                        <div key={i} className="bg-[#FAFAFA] rounded-lg p-2.5 border border-[#F0F0F0]">
+                          <div className="flex items-start justify-between mb-1.5">
+                            <span className="text-[11px] font-semibold text-[#333] flex-1 pr-2">{stripNumPrefix(g.grupo_despesa)}</span>
+                            <span className="text-[11px] font-bold shrink-0" style={{ color }}>{g.pct_exec.toFixed(1)}%</span>
+                          </div>
+                          <div className="flex gap-2 items-center text-[10px] text-[#999] mb-1.5">
+                            <span className="text-[#118DFF] font-semibold">{fmt(g.empenhado, 'compact')}</span>
+                            <span>·</span>
+                            <span className="text-[#1AAB40]">Liq {g.liq_pct.toFixed(0)}%</span>
+                            <span>·</span>
+                            <span className="text-[#D64550]">Gap {fmt(g.gap, 'compact')}</span>
+                          </div>
+                          <div className="relative h-2.5 bg-[#EBEBEB] rounded overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full bg-blue-200 rounded" style={{ width: shareW + '%' }} />
+                            <div className="absolute top-0 left-0 h-full rounded" style={{ width: Math.min(g.pct_exec, 100) + '%', background: color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                {/* Elemento — share + execução */}
+                <Card title="Top 10 Elementos — Share + Execução" icon={<Database className="w-4 h-4" />}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead><tr>
+                        <th className="text-left text-[10px] font-bold text-[#999] uppercase pb-2 pr-2">Elemento</th>
+                        <th className="text-right text-[10px] font-bold text-[#118DFF] uppercase pb-2 px-2 w-24">Valor</th>
+                        <th className="text-right text-[10px] font-bold text-[#999] uppercase pb-2 px-2 w-16">Share</th>
+                        <th className="text-right text-[10px] font-bold text-[#E66C37] uppercase pb-2 pl-2 w-16">Exec.</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-[#F7F7F7]">
+                        {elemExecData.sort((a,b)=>b.empenhado-a.empenhado).slice(0,10).map((e, i) => {
+                          const c = e.pct_exec >= 80 ? '#1AAB40' : e.pct_exec >= 50 ? '#D9B300' : '#D64550';
+                          return (
+                            <tr key={i} className="hover:bg-blue-50/20">
+                              <td className="py-1.5 pr-2">
+                                <div className="text-[11px] font-medium text-[#333] truncate max-w-[180px]">{stripNumPrefix(e.elemento)}</div>
+                                <div className="mt-0.5 h-1.5 bg-[#F0F0F0] rounded overflow-hidden">
+                                  <div className="h-full bg-blue-300 rounded" style={{ width: e.share + '%' }} />
+                                </div>
+                              </td>
+                              <td className="py-1.5 px-2 text-right font-mono text-[11px] text-[#118DFF]">{fmt(e.empenhado, 'compact')}</td>
+                              <td className="py-1.5 px-2 text-right text-[11px] text-[#666]">{e.share.toFixed(1)}%</td>
+                              <td className="py-1.5 pl-2 text-right text-[11px] font-bold" style={{ color: c }}>{e.pct_exec}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+
+              {/* UO + UG comparativo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Unidades Orçamentárias — Emp / Liq / Pago (completo)" icon={<Building2 className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porUo as unknown as Record<string,unknown>[]} yKey="uo" series={S3}
+                    height={Math.max(220, data.porUo.length * 45)} />
+                </Card>
+                <Card title="Projetos / Atividades — Emp / Pago (completo)" icon={<Briefcase className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porProjeto.slice(0,15) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2}
+                    height={Math.max(220, Math.min(data.porProjeto.length, 15) * 45)} />
+                </Card>
+              </div>
+
+              {/* Tipo de Despesa + Rótulo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}>
+                  {data.porTipoDespesa.length > 0 ? (
+                    <div className="flex flex-col gap-2.5">
+                      {data.porTipoDespesa.map((t, i) => {
                         const tot = data.porTipoDespesa.reduce((s, r) => s + r.empenhado, 0);
-                        const pct = tot > 0 ? (g.empenhado / tot) * 100 : 0;
+                        const pctShare = tot > 0 ? t.empenhado / tot * 100 : 0;
+                        const pctExec = t.empenhado > 0 ? t.pago_total / t.empenhado * 100 : 0;
+                        const pctLiq2 = t.empenhado > 0 ? t.liquidado / t.empenhado * 100 : 0;
+                        const c = pctExec >= 80 ? '#1AAB40' : pctExec >= 50 ? '#D9B300' : '#D64550';
                         return (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CHART_COLORS[(i+4) % CHART_COLORS.length] }} />
-                            <span className="text-[11px] text-[#555] flex-1 truncate">{stripNumPrefix(g.tipo_despesa)}</span>
-                            <span className="text-[10px] font-bold text-[#333]">{pct.toFixed(0)}%</span>
+                          <div key={i} className="p-2.5 bg-[#FAFAFA] rounded-lg border border-[#F0F0F0]">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CHART_COLORS[(i+4) % CHART_COLORS.length] }} />
+                                <span className="text-[11px] font-semibold text-[#333]">{stripNumPrefix(t.tipo_despesa)}</span>
+                              </div>
+                              <span className="text-[10px] font-bold" style={{ color: c }}>{pctExec.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex gap-3 text-[10px] text-[#999] mb-1.5">
+                              <span className="text-[#118DFF]">{fmt(t.empenhado, 'compact')}</span>
+                              <span>Liq: <b className="text-[#1AAB40]">{pctLiq2.toFixed(0)}%</b></span>
+                              <span>Share: <b>{pctShare.toFixed(1)}%</b></span>
+                            </div>
+                            <div className="relative h-2 bg-[#EBEBEB] rounded overflow-hidden">
+                              <div className="absolute h-full bg-blue-200 rounded" style={{ width: pctShare + '%' }} />
+                              <div className="absolute h-full rounded" style={{ width: pctExec + '%', background: c, opacity: 0.8 }} />
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
-              </Card>
-              <Card title="Top 5 Rótulos LC 131" icon={<BarChart3 className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
-              </Card>
-            </div>
+                  ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
+                </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <Card title="Top 5 Projetos/Atividades" icon={<Briefcase className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={220} />
+                <Card title="Rótulo LC 131 — Empenhado / Pago" icon={<BarChart3 className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRotulo as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2}
+                    height={Math.max(200, data.porRotulo.length * 50)} />
+                </Card>
+              </div>
+
+              {/* Tabela full de elementos */}
+              <Card title="Tabela Completa — Elementos de Despesa" noPad icon={<Table2 className="w-4 h-4" />}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
+                      <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999]">#</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">Elemento</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Share</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Exec.</th>
+                      <th className="px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase hidden md:table-cell">Barra</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-[#F0F0F0]">
+                      {elemExecData.sort((a,b)=>b.empenhado-a.empenhado).map((e, i) => {
+                        const c = e.pct_exec >= 80 ? '#1AAB40' : e.pct_exec >= 50 ? '#D9B300' : '#D64550';
+                        return (
+                          <tr key={i} className="hover:bg-blue-50/30">
+                            <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
+                            <td className="px-3 py-2 text-[#333] text-[12px] max-w-xs truncate" title={e.elemento}>{stripNumPrefix(e.elemento)}</td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-[12px]">{fmt(e.empenhado, 'currency')}</td>
+                            <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-[12px]">{fmt(e.pago_total, 'currency')}</td>
+                            <td className="px-3 py-2 text-right text-[12px] text-[#666]">{e.share.toFixed(1)}%</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: c + '18', color: c }}>{e.pct_exec}%</span>
+                            </td>
+                            <td className="px-3 py-2 hidden md:table-cell">
+                              <div className="relative w-32 h-2 bg-[#F0F0F0] rounded overflow-hidden">
+                                <div className="absolute h-full bg-blue-200" style={{ width: e.share + '%' }} />
+                                <div className="absolute h-full rounded" style={{ width: e.pct_exec + '%', background: c, opacity: 0.7 }} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
-              <Card title="Top 5 Unidades Gestoras (UG)" icon={<Building2 className="w-4 h-4" />}>
-                <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={220} />
-              </Card>
-            </div>
-          </>
-        )}
+            </>
+          );
+        })()}
 
         {/* ---------- TAB: FORNECEDORES ---------- */}
-        {activeTab === 'fornecedores' && data && (
-          <>
-            <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
-              badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">Top {Math.min(data.porFavorecido.length, 5)}</span>}>
-              <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={220} />
-            </Card>
+        {activeTab === 'fornecedores' && data && (() => {
+          const totalFav = data.porFavorecido.reduce((s, r) => s + r.empenhado, 0);
+          const sorted = [...data.porFavorecido].sort((a, b) => b.empenhado - a.empenhado);
+          // Concentração: top 5 vs resto
+          const top5Sum = sorted.slice(0, 5).reduce((s, r) => s + r.empenhado, 0);
+          const top10Sum = sorted.slice(0, 10).reduce((s, r) => s + r.empenhado, 0);
+          const concentracao5 = totalFav > 0 ? top5Sum / totalFav * 100 : 0;
+          const concentracao10 = totalFav > 0 ? top10Sum / totalFav * 100 : 0;
+          // Pareto acumulado
+          let cumSum = 0;
+          const paretoData = sorted.map(r => {
+            cumSum += r.empenhado;
+            return { ...r, cumPct: totalFav > 0 ? cumSum / totalFav * 100 : 0 };
+          });
+          // Faixas de valor para segmentação
+          const faixas = [
+            { label: '> R$50M', min: 50e6, color: '#118DFF' },
+            { label: 'R$10M–50M', min: 10e6, max: 50e6, color: '#1AAB40' },
+            { label: 'R$1M–10M', min: 1e6, max: 10e6, color: '#D9B300' },
+            { label: 'R$100k–1M', min: 100e3, max: 1e6, color: '#E66C37' },
+            { label: '< R$100k', min: 0, max: 100e3, color: '#D64550' },
+          ];
+          const segData = faixas.map(f => ({
+            ...f,
+            count: sorted.filter(r => r.empenhado >= f.min && (f.max === undefined || r.empenhado < f.max)).length,
+            total: sorted.filter(r => r.empenhado >= f.min && (f.max === undefined || r.empenhado < f.max)).reduce((s, r) => s + r.empenhado, 0),
+          }));
+          const avgContratos = sorted.length > 0 ? sorted.reduce((s, r) => s + r.contratos, 0) / sorted.length : 0;
+          const topFav = sorted[0];
+          const maxContratos = sorted.reduce((m, r) => r.contratos > m.contratos ? r : m, sorted[0] ?? { favorecido: '-', contratos: 0 });
 
-            {/* Favorecido ranking table */}
-            <Card title="Ranking Favorecidos" noPad icon={<Table2 className="w-4 h-4" />}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
-                    <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999]">#</th>
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">Favorecido</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Contratos</th>
-                  </tr></thead>
-                  <tbody className="divide-y divide-[#F0F0F0]">
-                    {data.porFavorecido.map((row, i) => (
-                      <tr key={i} className="hover:bg-blue-50/30">
-                        <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
-                        <td className="px-3 py-2 text-[#333] max-w-xs truncate" title={row.favorecido}>{row.favorecido}</td>
-                        <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF]">{fmt(row.empenhado, 'currency')}</td>
-                        <td className="px-3 py-2 text-right font-mono text-[#E66C37]">{fmt(row.pago_total, 'currency')}</td>
-                        <td className="px-3 py-2 text-right font-mono text-[#999]">{fmt(row.contratos)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          return (
+            <>
+              {/* KPIs fornecedores */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Concentração Top 5</p>
+                  <p className="text-[22px] font-bold leading-none text-[#118DFF]">{concentracao5.toFixed(1)}%</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">dos recursos</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Concentração Top 10</p>
+                  <p className="text-[22px] font-bold leading-none" style={{ color: concentracao10 > 80 ? '#D64550' : '#1AAB40' }}>{concentracao10.toFixed(1)}%</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">dos recursos</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Maior favorecido</p>
+                  <p className="text-[11px] font-bold text-[#118DFF] truncate">{topFav?.favorecido ?? '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{fmt(topFav?.empenhado ?? 0, 'compact')}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Mais contratos</p>
+                  <p className="text-[11px] font-bold text-[#6B007B] truncate">{maxContratos?.favorecido ?? '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{maxContratos?.contratos ?? 0} contratos · média {avgContratos.toFixed(0)}/forn.</p>
+                </div>
               </div>
-            </Card>
-          </>
-        )}
+
+              {/* Mapa de calor Pareto + Segmentação */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Segmentação por faixa de valor */}
+                <Card title="Segmentação de Fornecedores por Porte" icon={<Users className="w-4 h-4" />}>
+                  <div className="flex flex-col gap-3 mt-1">
+                    {segData.map((f, i) => {
+                      const share = totalFav > 0 ? f.total / totalFav * 100 : 0;
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="w-24 shrink-0">
+                            <p className="text-[11px] font-semibold text-[#333]">{f.label}</p>
+                            <p className="text-[10px] text-[#999]">{f.count} forn.</p>
+                          </div>
+                          <div className="flex-1 relative h-6 bg-[#F0F0F0] rounded overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full rounded" style={{ width: share + '%', background: f.color, opacity: 0.75 }} />
+                            <span className="absolute inset-0 flex items-center pl-2 text-[10px] font-bold text-white drop-shadow">{fmt(f.total, 'compact')} · {share.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="mt-1 pt-2 border-t border-[#F0F0F0] flex items-center justify-between text-[10px] text-[#999]">
+                      <span>{sorted.length} favorecidos no total</span>
+                      <span className="font-bold text-[#333]">Total: {fmt(totalFav, 'compact')}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Curva de concentração (Pareto visual) */}
+                <Card title="Curva de Pareto — Concentração de Recursos" icon={<TrendingUp className="w-4 h-4" />}
+                  badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Top 5: {concentracao5.toFixed(1)}%</span>}>
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    {/* Visual step chart showing cumulative % */}
+                    {sorted.slice(0, 12).map((r, i) => {
+                      const share = totalFav > 0 ? r.empenhado / totalFav * 100 : 0;
+                      const cum = paretoData[i].cumPct;
+                      const execPct = r.empenhado > 0 ? r.pago_total / r.empenhado * 100 : 0;
+                      const c = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-[10px] text-[#999] font-mono w-4 shrink-0 text-right">{i+1}</span>
+                          <div className="flex-1 relative h-5 bg-[#F0F0F0] rounded overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full bg-[#118DFF] opacity-25 rounded" style={{ width: cum + '%' }} />
+                            <div className="absolute top-0 left-0 h-full bg-[#118DFF] rounded" style={{ width: share + '%', opacity: 0.7 }} />
+                            <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-semibold text-[#333] truncate max-w-[70%]">{r.favorecido}</span>
+                          </div>
+                          <span className="text-[10px] text-[#118DFF] font-bold w-12 text-right shrink-0">{share.toFixed(1)}%</span>
+                          <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color: c }}>{execPct.toFixed(0)}%</span>
+                        </div>
+                      );
+                    })}
+                    <div className="text-[10px] text-[#999] mt-1 flex justify-end gap-3">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#118DFF] opacity-25 inline-block" />% acum.</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#118DFF] opacity-70 inline-block" />share</span>
+                      <span className="flex items-center gap-1"><b>%</b> exec.</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Gráfico top 15 */}
+              <Card title="Top 15 Favorecidos — Empenhado / Pago" icon={<Users className="w-4 h-4" />}>
+                <HGroupedBarChart data={sorted.slice(0,15) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2}
+                  height={Math.max(300, 15 * 40)} />
+              </Card>
+
+              {/* Ranking completo com métricas */}
+              <Card title="Ranking Completo de Favorecidos" noPad icon={<Table2 className="w-4 h-4" />}
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{sorted.length} fornecedores</span>}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
+                      <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999]">#</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">Favorecido</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Exec.</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Contratos</th>
+                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Share</th>
+                      <th className="px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase hidden md:table-cell">Barra</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-[#F0F0F0]">
+                      {sorted.map((row, i) => {
+                        const execPct = row.empenhado > 0 ? row.pago_total / row.empenhado * 100 : 0;
+                        const share = totalFav > 0 ? row.empenhado / totalFav * 100 : 0;
+                        const c = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
+                        const porte = row.empenhado >= 50e6 ? '🔵' : row.empenhado >= 10e6 ? '🟢' : row.empenhado >= 1e6 ? '🟡' : row.empenhado >= 100e3 ? '🟠' : '🔴';
+                        return (
+                          <tr key={i} className="hover:bg-blue-50/30">
+                            <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
+                            <td className="px-3 py-2 max-w-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px]" title="Porte">{porte}</span>
+                                <span className="text-[#333] text-[12px] truncate" title={row.favorecido}>{row.favorecido}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-[12px]">{fmt(row.empenhado, 'currency')}</td>
+                            <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-[12px]">{fmt(row.pago_total, 'currency')}</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: c + '18', color: c }}>{execPct.toFixed(1)}%</span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-[#6B007B] text-[12px]">{fmt(row.contratos)}</td>
+                            <td className="px-3 py-2 text-right text-[12px] text-[#999]">{share.toFixed(1)}%</td>
+                            <td className="px-3 py-2 hidden md:table-cell">
+                              <div className="w-28 h-2 bg-[#F0F0F0] rounded overflow-hidden">
+                                <div className="h-full rounded bg-[#118DFF]" style={{ width: share + '%', opacity: 0.6 }} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot><tr className="bg-[#1B1B1B] text-white">
+                      <td className="px-3 py-2.5" colSpan={2}><span className="text-[10px] font-bold text-[#888]">TOTAL</span></td>
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(totalFav, 'currency')}</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(sorted.reduce((s,r)=>s+r.pago_total,0), 'currency')}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-green-300">{totalFav > 0 ? (sorted.reduce((s,r)=>s+r.pago_total,0)/totalFav*100).toFixed(1) : '0'}%</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-purple-300">{fmt(sorted.reduce((s,r)=>s+r.contratos,0))}</td>
+                      <td className="px-3 py-2.5 text-right text-[#888]">100%</td>
+                      <td className="hidden md:table-cell" />
+                    </tr></tfoot>
+                  </table>
+                </div>
+              </Card>
+            </>
+          );
+        })()}
 
         {/* ---------- TAB: DADOS ---------- */}
         {activeTab === 'dados' && (
