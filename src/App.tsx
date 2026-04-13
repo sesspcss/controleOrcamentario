@@ -191,7 +191,7 @@ const TABLE_COLS: { key: keyof DetailRow; label: string; numeric?: boolean; w: s
 // -- Direct REST query helpers (bypass slow lc131_detail RPC) --
 const FILTER_TO_COL: Record<string, string> = {
   p_drs: 'drs', p_regiao_ad: 'regiao_ad', p_rras: 'rras', p_regiao_sa: 'regiao_sa',
-  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa_classif',
+  p_municipio: 'municipio', p_grupo_despesa: 'codigo_nome_grupo', p_tipo_despesa: 'tipo_despesa',
   p_rotulo: 'rotulo', p_uo: 'codigo_nome_uo', p_elemento: 'codigo_nome_elemento',
   p_favorecido: 'codigo_nome_favorecido',
 };
@@ -322,7 +322,7 @@ function buildDistinctStateFromRows(rows: Record<string, unknown>[]): Record<str
     distinct_regiao_sa: uniqueSorted(rows.map(r => r.regiao_sa)),
     distinct_municipio: uniqueSorted(rows.map(r => r.municipio)),
     distinct_grupo: uniqueSorted(rows.map(r => r.codigo_nome_grupo ?? r.grupo_despesa)),
-    distinct_tipo: uniqueSorted(rows.map(r => firstFilled(r.tipo_despesa_classif, r.tipo_despesa, classifyTipoDespesaClient(r.descricao_processo, r.tipo_despesa)))),
+    distinct_tipo: uniqueSorted(rows.map(r => r.tipo_despesa)),
     distinct_rotulo: uniqueSorted(rows.map(r => r.rotulo)),
     distinct_fonte: uniqueSorted(rows.map(r => r.codigo_nome_fonte_recurso ?? r.fonte_recurso)),
     distinct_codigo_ug: uniqueSorted(rows.map(r => r.codigo_ug)),
@@ -355,7 +355,6 @@ function applyFiltersToQuery(
   query: any,
   activeFilters: Partial<Record<DetailFilterKey, string[]>>,
   search = '',
-  useClassifiedTipo = true,
 ) {
   for (const f of FILTER_META) {
     if (f.key === 'p_codigo_ug' && search.trim()) continue;
@@ -365,9 +364,7 @@ function applyFiltersToQuery(
     if (f.key === 'p_fonte_recurso') query = query.or(buildFonteOrFilter(expanded));
     else if (f.key === 'p_codigo_ug') query = query.in('codigo_ug', expanded);
     else {
-      const col = f.key === 'p_tipo_despesa'
-        ? (useClassifiedTipo ? 'tipo_despesa_classif' : 'tipo_despesa')
-        : FILTER_TO_COL[f.key];
+      const col = FILTER_TO_COL[f.key];
       if (col) query = query.in(col, expanded);
     }
   }
@@ -404,7 +401,7 @@ function enrichDetailRow(r: Record<string, unknown>): DetailRow {
     : 'Demais Fontes';
   const g = String(row.codigo_nome_grupo ?? '');
   row.grupo_simpl = g.startsWith('1') ? 'Pessoal' : g.startsWith('2') ? 'Dívida' : g.startsWith('3') ? 'Custeio' : g.startsWith('4') ? 'Investimento' : 'Outros';
-  row.tipo_despesa = firstFilled((r as Record<string, unknown>).tipo_despesa_classif, row.tipo_despesa, classifyTipoDespesaClient(row.descricao_processo, row.tipo_despesa));
+  // tipo_despesa is already enriched from TIPO_DESPESA.xlsx via tipo_despesa_ref
   row.pago_total = (Number(row.pago) || 0) + (Number(row.pago_anos_anteriores) || 0);
   return row;
 }
@@ -1724,23 +1721,12 @@ export default function App() {
 
       if (!hasAnyDistinctOptions(nextDistincts) || (nextDistincts.distinct_tipo?.length ?? 0) === 0) {
         let query = supabase.from('lc131_despesas')
-          .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, tipo_despesa_classif, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
+          .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
           .limit(5000);
         if (ano !== 'todos') query = query.eq('ano_referencia', Number(ano));
-        query = applyFiltersToQuery(query, cf, '', true);
+        query = applyFiltersToQuery(query, cf, '');
 
         let { data: fallbackRows, error: fallbackErr } = await query;
-
-        if (fallbackErr?.message?.includes('tipo_despesa_classif')) {
-          let legacyQuery = supabase.from('lc131_despesas')
-            .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
-            .limit(5000);
-          if (ano !== 'todos') legacyQuery = legacyQuery.eq('ano_referencia', Number(ano));
-          legacyQuery = applyFiltersToQuery(legacyQuery, cf, '', false);
-          const legacyRes = await legacyQuery;
-          fallbackRows = legacyRes.data;
-          fallbackErr = legacyRes.error;
-        }
 
         if (!fallbackErr && Array.isArray(fallbackRows)) {
           nextDistincts = buildDistinctStateFromRows(fallbackRows as Record<string, unknown>[]);
@@ -1780,23 +1766,11 @@ export default function App() {
         .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
 
       if (anoSel !== 'todos') query = query.eq('ano_referencia', Number(anoSel));
-      query = applyFiltersToQuery(query, filters, search, true);
+      query = applyFiltersToQuery(query, filters, search);
 
       let { data, count, error } = await query;
 
-      if (error?.message?.includes('tipo_despesa_classif')) {
-        let legacyQuery = supabase.from('lc131_despesas')
-          .select('*', { count: 'estimated' })
-          .order('empenhado', { ascending: false, nullsFirst: false })
-          .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
-
-        if (anoSel !== 'todos') legacyQuery = legacyQuery.eq('ano_referencia', Number(anoSel));
-        legacyQuery = applyFiltersToQuery(legacyQuery, filters, search, false);
-        const legacyRes = await legacyQuery;
-        data = legacyRes.data;
-        count = legacyRes.count;
-        error = legacyRes.error;
-      }
+      // tipo_despesa is now the enriched column (from TIPO_DESPESA.xlsx mapping)
 
       if (error) throw new Error(error.message);
       const rows = (data ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));

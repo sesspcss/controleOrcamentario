@@ -1,13 +1,13 @@
 -- ================================================================
--- PATCH: Tipo de Despesa usa tipo_despesa_classif (classify_tipo_despesa)
--- Atualiza as 3 funÃ§Ãµes: lc131_dashboard, lc131_distincts, lc131_detail
+-- PATCH: Tipo de Despesa usa tipo_despesa (mapeamento da planilha TIPO_DESPESA.xlsx)
+-- Atualiza as 3 funÃƒÂ§ÃƒÂµes: lc131_dashboard, lc131_distincts, lc131_detail
 -- Rodar no Supabase SQL Editor (uma vez)
 -- ================================================================
 SET statement_timeout = 0;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 -- 1. lc131_dashboard
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 CREATE OR REPLACE FUNCTION public.lc131_dashboard(
   p_ano           integer DEFAULT NULL,
   p_drs           text    DEFAULT NULL,
@@ -35,9 +35,8 @@ BEGIN
       drs, regiao_ad, rras, regiao_sa, municipio,
       codigo_nome_grupo, codigo_nome_fonte_recurso,
       codigo_nome_elemento, codigo_nome_uo, codigo_ug,
-      rotulo,
+      tipo_despesa, rotulo,
       descricao_processo,
-      tipo_despesa_classif,
       codigo_nome_favorecido, codigo_nome_projeto_atividade,
       codigo_nome_ug,
       COALESCE(empenhado, 0) AS empenhado,
@@ -46,7 +45,7 @@ BEGIN
       COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS _pt,
       CASE
         WHEN LEFT(codigo_nome_grupo, 1) = '1' THEN 'Pessoal'
-        WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'DÃ­vida'
+        WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'DÃƒÂ­vida'
         WHEN LEFT(codigo_nome_grupo, 1) = '3' THEN 'Custeio'
         WHEN LEFT(codigo_nome_grupo, 1) = '4' THEN 'Investimento'
         ELSE 'Outros'
@@ -54,10 +53,10 @@ BEGIN
       CASE
         WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
         WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-          OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+          OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
           OR codigo_nome_fonte_recurso ILIKE '%uniao%'
           OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-          OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+          OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
           OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
           OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
         ELSE 'Demais Fontes'
@@ -71,16 +70,16 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif      = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
               WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
               WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-                OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+                OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
                 OR codigo_nome_fonte_recurso ILIKE '%uniao%'
                 OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-                OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+                OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
                 OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
                 OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
               ELSE 'Demais Fontes'
@@ -191,10 +190,10 @@ BEGIN
     ),
     'por_tipo_despesa', (
       SELECT json_agg(r) FROM (
-        SELECT tipo_despesa_classif AS tipo_despesa,
+        SELECT tipo_despesa,
           SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
-        FROM base WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>''
-        GROUP BY tipo_despesa_classif ORDER BY 2 DESC LIMIT 60
+        FROM base WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>''
+        GROUP BY tipo_despesa ORDER BY 2 DESC LIMIT 12
       ) r
     ),
     'por_rotulo', (
@@ -245,9 +244,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.lc131_dashboard(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
 
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 -- 2. lc131_distincts
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 CREATE OR REPLACE FUNCTION public.lc131_distincts(
   p_ano           integer DEFAULT NULL,
   p_drs           text    DEFAULT NULL,
@@ -271,10 +270,8 @@ DECLARE result json;
 BEGIN
   WITH filtered AS (
     SELECT drs, regiao_ad, rras, regiao_sa, municipio,
-           codigo_nome_grupo, rotulo,
+           codigo_nome_grupo, tipo_despesa, rotulo,
            descricao_processo,
-           tipo_despesa,
-           tipo_despesa_classif,
            codigo_nome_fonte_recurso, codigo_ug,
            codigo_nome_uo, codigo_nome_elemento,
            codigo_nome_favorecido
@@ -287,16 +284,16 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif      = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
               WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
               WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-                OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+                OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
                 OR codigo_nome_fonte_recurso ILIKE '%uniao%'
                 OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-                OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+                OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
                 OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
                 OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
               ELSE 'Demais Fontes'
@@ -313,16 +310,16 @@ BEGIN
     'distinct_regiao_sa',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT regiao_sa                 AS d FROM filtered WHERE regiao_sa IS NOT NULL AND regiao_sa<>'') x),
     'distinct_municipio',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT municipio                 AS d FROM filtered WHERE municipio IS NOT NULL AND municipio<>'') x),
     'distinct_grupo',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_grupo         AS d FROM filtered WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo<>'') x),
-    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa_classif AS d FROM filtered WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>'') x),
+    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa              AS d FROM filtered WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>'') x),
     'distinct_rotulo',     (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rotulo                    AS d FROM filtered WHERE rotulo IS NOT NULL AND rotulo<>'') x),
     'distinct_fonte',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT
                               CASE
                                 WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
                                 WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-                                  OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+                                  OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
                                   OR codigo_nome_fonte_recurso ILIKE '%uniao%'
                                   OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-                                  OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+                                  OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
                                   OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
                                   OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
                                 ELSE 'Demais Fontes'
@@ -340,9 +337,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.lc131_distincts(integer,text,text,text,text,text,text,text,text,text,text,text,text,text) TO anon, authenticated;
 
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 -- 3. lc131_detail
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 CREATE OR REPLACE FUNCTION public.lc131_detail(
   p_ano           integer DEFAULT NULL,
   p_drs           text    DEFAULT NULL,
@@ -372,17 +369,17 @@ BEGIN
            CASE
              WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
              WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-               OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+               OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
                OR codigo_nome_fonte_recurso ILIKE '%uniao%'
                OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-               OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+               OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
                OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
                OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
              ELSE 'Demais Fontes'
            END AS fonte_simpl,
            CASE
              WHEN LEFT(codigo_nome_grupo, 1) = '1' THEN 'Pessoal'
-             WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'DÃ­vida'
+             WHEN LEFT(codigo_nome_grupo, 1) = '2' THEN 'DÃƒÂ­vida'
              WHEN LEFT(codigo_nome_grupo, 1) = '3' THEN 'Custeio'
              WHEN LEFT(codigo_nome_grupo, 1) = '4' THEN 'Investimento'
              ELSE 'Outros'
@@ -396,16 +393,16 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif      = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
               WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
               WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
-                OR codigo_nome_fonte_recurso ILIKE '%uniÃ£o%'
+                OR codigo_nome_fonte_recurso ILIKE '%uniÃƒÂ£o%'
                 OR codigo_nome_fonte_recurso ILIKE '%uniao%'
                 OR codigo_nome_fonte_recurso ILIKE '%fundo nacional%'
-                OR codigo_nome_fonte_recurso ILIKE '%transferÃªncia%'
+                OR codigo_nome_fonte_recurso ILIKE '%transferÃƒÂªncia%'
                 OR codigo_nome_fonte_recurso ILIKE '%transferencia%'
                 OR codigo_nome_fonte_recurso ILIKE '%SUS%' THEN 'Federal'
               ELSE 'Demais Fontes'
@@ -427,7 +424,7 @@ BEGIN
           codigo_nome_fonte_recurso, fonte_recurso, fonte_simpl,
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
-          tipo_despesa_classif AS tipo_despesa, rotulo,
+          tipo_despesa, rotulo,
           unidade,
           codigo_nome_favorecido, codigo_favorecido,
           descricao_processo, numero_processo,

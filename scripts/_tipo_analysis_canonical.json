@@ -1,0 +1,1395 @@
+{
+  "uniqueDescriptions": 52629,
+  "unambiguous": 48912,
+  "conflicts": 3717,
+  "sample": [
+    {
+      "desc": "CONVENIO CUSTEIO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          369
+        ],
+        [
+          "CONVÊNIO",
+          198
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          7
+        ]
+      ]
+    },
+    {
+      "desc": "GESTAO ESTADUAL SIA PRODUCAO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          353
+        ],
+        [
+          "GESTÃO ESTADUAL",
+          270
+        ],
+        [
+          "ORGANIZAÇÃO SOCIAL",
+          8
+        ]
+      ]
+    },
+    {
+      "desc": "GESTAO PLENA - SIA NEFROLOGIA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          158
+        ],
+        [
+          "GESTÃO ESTADUAL",
+          155
+        ],
+        [
+          "ORGANIZAÇÃO SOCIAL",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "GESTAO ESTADUAL - TETO FIXO FILANTROPICOS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          472
+        ],
+        [
+          "GESTÃO ESTADUAL",
+          299
+        ],
+        [
+          "ORGANIZAÇÃO SOCIAL",
+          13
+        ],
+        [
+          "TABELA SUS PAULISTA",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "GESTAO ESTADUAL - SIA ESTRATEGICOS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          165
+        ],
+        [
+          "GESTÃO ESTADUAL",
+          107
+        ],
+        [
+          "ORGANIZAÇÃO SOCIAL",
+          7
+        ]
+      ]
+    },
+    {
+      "desc": "GESTAO ESTADUAL - SIH ESTRATEGICOS",
+      "types": [
+        [
+          "GESTÃO ESTADUAL",
+          53
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          46
+        ]
+      ]
+    },
+    {
+      "desc": "SPDM",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "ICAV",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          11
+        ],
+        [
+          "EMENDA",
+          4
+        ],
+        [
+          "CONVÊNIO",
+          2
+        ]
+      ]
+    },
+    {
+      "desc": "GRAACC",
+      "types": [
+        [
+          "EMENDA",
+          3
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CASA DE DAVID",
+      "types": [
+        [
+          "EMENDA",
+          3
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "AQUISICAO DE MEDICAMENTO",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          2909
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          780
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CUSTEIO ONCOLOGIA",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "BEM TE VI",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PIRACICABA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          7
+        ],
+        [
+          "EMENDA",
+          3
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA MOCOCA",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "UNICAMP",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          11
+        ],
+        [
+          "EMENDA",
+          8
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "SOBRAPAR",
+      "types": [
+        [
+          "EMENDA",
+          4
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA SAO JOSE DOS CAMPOS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          4
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA VALINHOS",
+      "types": [
+        [
+          "EMENDA",
+          2
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ]
+      ]
+    },
+    {
+      "desc": "AACD",
+      "types": [
+        [
+          "EMENDA",
+          5
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ]
+      ]
+    },
+    {
+      "desc": "AQUISICAO DE INSUMOS DE ENFERMAGEM",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          98
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          8
+        ]
+      ]
+    },
+    {
+      "desc": "IBCC",
+      "types": [
+        [
+          "EMENDA",
+          7
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          6
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA APARECIDA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          4
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PEDERNEIRAS",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CONVENIO",
+      "types": [
+        [
+          "CONVÊNIO",
+          56
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          17
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDACAO PIO XII",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA DUARTINA",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA CACONDE",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA GUARA",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDACAO DOUTOR AMARAL CARVALHO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA DONA CAROLINA MALHEIROS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "UNIV. EST. CAMPINAS",
+      "types": [
+        [
+          "EMENDA",
+          14
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "APAE",
+      "types": [
+        [
+          "EMENDA",
+          6
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ]
+      ]
+    },
+    {
+      "desc": "CONVENIO CUSTEIO HIV",
+      "types": [
+        [
+          "CONVÊNIO",
+          2
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "INVESTIMENTO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          147
+        ],
+        [
+          "EMENDA",
+          12
+        ],
+        [
+          "FUNDO A FUNDO - DEMANDAS PARLAMENTARES",
+          2
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CUSTEIO DA SANTA CASA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CONVENIO INVESTIMENTO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          17
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "GPACI",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDACAO DR. AMARAL CARVALHO",
+      "types": [
+        [
+          "EMENDA",
+          5
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA SOROCABA",
+      "types": [
+        [
+          "EMENDA",
+          3
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ]
+      ]
+    },
+    {
+      "desc": "CONVENIO - CUSTEIO",
+      "types": [
+        [
+          "CONVÊNIO",
+          2
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "AHBB",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "AQUISICAO DE MATERIAL DE ESCRITORIO",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          360
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          15
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          8
+        ],
+        [
+          "EMENDA",
+          5
+        ]
+      ]
+    },
+    {
+      "desc": "ASSOCIACAO FILHAS DE SAO CAMILO",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "HOSPITAL AMARAL CARVALHO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA TAGUAI",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA DRACENA",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CASA DE SAUDE BEZERRA DE MENEZES",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA SAO PAULO",
+      "types": [
+        [
+          "EMENDA",
+          4
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA S.J BARRA",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDACAO PADRE ALBINO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA SANTOS",
+      "types": [
+        [
+          "EMENDA",
+          3
+        ],
+        [
+          "CONVÊNIO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA COSMOPOLIS",
+      "types": [
+        [
+          "CONVÊNIO",
+          2
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PINDAMONHANGABA",
+      "types": [
+        [
+          "CONVÊNIO",
+          2
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "ASSOC.BENEF.JESUS JOSE MARIA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA ITATIBA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "AQUISICAO DE INSUMOS DE ODONTOLOGIA",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          12
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "APAE - CHAVANTES",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "IRM.SAO VICENTE DE PAULO",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA ITAPEVA",
+      "types": [
+        [
+          "EMENDA",
+          3
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "GACC",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA MOGI DAS CRUZES",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA NOVO HORIZONTE",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PILAR DO SUL",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PIEDADE",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA PRESIDENTE PRUDENTE",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "ASSOCIACAO CRUZ VERDE",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA RIBEIRAO PRETO",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA LIMEIRA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "SOC. CAMP.EDUCACAO",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "ASSOC.LAR SAO FRANC.ASSIS",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "STA CASA TUPI PAULISTA",
+      "types": [
+        [
+          "CONVÊNIO",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "BANCO DE OLHOS DE SOROCABA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDACAO SOBECCAN",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "EMENDAS",
+      "types": [
+        [
+          "EMENDA",
+          1
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "PREFEITURA MUNICIPAL DE SAO PAULO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "CASAS DE APOIO PVHIV/AIDS - 1° PARC.",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          22
+        ],
+        [
+          "CASAS DE APOIO",
+          1
+        ],
+        [
+          "FUNDO A FUNDO",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FUNDO A FUNDO RESIDENCIA TERAPEUTICA",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          41
+        ],
+        [
+          "FUNDO A FUNDO",
+          3
+        ]
+      ]
+    },
+    {
+      "desc": "PAGAMENTO - DDPE",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          20
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "EMENDAS PARLAMENTARES",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          41
+        ],
+        [
+          "EMENDA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "RESSARCIMENTO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          15
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          7
+        ]
+      ]
+    },
+    {
+      "desc": "DESPESAS COM AQUISICAO DE MATERIAL DE CONSUMO",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          8
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          6
+        ]
+      ]
+    },
+    {
+      "desc": "ENCARGOS DE PESSOAL INSS COMISSIONADOS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          6
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "ENCARGOS SOCIAIS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          6
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "FGTS",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          9
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "LIQUIDO DA FOLHA DE PAGAMENTO DA SES",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          6
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "PUBLICIDADE",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          19
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          3
+        ]
+      ]
+    },
+    {
+      "desc": "UTILIDADE PUBLICA",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          121
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          7
+        ]
+      ]
+    },
+    {
+      "desc": "PREST.SERV.AUX.ALIMENTACAO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          6
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "EXECUCAO DAS ATIVIDADES DE SERV. DE SAUDE",
+      "types": [
+        [
+          "ORGANIZAÇÃO SOCIAL",
+          1
+        ],
+        [
+          "RLM FERNANDÓPOLIS",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "PRESTACAO DE SERVICO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          184
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          27
+        ],
+        [
+          "AUTARQUIA - ONCOCENTRO",
+          13
+        ]
+      ]
+    },
+    {
+      "desc": "CONTRATACAO DE EMPRESA ESPECIALIZADA PARA PRE",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          19
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          17
+        ]
+      ]
+    },
+    {
+      "desc": "PECAS DE REPOSICAO E ACESSORIOS",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          96
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          5
+        ]
+      ]
+    },
+    {
+      "desc": "MATERIAL MEDICO, HOSPITALAR E ODONTOLOGICO",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          563
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          23
+        ]
+      ]
+    },
+    {
+      "desc": "PAGAMENTO",
+      "types": [
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          28
+        ],
+        [
+          "UNIDADE PRÓPRIA",
+          9
+        ]
+      ]
+    },
+    {
+      "desc": "MATERIAL DE USO LABORATORIAL",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          635
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          6
+        ]
+      ]
+    },
+    {
+      "desc": "FORNECIMENTO ININTERRUPTO DE GASES MEDICINAIS",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          23
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          3
+        ]
+      ]
+    },
+    {
+      "desc": "AQUISICAO DE PAPEL TOALHA",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          54
+        ],
+        [
+          "TRANFERÊNCIA VOLUNTÁRIA",
+          2
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          1
+        ]
+      ]
+    },
+    {
+      "desc": "MATERIAL MEDICO,HOSPITALAR E ODONTOLOGICO",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          850
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          4
+        ]
+      ]
+    },
+    {
+      "desc": "ARTIGOS DE HIGIENE PESSOAL",
+      "types": [
+        [
+          "UNIDADE PRÓPRIA",
+          92
+        ],
+        [
+          "CIRURGIAS ELETIVAS",
+          1
+        ]
+      ]
+    }
+  ]
+}
