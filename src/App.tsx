@@ -1673,6 +1673,7 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError]     = useState<string|null>(null);
   const [tableSearch, setTableSearch]     = useState('');
+  const [xlsxLoading, setXlsxLoading]     = useState(false);
   const DETAIL_PAGE_SIZE = 200;
 
   // -- Retry helper for RPC calls (handles upstream timeouts) --
@@ -1818,7 +1819,7 @@ export default function App() {
     try {
       // Direct REST query – avoids the slow COUNT(*) in lc131_detail RPC
       let query = supabase.from('lc131_despesas')
-        .select('*', { count: 'estimated' })
+        .select('*', { count: 'exact' })
         .order('empenhado', { ascending: false, nullsFirst: false })
         .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
 
@@ -1870,6 +1871,48 @@ export default function App() {
     const body = detailRows.map(r => TABLE_COLS.map(c => '"' + String(r[c.key] ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
     const url = URL.createObjectURL(new Blob(['\uFEFF' + headers + '\n' + body], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a'); a.href = url; a.download = 'lc131_' + anoSel + '.csv'; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const downloadAllXlsx = async () => {
+    setXlsxLoading(true);
+    try {
+      const BATCH = 5000;
+      let offset = 0;
+      const allRows: DetailRow[] = [];
+      while (true) {
+        let q = supabase.from('lc131_despesas')
+          .select('*')
+          .order('empenhado', { ascending: false, nullsFirst: false })
+          .range(offset, offset + BATCH - 1);
+        if (anoSel !== 'todos') q = q.eq('ano_referencia', Number(anoSel));
+        q = applyFiltersToQuery(q, filters, tableSearch);
+        const { data: batch, error } = await q;
+        if (error) throw new Error(error.message);
+        const fetched = (batch ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));
+        allRows.push(...fetched);
+        if (fetched.length < BATCH) break;
+        offset += BATCH;
+      }
+      const XLSX = await import('xlsx');
+      const sheetData = [
+        TABLE_COLS.map(c => c.label),
+        ...allRows.map(r => TABLE_COLS.map(c => {
+          const v = r[c.key];
+          if (c.numeric) return Number(v ?? 0) || 0;
+          const s = String(v ?? '');
+          if (!s || s === 'null' || s === 'undefined') return '';
+          return (c.key as string).startsWith('codigo_nome_') ? stripNumPrefix(s) : s;
+        })),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+      XLSX.writeFile(wb, `lc131_${anoSel}_completo.xlsx`);
+    } catch (e: unknown) {
+      alert('Erro ao gerar XLSX: ' + (e as Error).message);
+    } finally {
+      setXlsxLoading(false);
+    }
   };
 
   const kpis = data?.kpis;
@@ -2906,7 +2949,12 @@ export default function App() {
               </div>
               <button onClick={exportCSV} disabled={!detailRows.length}
                 className="flex items-center gap-1.5 px-3 py-2 bg-[#1AAB40] text-white text-xs font-bold rounded-lg hover:bg-[#159033] disabled:opacity-40">
-                <Download className="w-3.5 h-3.5" /> CSV
+                <Download className="w-3.5 h-3.5" /> CSV (página)
+              </button>
+              <button onClick={downloadAllXlsx} disabled={xlsxLoading || detailTotal === 0}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#217346] text-white text-xs font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40">
+                {xlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
+                XLSX (todos)
               </button>
               <span className="text-xs text-[#999]">{detailLoading ? <Spinner size={3} /> : fmt(detailTotal) + ' registros'}</span>
             </div>

@@ -15,7 +15,7 @@ DROP INDEX IF EXISTS public.idx_lc131_ano_empenhado;
 DROP INDEX IF EXISTS public.idx_lc131_cod_nome_ug_prefix;
 
 -- Confirma o que restou:
-SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS tamanho
+SELECT indexrelname AS indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS tamanho
 FROM pg_stat_user_indexes
 WHERE relname = 'lc131_despesas'
 ORDER BY pg_relation_size(indexrelid) DESC;
