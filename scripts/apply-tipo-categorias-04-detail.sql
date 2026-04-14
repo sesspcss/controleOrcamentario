@@ -53,7 +53,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif      = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -84,7 +84,7 @@ BEGIN
           codigo_nome_fonte_recurso, fonte_recurso, fonte_simpl,
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
-          tipo_despesa_classif AS tipo_despesa, rotulo,
+          tipo_despesa, rotulo,
           unidade,
           codigo_nome_favorecido, codigo_favorecido,
           descricao_processo, numero_processo,

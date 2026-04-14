@@ -273,7 +273,7 @@ BEGIN
       descricao_processo,
       codigo_nome_favorecido, codigo_nome_projeto_atividade,
       codigo_nome_ug,
-      tipo_despesa_classif,
+      tipo_despesa,
       COALESCE(empenhado, 0) AS empenhado,
       COALESCE(liquidado, 0) AS liquidado,
       COALESCE(pago, 0)      AS pago,
@@ -305,7 +305,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -425,10 +425,10 @@ BEGIN
     ),
     'por_tipo_despesa', (
       SELECT json_agg(r) FROM (
-        SELECT tipo_despesa_classif AS tipo_despesa,
+        SELECT tipo_despesa AS tipo_despesa,
           SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
-        FROM base WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>''
-        GROUP BY tipo_despesa_classif ORDER BY 2 DESC LIMIT 60
+        FROM base WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>''
+        GROUP BY tipo_despesa ORDER BY 2 DESC LIMIT 60
       ) r
     ),
     'por_rotulo', (
@@ -505,7 +505,6 @@ BEGIN
            codigo_nome_grupo, rotulo,
            descricao_processo,
            tipo_despesa,
-           tipo_despesa_classif,
            codigo_nome_fonte_recurso, codigo_ug,
            codigo_nome_uo, codigo_nome_elemento,
            codigo_nome_favorecido
@@ -518,7 +517,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -544,7 +543,7 @@ BEGIN
     'distinct_regiao_sa',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT regiao_sa                 AS d FROM filtered WHERE regiao_sa IS NOT NULL AND regiao_sa<>'') x),
     'distinct_municipio',  (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT municipio                 AS d FROM filtered WHERE municipio IS NOT NULL AND municipio<>'') x),
     'distinct_grupo',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT codigo_nome_grupo         AS d FROM filtered WHERE codigo_nome_grupo IS NOT NULL AND codigo_nome_grupo<>'') x),
-    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa_classif      AS d FROM filtered WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>'') x),
+    'distinct_tipo',       (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT tipo_despesa      AS d FROM filtered WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>'') x),
     'distinct_rotulo',     (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rotulo                    AS d FROM filtered WHERE rotulo IS NOT NULL AND rotulo<>'') x),
     'distinct_fonte',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT
                               CASE
@@ -627,7 +626,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif                                    = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -658,7 +657,7 @@ BEGIN
           codigo_nome_fonte_recurso, fonte_recurso, fonte_simpl,
           codigo_nome_grupo, grupo_despesa, grupo_simpl,
           codigo_nome_elemento, codigo_elemento,
-          tipo_despesa_classif AS tipo_despesa, rotulo,
+          tipo_despesa AS tipo_despesa, rotulo,
           unidade,
           codigo_nome_favorecido, codigo_favorecido,
           descricao_processo, numero_processo,

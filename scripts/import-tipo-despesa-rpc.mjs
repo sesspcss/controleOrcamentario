@@ -55,6 +55,9 @@ function canonicalizeTipo(value) {
   }
 }
 
+// Generic/umbrella types that specific program types should override
+const GENERIC_TYPES = new Set(['UNIDADE PRÓPRIA', 'TRANFERÊNCIA VOLUNTÁRIA']);
+
 async function callRpc(name, body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: 'POST',
@@ -93,7 +96,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Build exact mappings (like original import-tipo-despesa.ts)
+  // Build lookup mappings by normalized descrição_processo.
+  // If a description appears with multiple tipos, choose the most frequent one.
   const buckets = new Map();
   for (let i = 1; i < rows.length; i++) {
     const rawTipo = String(rows[i][tipoIndex] || '').trim();
@@ -103,37 +107,52 @@ async function main() {
     const descNorm = normalizeText(rawDesc);
     if (!tipo || !descNorm) continue;
     let bucket = buckets.get(descNorm);
-    if (!bucket) { bucket = { sample: rawDesc, counts: new Map(), total: 0 }; buckets.set(descNorm, bucket); }
+    if (!bucket) {
+      bucket = { sample: rawDesc, counts: new Map(), total: 0 };
+      buckets.set(descNorm, bucket);
+    }
     bucket.total += 1;
     bucket.counts.set(tipo, (bucket.counts.get(tipo) || 0) + 1);
   }
 
   const nowIso = new Date().toISOString();
-  const exactMappings = [];
+  const mappings = [];
+  const ambiguous = [];
   for (const [descNorm, bucket] of buckets.entries()) {
     const tipos = [...bucket.counts.entries()]
       .map(([tipo, ocorrencias]) => ({ tipo, ocorrencias }))
-      .sort((a, b) => b.ocorrencias - a.ocorrencias);
-    if (tipos.length === 1) {
-      exactMappings.push({
-        descricao_processo_norm: descNorm,
-        descricao_processo_exemplo: bucket.sample,
-        tipo_despesa: tipos[0].tipo,
-        ocorrencias: tipos[0].ocorrencias,
-        atualizado_em: nowIso,
-      });
+      .sort((a, b) => b.ocorrencias - a.ocorrencias || a.tipo.localeCompare(b.tipo));
+
+    // Prefer specific program types over generic umbrella types (UNIDADE PRÓPRIA / TRANFERÊNCIA VOLUNTÁRIA)
+    const specificTipos = tipos.filter(({ tipo }) => !GENERIC_TYPES.has(tipo));
+    const winner = specificTipos.length > 0 ? specificTipos[0] : tipos[0];
+
+    mappings.push({
+      descricao_processo_norm: descNorm,
+      descricao_processo_exemplo: bucket.sample,
+      tipo_despesa: winner.tipo,
+      ocorrencias: winner.ocorrencias,
+      atualizado_em: nowIso,
+    });
+
+    if (tipos.length > 1) {
+      ambiguous.push({ sample: bucket.sample, descNorm, tipos });
     }
   }
 
-  console.log(`Mapeamentos exatos: ${exactMappings.length}`);
+  console.log(`Descrições normalizadas: ${buckets.size}`);
+  console.log(`Mapeamentos de lookup: ${mappings.length}`);
+  if (ambiguous.length > 0) {
+    console.log(`Descrições ambíguas (tipo específico preferido sobre genérico): ${ambiguous.length}`);
+  }
   console.log(`Enviando em chunks de ${CHUNK_SIZE} via RPC...`);
 
   let uploaded = 0;
-  for (let i = 0; i < exactMappings.length; i += CHUNK_SIZE) {
-    const chunk = exactMappings.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < mappings.length; i += CHUNK_SIZE) {
+    const chunk = mappings.slice(i, i + CHUNK_SIZE);
     const count = await callRpc('upsert_tipo_despesa_ref', { p_rows: chunk });
     uploaded += chunk.length;
-    process.stdout.write(`\r  Enviado ${uploaded}/${exactMappings.length} (último chunk: ${count})`);
+    process.stdout.write(`\r  Enviado ${uploaded}/${mappings.length} (último chunk: ${count})`);
   }
 
   console.log(`\n\n✅ Import concluído! ${uploaded} mapeamentos inseridos em tipo_despesa_ref`);

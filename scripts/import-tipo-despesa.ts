@@ -50,6 +50,9 @@ function canonicalizeTipo(value: string | null | undefined): string {
   }
 }
 
+// Generic/umbrella types that specific program types should override
+const GENERIC_TYPES = new Set(['UNIDADE PRÓPRIA', 'TRANFERÊNCIA VOLUNTÁRIA']);
+
 async function confirm(prompt: string): Promise<boolean> {
   process.stdout.write(prompt);
   const answer = await new Promise<string>((resolve) => {
@@ -108,7 +111,7 @@ async function main() {
     bucket.counts.set(tipo, (bucket.counts.get(tipo) || 0) + 1);
   }
 
-  const exactMappings = [] as Array<{
+  const mappings = [] as Array<{
     descricao_processo_norm: string;
     descricao_processo_exemplo: string;
     tipo_despesa: string;
@@ -127,31 +130,34 @@ async function main() {
       .map(([tipo, ocorrencias]) => ({ tipo, ocorrencias }))
       .sort((left, right) => right.ocorrencias - left.ocorrencias || left.tipo.localeCompare(right.tipo));
 
-    if (tipos.length === 1) {
-      exactMappings.push({
-        descricao_processo_norm: descNorm,
-        descricao_processo_exemplo: bucket.sample,
-        tipo_despesa: tipos[0].tipo,
-        ocorrencias: tipos[0].ocorrencias,
-        atualizado_em: nowIso,
-      });
-      continue;
-    }
+    // Prefer specific program types over generic umbrella types (UNIDADE PRÓPRIA / TRANFERÊNCIA VOLUNTÁRIA)
+    const specificTipos = tipos.filter(({ tipo }) => !GENERIC_TYPES.has(tipo));
+    const winner = specificTipos.length > 0 ? specificTipos[0] : tipos[0];
 
-    ambiguous.push({
-      descricao_processo_exemplo: bucket.sample,
+    mappings.push({
       descricao_processo_norm: descNorm,
-      tipos,
+      descricao_processo_exemplo: bucket.sample,
+      tipo_despesa: winner.tipo,
+      ocorrencias: winner.ocorrencias,
+      atualizado_em: nowIso,
     });
+
+    if (tipos.length > 1) {
+      ambiguous.push({
+        descricao_processo_exemplo: bucket.sample,
+        descricao_processo_norm: descNorm,
+        tipos,
+      });
+    }
   }
 
   console.log(`Arquivo: ${path.basename(filePath)}`);
   console.log(`Descrições normalizadas: ${buckets.size}`);
-  console.log(`Mapeamentos exatos: ${exactMappings.length}`);
-  console.log(`Descrições ambíguas ignoradas: ${ambiguous.length}`);
+  console.log(`Mapeamentos de lookup: ${mappings.length}`);
+  console.log(`Descrições ambíguas resolvidas por maior ocorrência: ${ambiguous.length}`);
 
   if (ambiguous.length > 0) {
-    console.log('\nAmostra de descrições ambíguas ignoradas:');
+    console.log('\nAmostra de descrições ambíguas resolvidas por maior ocorrência:');
     for (const item of ambiguous.slice(0, 15)) {
       const tipos = item.tipos
         .slice(0, 4)
@@ -161,7 +167,7 @@ async function main() {
     }
   }
 
-  const shouldContinue = await confirm(`\nFazer UPSERT de ${exactMappings.length} registros em ${TARGET_TABLE}? (s/N) `);
+  const shouldContinue = await confirm(`\nFazer UPSERT de ${mappings.length} registros em ${TARGET_TABLE}? (s/N) `);
   if (!shouldContinue) {
     console.log('Cancelado.');
     process.exit(0);
@@ -170,8 +176,8 @@ async function main() {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   let uploaded = 0;
 
-  for (let i = 0; i < exactMappings.length; i += CHUNK_SIZE) {
-    const chunk = exactMappings.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < mappings.length; i += CHUNK_SIZE) {
+    const chunk = mappings.slice(i, i + CHUNK_SIZE);
     const { error } = await supabase
       .from(TARGET_TABLE)
       .upsert(chunk, { onConflict: 'descricao_processo_norm', ignoreDuplicates: false });
@@ -182,13 +188,13 @@ async function main() {
     }
 
     uploaded += chunk.length;
-    console.log(`Enviado ${uploaded}/${exactMappings.length}`);
+    console.log(`Enviado ${uploaded}/${mappings.length}`);
   }
 
   console.log('\nImportação concluída.');
   console.log(`Tabela atualizada: ${TARGET_TABLE}`);
-  console.log(`Mapeamentos exatos carregados: ${exactMappings.length}`);
-  console.log(`Descrições ambíguas mantidas para fallback heurístico: ${ambiguous.length}`);
+  console.log(`Mapeamentos carregados: ${mappings.length}`);
+  console.log(`Descrições ambíguas resolvidas por maior ocorrência: ${ambiguous.length}`);
 }
 
 main().catch((error) => {

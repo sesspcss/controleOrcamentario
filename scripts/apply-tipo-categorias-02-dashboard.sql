@@ -31,7 +31,7 @@ BEGIN
       descricao_processo,
       codigo_nome_favorecido, codigo_nome_projeto_atividade,
       codigo_nome_ug,
-      tipo_despesa_classif,
+      tipo_despesa,
       COALESCE(empenhado, 0) AS empenhado,
       COALESCE(liquidado, 0) AS liquidado,
       COALESCE(pago, 0)      AS pago,
@@ -63,7 +63,7 @@ BEGIN
       AND (p_regiao_sa     IS NULL OR regiao_sa                 = ANY(string_to_array(p_regiao_sa, '|')))
       AND (p_municipio     IS NULL OR municipio                 = ANY(string_to_array(p_municipio, '|')))
       AND (p_grupo_despesa IS NULL OR codigo_nome_grupo         = ANY(string_to_array(p_grupo_despesa, '|')))
-      AND (p_tipo_despesa  IS NULL OR tipo_despesa_classif      = ANY(string_to_array(p_tipo_despesa, '|')))
+      AND (p_tipo_despesa  IS NULL OR tipo_despesa              = ANY(string_to_array(p_tipo_despesa, '|')))
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
@@ -183,10 +183,10 @@ BEGIN
     ),
     'por_tipo_despesa', (
       SELECT json_agg(r) FROM (
-        SELECT tipo_despesa_classif AS tipo_despesa,
+        SELECT tipo_despesa AS tipo_despesa,
           SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
-        FROM base WHERE tipo_despesa_classif IS NOT NULL AND tipo_despesa_classif<>''
-        GROUP BY tipo_despesa_classif ORDER BY 2 DESC LIMIT 60
+        FROM base WHERE tipo_despesa IS NOT NULL AND tipo_despesa<>''
+        GROUP BY tipo_despesa ORDER BY 2 DESC LIMIT 60
       ) r
     ),
     'por_rotulo', (
