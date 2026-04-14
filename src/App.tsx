@@ -1876,7 +1876,7 @@ export default function App() {
   const downloadAllXlsx = async () => {
     setXlsxLoading(true);
     try {
-      const BATCH = 5000;
+      const BATCH = 1000; // Supabase REST hard-caps at 1000 rows per request
       let offset = 0;
       const allRows: DetailRow[] = [];
       while (true) {
