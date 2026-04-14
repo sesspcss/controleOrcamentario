@@ -413,7 +413,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'despesas',      label: 'Despesas',       icon: <Briefcase className="w-3.5 h-3.5" /> },
   { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
-  { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
+  { id: 'pivot',         label: 'Pagamentos',     icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
 ];
 
 type UploadStep = 'idle'|'parsing'|'preview'|'uploading'|'done'|'error';

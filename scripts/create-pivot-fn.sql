@@ -2,7 +2,7 @@
 -- lc131_pivot: retorna pago_total / empenhado / liquidado
 -- agrupado por (municipio, rotulo, ano_referencia)
 -- Todos os anos aparecem como colunas no front-end (pivot dinâmico)
--- Execute no Supabase SQL Editor antes de usar a aba "Tabela Dinâmica"
+-- Execute no Supabase SQL Editor antes de usar a aba "Pagamentos"
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION public.lc131_pivot(
@@ -26,11 +26,14 @@ RETURNS TABLE(
   empenhado      NUMERIC,
   liquidado      NUMERIC
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET statement_timeout = 0
 AS $$
+BEGIN
+  RETURN QUERY
   SELECT
     COALESCE(d.municipio,  '')              AS municipio,
     COALESCE(d.rotulo,     '(Sem Rótulo)')  AS rotulo,
@@ -52,6 +55,7 @@ AS $$
     AND (p_favorecido    IS NULL OR d.codigo_nome_favorecido = ANY(string_to_array(p_favorecido,    '|')))
   GROUP BY d.municipio, d.rotulo, d.ano_referencia
   ORDER BY d.municipio, d.rotulo, d.ano_referencia;
+END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.lc131_pivot(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO anon, authenticated;
