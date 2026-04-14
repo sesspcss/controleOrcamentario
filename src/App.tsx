@@ -2227,6 +2227,9 @@ export default function App() {
                 <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
                   <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={200} />
                 </Card>
+                <Card title="Top 5 Rótulos — Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
+                </Card>
               </div>
             )}
           </>
@@ -2612,8 +2615,8 @@ export default function App() {
                 </Card>
               </div>
 
-              {/* Tipo de Despesa */}
-              <div className="grid grid-cols-1 gap-5">
+              {/* Tipo de Despesa + Rótulo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}>
                   {data.porTipoDespesa.length > 0 ? (
                     <div className="flex flex-col gap-2.5">
@@ -2635,6 +2638,39 @@ export default function App() {
                             <div className="flex gap-3 text-[10px] text-[#999] mb-1.5">
                               <span className="text-[#118DFF]">{fmt(t.empenhado, 'compact')}</span>
                               <span>Liq: <b className="text-[#1AAB40]">{pctLiq2.toFixed(0)}%</b></span>
+                              <span>Share: <b>{pctShare.toFixed(1)}%</b></span>
+                            </div>
+                            <div className="relative h-2 bg-[#EBEBEB] rounded overflow-hidden">
+                              <div className="absolute h-full bg-blue-200 rounded" style={{ width: pctShare + '%' }} />
+                              <div className="absolute h-full rounded" style={{ width: pctExec + '%', background: c, opacity: 0.8 }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
+                </Card>
+
+                {/* Rótulo LC 131 */}
+                <Card title="Rótulo LC 131 — Execução detalhada" icon={<Layers className="w-4 h-4" />}>
+                  {data.porRotulo.length > 0 ? (
+                    <div className="flex flex-col gap-2.5">
+                      {data.porRotulo.map((t, i) => {
+                        const tot = data.porRotulo.reduce((s, r) => s + r.empenhado, 0);
+                        const pctShare = tot > 0 ? t.empenhado / tot * 100 : 0;
+                        const pctExec = t.empenhado > 0 ? t.pago_total / t.empenhado * 100 : 0;
+                        const c = pctExec >= 80 ? '#1AAB40' : pctExec >= 50 ? '#D9B300' : '#D64550';
+                        return (
+                          <div key={i} className="p-2.5 bg-[#FAFAFA] rounded-lg border border-[#F0F0F0]">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                <span className="text-[11px] font-semibold text-[#333]">{t.rotulo || '(sem rótulo)'}</span>
+                              </div>
+                              <span className="text-[10px] font-bold" style={{ color: c }}>{pctExec.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex gap-3 text-[10px] text-[#999] mb-1.5">
+                              <span className="text-[#118DFF]">{fmt(t.empenhado, 'compact')}</span>
                               <span>Share: <b>{pctShare.toFixed(1)}%</b></span>
                             </div>
                             <div className="relative h-2 bg-[#EBEBEB] rounded overflow-hidden">
