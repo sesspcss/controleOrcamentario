@@ -1678,7 +1678,7 @@ export default function App() {
   const DETAIL_PAGE_SIZE = 200;
 
   // -- Pivot tab --
-  type PivotRawRow = { municipio: string; rotulo: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
+  type PivotRawRow = { municipio: string; tipo_despesa: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
   const [pivotRaw, setPivotRaw]             = useState<PivotRawRow[]>([]);
   const [pivotLoading, setPivotLoading]     = useState(false);
   const [pivotError, setPivotError]         = useState<string|null>(null);
@@ -1865,9 +1865,18 @@ export default function App() {
         if (SKIP_KEYS.has(k)) return;
         if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
       });
-      const { data, error } = await supabase.rpc('lc131_pivot', params);
-      if (error) throw new Error(error.message);
-      setPivotRaw(data ?? []);
+      const BATCH = 1000;
+      let offset = 0;
+      const allRows: PivotRawRow[] = [];
+      while (true) {
+        const { data, error } = await supabase.rpc('lc131_pivot', params).range(offset, offset + BATCH - 1);
+        if (error) throw new Error(error.message);
+        const fetched = data ?? [];
+        allRows.push(...fetched);
+        if (fetched.length < BATCH) break;
+        offset += BATCH;
+      }
+      setPivotRaw(allRows);
     } catch (e: unknown) {
       setPivotError((e as Error).message);
     } finally {
@@ -3077,30 +3086,30 @@ export default function App() {
           // Derive years present in the data
           const pivotAnos = Array.from(new Set(pivotRaw.map(r => r.ano_referencia))).sort((a, b) => a - b);
 
-          // Build hierarchical structure: municipio → rotulos → byYear
+          // Build hierarchical structure: municipio → tipos de despesa → byYear
           type PivotMunic = {
             municipio: string;
             byYear: Record<number, number>;
             total: number;
-            rotulos: { rotulo: string; byYear: Record<number, number>; total: number }[];
+            tipos: { tipo: string; byYear: Record<number, number>; total: number }[];
           };
           const municMap = new Map<string, PivotMunic>();
           for (const row of pivotRaw) {
             const v = (row[pivotValueKey] as number) ?? 0;
             if (!municMap.has(row.municipio)) {
-              municMap.set(row.municipio, { municipio: row.municipio, byYear: {}, total: 0, rotulos: [] });
+              municMap.set(row.municipio, { municipio: row.municipio, byYear: {}, total: 0, tipos: [] });
             }
             const munic = municMap.get(row.municipio)!;
             munic.byYear[row.ano_referencia] = (munic.byYear[row.ano_referencia] ?? 0) + v;
             munic.total += v;
-            let rot = munic.rotulos.find(r => r.rotulo === row.rotulo);
-            if (!rot) { rot = { rotulo: row.rotulo, byYear: {}, total: 0 }; munic.rotulos.push(rot); }
-            rot.byYear[row.ano_referencia] = (rot.byYear[row.ano_referencia] ?? 0) + v;
-            rot.total += v;
+            let tp = munic.tipos.find(r => r.tipo === row.tipo_despesa);
+            if (!tp) { tp = { tipo: row.tipo_despesa, byYear: {}, total: 0 }; munic.tipos.push(tp); }
+            tp.byYear[row.ano_referencia] = (tp.byYear[row.ano_referencia] ?? 0) + v;
+            tp.total += v;
           }
           const municRows = Array.from(municMap.values())
             .sort((a, b) => a.municipio.localeCompare(b.municipio, 'pt-BR'));
-          municRows.forEach(m => m.rotulos.sort((a, b) => b.total - a.total));
+          municRows.forEach(m => m.tipos.sort((a, b) => b.total - a.total));
 
           // Grand totals
           const grandByYear: Record<number, number> = {};
@@ -3116,22 +3125,19 @@ export default function App() {
             try {
               const XLSX = await import('xlsx');
               const valLabel = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
-              const header = ['Município', 'Rótulo', ...pivotAnos.map(String), 'Total Geral'];
+              const header = ['Município', 'Tipo de Despesa', ...pivotAnos.map(String), 'Total Geral'];
               const rows: (string | number)[][] = [header];
               for (const m of municRows) {
-                // municipality summary row
                 rows.push([m.municipio, `TOTAL ${m.municipio}`, ...pivotAnos.map(a => m.byYear[a] ?? 0), m.total]);
-                // rotulo sub-rows
-                for (const r of m.rotulos) {
-                  rows.push([m.municipio, r.rotulo, ...pivotAnos.map(a => r.byYear[a] ?? 0), r.total]);
+                for (const tp of m.tipos) {
+                  rows.push([m.municipio, tp.tipo, ...pivotAnos.map(a => tp.byYear[a] ?? 0), tp.total]);
                 }
               }
-              // grand total row
               rows.push(['TOTAL GERAL', '', ...pivotAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
               const ws = XLSX.utils.aoa_to_sheet(rows);
               const wb = XLSX.utils.book_new();
               XLSX.utils.book_append_sheet(wb, ws, valLabel);
-              XLSX.writeFile(wb, `pivot_municipio_rotulo_${pivotValueKey}.xlsx`);
+              XLSX.writeFile(wb, `pivot_municipio_tipo_despesa_${pivotValueKey}.xlsx`);
             } catch (e: unknown) {
               alert('Erro ao gerar XLSX: ' + (e as Error).message);
             } finally {
@@ -3192,7 +3198,7 @@ export default function App() {
                         <tr className="bg-[#1B1B1B] text-white">
                           <th className="sticky left-0 z-30 bg-[#1B1B1B] px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
                             style={{ minWidth: '220px' }}>
-                            Município / Rótulo
+                            Município / Tipo de Despesa
                           </th>
                           {pivotAnos.map(ano => (
                             <th key={ano} className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
@@ -3234,20 +3240,20 @@ export default function App() {
                                   {fmt(munic.total, 'currency')}
                                 </td>
                               </tr>
-                              {/* Rotulo sub-rows */}
-                              {isOpen && munic.rotulos.map(rot => (
-                                <tr key={rot.rotulo} className="bg-white hover:bg-[#F8FAFF]">
+                              {/* Tipo de despesa sub-rows */}
+                              {isOpen && munic.tipos.map(tp => (
+                                <tr key={tp.tipo} className="bg-white hover:bg-[#F8FAFF]">
                                   <td className="sticky left-0 z-10 px-3 py-1.5 text-[#444] whitespace-nowrap border-r border-[#F0F0F0] bg-white"
                                     style={{ minWidth: '220px' }}>
-                                    <span className="pl-6">{rot.rotulo}</span>
+                                    <span className="pl-6">{tp.tipo}</span>
                                   </td>
                                   {pivotAnos.map(ano => (
                                     <td key={ano} className="px-3 py-1.5 text-right font-mono text-[#555] whitespace-nowrap border-r border-[#F0F0F0]">
-                                      {rot.byYear[ano] ? fmt(rot.byYear[ano], 'currency') : <span className="text-[#EEE]">-</span>}
+                                      {tp.byYear[ano] ? fmt(tp.byYear[ano], 'currency') : <span className="text-[#EEE]">-</span>}
                                     </td>
                                   ))}
                                   <td className="px-3 py-1.5 text-right font-mono font-semibold text-[#333] whitespace-nowrap">
-                                    {fmt(rot.total, 'currency')}
+                                    {fmt(tp.total, 'currency')}
                                   </td>
                                 </tr>
                               ))}

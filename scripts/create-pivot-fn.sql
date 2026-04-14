@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION public.lc131_pivot(
 )
 RETURNS TABLE(
   municipio      TEXT,
-  rotulo         TEXT,
+  tipo_despesa   TEXT,
   ano_referencia INT,
   pago_total     NUMERIC,
   empenhado      NUMERIC,
@@ -35,12 +35,12 @@ AS $$
 BEGIN
   RETURN QUERY
   SELECT
-    COALESCE(d.municipio,  '')              AS municipio,
-    COALESCE(d.rotulo,     '(Sem Rótulo)')  AS rotulo,
-    d.ano_referencia::INT                   AS ano_referencia,
+    COALESCE(d.municipio,    '')               AS municipio,
+    COALESCE(d.tipo_despesa, '(Sem Tipo)')     AS tipo_despesa,
+    d.ano_referencia::INT                      AS ano_referencia,
     SUM(COALESCE(d.pago, 0) + COALESCE(d.pago_anos_anteriores, 0)) AS pago_total,
-    SUM(COALESCE(d.empenhado,  0))          AS empenhado,
-    SUM(COALESCE(d.liquidado,  0))          AS liquidado
+    SUM(COALESCE(d.empenhado,  0))             AS empenhado,
+    SUM(COALESCE(d.liquidado,  0))             AS liquidado
   FROM public.lc131_despesas d
   WHERE (p_drs           IS NULL OR d.drs                    = ANY(string_to_array(p_drs,           '|')))
     AND (p_regiao_ad     IS NULL OR d.regiao_ad              = ANY(string_to_array(p_regiao_ad,     '|')))
@@ -53,8 +53,8 @@ BEGIN
     AND (p_uo            IS NULL OR d.codigo_nome_uo         = ANY(string_to_array(p_uo,            '|')))
     AND (p_elemento      IS NULL OR d.codigo_nome_elemento   = ANY(string_to_array(p_elemento,      '|')))
     AND (p_favorecido    IS NULL OR d.codigo_nome_favorecido = ANY(string_to_array(p_favorecido,    '|')))
-  GROUP BY d.municipio, d.rotulo, d.ano_referencia
-  ORDER BY d.municipio, d.rotulo, d.ano_referencia;
+  GROUP BY d.municipio, d.tipo_despesa, d.ano_referencia
+  ORDER BY d.municipio, d.tipo_despesa, d.ano_referencia;
 END;
 $$;
 
