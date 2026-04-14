@@ -1,73 +1,79 @@
 -- ================================================================
--- Enriquece rotulo, unidade e tipo_despesa (fallback) em lc131_despesas
--- a partir de bd_ref, usando a mesma lógica de JOIN da view lc131_enriquecida:
---   1º: codigo_projeto_atividade → bd_ref.codigo
---   2º: codigo_ug → bd_ref.codigo
---   3º: prefixo numérico de codigo_nome_ug → bd_ref.codigo
---
+-- Enriquece rotulo, unidade e tipo_despesa em lc131_despesas a partir de bd_ref.
+-- Estratégia: uma chamada por código de bd_ref → usa índice idx_lc131_cod_projeto
 -- Execute no Supabase SQL Editor, depois rode: node scripts/run-enrich-bdref.mjs
 -- ================================================================
 
-CREATE OR REPLACE FUNCTION public.enrich_bdref_batch(
-  p_batch_size integer DEFAULT 1000
-)
+-- Função 1: retorna todos os codigos de bd_ref que têm dados úteis
+CREATE OR REPLACE FUNCTION public.list_bdref_codigos()
+RETURNS json
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT json_agg(codigo ORDER BY codigo)
+  FROM public.bd_ref
+  WHERE unidade IS NOT NULL OR rotulo IS NOT NULL OR tipo_despesa IS NOT NULL;
+$$;
+
+-- Função 2: atualiza lc131_despesas para um código específico
+-- Usa o índice idx_lc131_cod_projeto (rápido, < 1s por código)
+CREATE OR REPLACE FUNCTION public.enrich_bdref_by_code(p_codigo text)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  updated_count integer;
+  ref_unidade      text;
+  ref_rotulo       text;
+  ref_tipo_despesa text;
+  updated_count    integer;
 BEGIN
-  -- Usa apenas codigo_projeto_atividade → bd_ref (índice único, rápido)
-  -- Faz um UPDATE direto sem CTE para minimizar overhead
-  UPDATE public.lc131_despesas lc
+  SELECT unidade, rotulo, tipo_despesa
+  INTO ref_unidade, ref_rotulo, ref_tipo_despesa
+  FROM public.bd_ref
+  WHERE codigo = p_codigo
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN json_build_object('updated', 0);
+  END IF;
+
+  -- Atualiza apenas linhas que ainda têm NULL (preserva valores já preenchidos)
+  -- Usa índice no codigo_projeto_atividade → muito rápido
+  UPDATE public.lc131_despesas
   SET
-    unidade      = COALESCE(lc.unidade,      rb.unidade),
-    rotulo       = COALESCE(lc.rotulo,       rb.rotulo),
-    tipo_despesa = COALESCE(lc.tipo_despesa, rb.tipo_despesa)
-  FROM (
-    SELECT lc2.id,
-           rb.unidade,
-           rb.rotulo,
-           rb.tipo_despesa
-    FROM public.lc131_despesas lc2
-    JOIN public.bd_ref rb
-      ON rb.codigo = lc2.codigo_projeto_atividade::text
-    WHERE (lc2.unidade IS NULL OR lc2.rotulo IS NULL OR lc2.tipo_despesa IS NULL)
-      AND (rb.unidade IS NOT NULL OR rb.rotulo IS NOT NULL OR rb.tipo_despesa IS NOT NULL)
-    LIMIT p_batch_size
-  ) rb
-  WHERE lc.id = rb.id;
+    unidade      = COALESCE(unidade,      ref_unidade),
+    rotulo       = COALESCE(rotulo,       ref_rotulo),
+    tipo_despesa = COALESCE(tipo_despesa, ref_tipo_despesa)
+  WHERE codigo_projeto_atividade::text = p_codigo
+    AND (
+      (unidade      IS NULL AND ref_unidade      IS NOT NULL) OR
+      (rotulo       IS NULL AND ref_rotulo        IS NOT NULL) OR
+      (tipo_despesa IS NULL AND ref_tipo_despesa  IS NOT NULL)
+    );
 
   GET DIAGNOSTICS updated_count = ROW_COUNT;
 
-  -- Se ainda sobrar linhas com NULL, tenta via codigo_ug (segunda passagem)
-  IF updated_count = 0 THEN
-    UPDATE public.lc131_despesas lc
-    SET
-      unidade      = COALESCE(lc.unidade,      rb.unidade),
-      rotulo       = COALESCE(lc.rotulo,       rb.rotulo),
-      tipo_despesa = COALESCE(lc.tipo_despesa, rb.tipo_despesa)
-    FROM (
-      SELECT lc2.id,
-             rb.unidade,
-             rb.rotulo,
-             rb.tipo_despesa
-      FROM public.lc131_despesas lc2
-      JOIN public.bd_ref rb
-        ON rb.codigo = lc2.codigo_ug::text
-      WHERE (lc2.unidade IS NULL OR lc2.rotulo IS NULL OR lc2.tipo_despesa IS NULL)
-        AND (rb.unidade IS NOT NULL OR rb.rotulo IS NOT NULL OR rb.tipo_despesa IS NOT NULL)
-      LIMIT p_batch_size
-    ) rb
-    WHERE lc.id = rb.id;
+  -- Fallback: tenta também via codigo_ug (para linhas sem codigo_projeto_atividade)
+  UPDATE public.lc131_despesas
+  SET
+    unidade      = COALESCE(unidade,      ref_unidade),
+    rotulo       = COALESCE(rotulo,       ref_rotulo),
+    tipo_despesa = COALESCE(tipo_despesa, ref_tipo_despesa)
+  WHERE codigo_ug::text = p_codigo
+    AND (codigo_projeto_atividade IS NULL OR codigo_projeto_atividade::text <> p_codigo)
+    AND (
+      (unidade      IS NULL AND ref_unidade      IS NOT NULL) OR
+      (rotulo       IS NULL AND ref_rotulo        IS NOT NULL) OR
+      (tipo_despesa IS NULL AND ref_tipo_despesa  IS NOT NULL)
+    );
 
-    GET DIAGNOSTICS updated_count = ROW_COUNT;
-  END IF;
+  updated_count := updated_count + ROW_COUNT;
 
   RETURN json_build_object('updated', updated_count);
 END;
 $$;
 
-SELECT 'Função enrich_bdref_batch criada com sucesso' AS status;
+SELECT 'Funções list_bdref_codigos e enrich_bdref_by_code criadas' AS status;

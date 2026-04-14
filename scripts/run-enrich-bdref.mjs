@@ -1,8 +1,8 @@
 /**
  * run-enrich-bdref.mjs
  * ─────────────────────────────────────────────────────────────────
- * Enriquece as colunas rotulo, unidade e tipo_despesa (fallback)
- * em lc131_despesas a partir do bd_ref, via RPC em lotes.
+ * Enriquece rotulo, unidade e tipo_despesa em lc131_despesas
+ * processando um código de bd_ref por vez (usa índice, sem timeout).
  *
  * PRÉ-REQUISITO: Execute create-enrich-bdref-fn.sql no Supabase SQL Editor
  *
@@ -14,7 +14,6 @@
 
 const SUPABASE_URL = 'https://teikzwrfsxjipxozzhbr.supabase.co';
 const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc4OTA0NCwiZXhwIjoyMDkxMzY1MDQ0fQ.YUaFE11ZfuKAaRj1UMmhvLr3bN_1yjP9D2WDBcpBee0';
-const BATCH_SIZE   = 1000;
 
 const HEADERS = {
   apikey: SERVICE_KEY,
@@ -36,25 +35,34 @@ async function callRpc(name, body = {}) {
 async function main() {
   console.log('=== Enriquecendo rotulo / unidade / tipo_despesa via bd_ref ===\n');
   const start = Date.now();
-  let totalUpdated = 0;
-  let iteration = 0;
 
-  while (true) {
-    iteration++;
-    const result = await callRpc('enrich_bdref_batch', { p_batch_size: BATCH_SIZE });
+  // Passo 1: busca todos os códigos de bd_ref com dados úteis
+  console.log('1. Carregando códigos de bd_ref...');
+  const codigos = await callRpc('list_bdref_codigos');
+  if (!Array.isArray(codigos) || codigos.length === 0) {
+    console.log('  Nenhum código encontrado em bd_ref. Certifique-se de ter importado o Excel de referência.');
+    return;
+  }
+  console.log(`   ${codigos.length} códigos encontrados.\n`);
+
+  // Passo 2: processa um código por vez (cada call usa índice → rápido)
+  console.log('2. Atualizando lc131_despesas código a código...');
+  let totalUpdated = 0;
+  let processed = 0;
+
+  for (const codigo of codigos) {
+    const result = await callRpc('enrich_bdref_by_code', { p_codigo: codigo });
     const count = Number(result?.updated ?? 0);
     totalUpdated += count;
-    const elapsed = ((Date.now() - start) / 1000).toFixed(0);
-    console.log(`  Lote ${iteration}: ${count} atualizados  (total: ${totalUpdated}, ${elapsed}s)`);
-    // Para quando não há mais nada para atualizar
-    if (count < BATCH_SIZE) break;
+    processed++;
+    if (processed % 50 === 0 || count > 0) {
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      process.stdout.write(`\r   ${processed}/${codigos.length} códigos · ${totalUpdated} linhas atualizadas · ${elapsed}s  `);
+    }
   }
 
-  console.log(`\n✓ Enriquecimento concluído: ${totalUpdated} registros atualizados.`);
-
-  if (totalUpdated === 0) {
-    console.log('  (0 atualizações = todos os registros já tinham esses campos preenchidos)');
-  }
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  console.log(`\n\n✓ Concluído em ${elapsed}s: ${totalUpdated} registros atualizados.`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
