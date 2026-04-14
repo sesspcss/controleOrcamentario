@@ -5,6 +5,8 @@
 -- Execute no Supabase SQL Editor antes de usar a aba "Pagamentos"
 -- ================================================================
 
+DROP FUNCTION IF EXISTS public.lc131_pivot(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
+
 CREATE OR REPLACE FUNCTION public.lc131_pivot(
   p_drs           TEXT DEFAULT NULL,
   p_regiao_ad     TEXT DEFAULT NULL,
