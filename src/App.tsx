@@ -1861,33 +1861,26 @@ export default function App() {
     try {
       const SKIP_KEYS = new Set(['p_codigo_ug', 'p_fonte_recurso']);
       const params: Record<string, unknown> = {};
+      if (anoSel !== 'todos') params.p_ano = Number(anoSel);
       Object.entries(filters).forEach(([k, v]) => {
         if (SKIP_KEYS.has(k)) return;
         if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
       });
-      const BATCH = 1000;
-      let offset = 0;
-      const allRows: PivotRawRow[] = [];
-      while (true) {
-        const { data, error } = await supabase.rpc('lc131_pivot', params).range(offset, offset + BATCH - 1);
-        if (error) throw new Error(error.message);
-        const fetched = data ?? [];
-        allRows.push(...fetched);
-        if (fetched.length < BATCH) break;
-        offset += BATCH;
-      }
-      setPivotRaw(allRows);
+      // Function returns json (single value) — no 1000-row REST limit
+      const { data, error } = await supabase.rpc('lc131_pivot', params);
+      if (error) throw new Error(error.message);
+      setPivotRaw(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setPivotError((e as Error).message);
     } finally {
       setPivotLoading(false);
     }
-  }, [filters]);
+  }, [filters, anoSel]);
 
   useEffect(() => {
     if (activeTab !== 'pivot') return;
     loadPivot();
-  }, [activeTab, filters, loadPivot]);
+  }, [activeTab, filters, anoSel, loadPivot]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
