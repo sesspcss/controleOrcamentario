@@ -83,6 +83,14 @@ BEGIN
           OR norm_tipo_desc(descricao_processo) LIKE '%INTRA ORCAMENTARIA%'
           OR norm_tipo_desc(descricao_processo) = 'INTRA'                     THEN 'INTRAORÇAMENTÁRIA'
 
+        -- ─── TABELA SUS PAULISTA específicos ────────────────────────
+        -- (antes de GESTAO ESTADUAL e EMENDA que capturariam estas descrições)
+        WHEN norm_tipo_desc(descricao_processo) LIKE '%TETO FIXO FILANTROPICOS%'
+          OR norm_tipo_desc(descricao_processo) LIKE '%RESOLUCAO SS N%'
+          OR norm_tipo_desc(descricao_processo) LIKE '%RESOLUCAO SS 164%'
+          OR norm_tipo_desc(descricao_processo) LIKE '%RESOLUCAO SS 198%'
+          OR norm_tipo_desc(descricao_processo) LIKE '%PAGAMENTO RESOLUCAO SS%' THEN 'TABELA SUS PAULISTA'
+
         -- ─── Gestão Estadual ────────────────────────────────────────
         WHEN norm_tipo_desc(descricao_processo) LIKE '%GESTAO ESTADUAL%'      THEN 'GESTÃO ESTADUAL'
 
