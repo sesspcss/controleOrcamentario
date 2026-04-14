@@ -64,10 +64,17 @@ async function main() {
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
   console.log(`\n\n✓ Concluído em ${elapsed}s: ${totalUpdated} registros atualizados.`);
 
-  // Passo 3: preenche rotulo com tipo_despesa onde ainda NULL
-  console.log('\n3. Preenchendo rotulo a partir de tipo_despesa (onde rotulo = NULL)...');
-  const r3 = await callRpc('fill_rotulo_from_tipo');
-  console.log(`   ${r3?.updated ?? 0} linhas atualizadas.`);
+  // Passo 3: preenche rotulo com tipo_despesa onde ainda NULL (por ano)
+  console.log('\n3. Preenchendo rotulo a partir de tipo_despesa (por ano)...');
+  const ANOS = [2022, 2023, 2024, 2025, 2026];
+  let totalRotulo = 0;
+  for (const ano of ANOS) {
+    const r3 = await callRpc('fill_rotulo_by_year', { p_ano: ano });
+    const n = r3?.updated ?? 0;
+    if (n > 0) console.log(`   ${ano}: ${n} linhas atualizadas.`);
+    totalRotulo += n;
+  }
+  console.log(`   Total: ${totalRotulo} linhas atualizadas.`);
   console.log('\n✓ Todos os campos enriquecidos com sucesso.');
 }
 

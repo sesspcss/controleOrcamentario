@@ -23,6 +23,7 @@ RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET statement_timeout = 0
 AS $$
 DECLARE
   ref_unidade      text;
@@ -81,26 +82,30 @@ SELECT 'Funções list_bdref_codigos e enrich_bdref_by_code criadas' AS status;
 
 -- ================================================================
 -- Função 3: preenche rotulo a partir de tipo_despesa onde ainda NULL
--- Chamada única — não precisa de paginação
+-- Processa um ano por vez para evitar timeout HTTP do gateway
 -- ================================================================
-CREATE OR REPLACE FUNCTION public.fill_rotulo_from_tipo()
+CREATE OR REPLACE FUNCTION public.fill_rotulo_by_year(p_ano INT)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET statement_timeout = 0
 AS $$
 DECLARE
   n integer;
 BEGIN
   UPDATE public.lc131_despesas
   SET rotulo = tipo_despesa
-  WHERE rotulo IS NULL
+  WHERE ano = p_ano
+    AND rotulo IS NULL
     AND tipo_despesa IS NOT NULL
     AND tipo_despesa <> '';
 
   GET DIAGNOSTICS n = ROW_COUNT;
-  RETURN json_build_object('updated', n);
+  RETURN json_build_object('updated', n, 'ano', p_ano);
 END;
 $$;
 
-SELECT 'Funções criadas: list_bdref_codigos, enrich_bdref_by_code, fill_rotulo_from_tipo' AS status;
+GRANT EXECUTE ON FUNCTION public.fill_rotulo_by_year(INT) TO anon, authenticated;
+
+SELECT 'Funções criadas: list_bdref_codigos, enrich_bdref_by_code, fill_rotulo_by_year' AS status;
