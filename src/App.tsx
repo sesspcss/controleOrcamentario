@@ -2054,7 +2054,7 @@ export default function App() {
 
       {/* --.-.-.-.-.-.-.-FILTER BAR --.-.-.-.-.-.-.-*/}
       {filtersOpen && (
-        <div className="sticky top-[84px] z-20 bg-white border-b border-[#E5E5E5] shadow-md">
+        <div className="sticky top-[84px] z-30 bg-white border-b border-[#E5E5E5] shadow-md">
           <div className="max-w-screen-2xl mx-auto px-4 py-2.5">
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-7 gap-2">
               {FILTER_META.map(f => (
