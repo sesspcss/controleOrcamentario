@@ -126,7 +126,7 @@ BEGIN
         ELSE tipo_despesa
       END AS novo_tipo
     FROM public.lc131_despesas
-    WHERE ano = p_ano
+    WHERE ano_referencia = p_ano
   ) m
   WHERE d.ctid = m.ctid
     AND d.tipo_despesa IS DISTINCT FROM m.novo_tipo;

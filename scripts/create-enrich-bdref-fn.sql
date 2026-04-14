@@ -96,7 +96,7 @@ DECLARE
 BEGIN
   UPDATE public.lc131_despesas
   SET rotulo = tipo_despesa
-  WHERE ano = p_ano
+  WHERE ano_referencia = p_ano
     AND rotulo IS NULL
     AND tipo_despesa IS NOT NULL
     AND tipo_despesa <> '';
