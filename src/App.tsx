@@ -480,6 +480,63 @@ function Card({ title, children, badge, noPad, icon }: {
   );
 }
 
+interface SegFaixa { label: string; min: number; max?: number; color: string; count: number; total: number }
+interface FavRow { favorecido: string; empenhado: number; pago_total: number; contratos: number }
+function SegmentacaoFornecedores({ segData, sorted, totalFav }: { segData: SegFaixa[]; sorted: FavRow[]; totalFav: number }) {
+  const [expanded, setExpanded] = React.useState<number | null>(null);
+  return (
+    <div className="flex flex-col gap-2 mt-1">
+      {segData.map((f, i) => {
+        const share = totalFav > 0 ? f.total / totalFav * 100 : 0;
+        const isOpen = expanded === i;
+        const members = sorted.filter(r => r.empenhado >= f.min && (f.max === undefined || r.empenhado < f.max));
+        return (
+          <div key={i}>
+            <div
+              className={cn('flex items-center gap-3 cursor-pointer rounded', isOpen && 'bg-[#F7F9FF]')}
+              onClick={() => setExpanded(isOpen ? null : i)}
+            >
+              <div className="w-24 shrink-0 py-1 pl-1">
+                <p className="text-[11px] font-semibold text-[#333]">{f.label}</p>
+                <p className="text-[10px] text-[#999]">{f.count} forn.</p>
+              </div>
+              <div className="flex-1 relative h-6 bg-[#F0F0F0] rounded overflow-hidden">
+                {share > 0 && <div className="absolute top-0 left-0 h-full rounded" style={{ width: share + '%', background: f.color, opacity: 0.75 }} />}
+                <span className="absolute inset-0 flex items-center pl-2 text-[10px] font-bold text-white drop-shadow">
+                  {f.total > 0 ? `${fmt(f.total, 'compact')} · ${share.toFixed(1)}%` : <span className="text-[#AAA] font-normal">0 - 0.0%</span>}
+                </span>
+              </div>
+              {members.length > 0 && (
+                <ChevronDown className={cn('w-3.5 h-3.5 text-[#999] shrink-0 transition-transform', isOpen && 'rotate-180')} />
+              )}
+            </div>
+            {isOpen && members.length > 0 && (
+              <div className="mt-1 ml-1 border-l-2 pl-3 flex flex-col gap-1" style={{ borderColor: f.color }}>
+                {members.map((r, j) => {
+                  const execPct = r.empenhado > 0 ? r.pago_total / r.empenhado * 100 : 0;
+                  const ec = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
+                  return (
+                    <div key={j} className="flex items-center gap-2 py-0.5">
+                      <span className="text-[10px] text-[#999] font-mono w-4 text-right shrink-0">{j+1}</span>
+                      <span className="flex-1 text-[11px] text-[#333] truncate" title={stripNumPrefix(r.favorecido)}>{stripNumPrefix(r.favorecido)}</span>
+                      <span className="text-[10px] font-bold text-[#118DFF] shrink-0 w-16 text-right">{fmt(r.empenhado, 'compact')}</span>
+                      <span className="text-[10px] font-bold shrink-0 w-10 text-right" style={{ color: ec }}>{execPct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="mt-1 pt-2 border-t border-[#F0F0F0] flex items-center justify-between text-[10px] text-[#999]">
+        <span>{sorted.length} favorecidos no total</span>
+        <span className="font-bold text-[#333]">Total: {fmt(totalFav, 'compact')}</span>
+      </div>
+    </div>
+  );
+}
+
 function MultiSelect({ label, options, value, onChange, loading }: {
   label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; loading?: boolean;
 }) {
@@ -2705,27 +2762,7 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Segmentação por faixa de valor */}
                 <Card title="Segmentação de Fornecedores por Porte" icon={<Users className="w-4 h-4" />}>
-                  <div className="flex flex-col gap-3 mt-1">
-                    {segData.map((f, i) => {
-                      const share = totalFav > 0 ? f.total / totalFav * 100 : 0;
-                      return (
-                        <div key={i} className="flex items-center gap-3">
-                          <div className="w-24 shrink-0">
-                            <p className="text-[11px] font-semibold text-[#333]">{f.label}</p>
-                            <p className="text-[10px] text-[#999]">{f.count} forn.</p>
-                          </div>
-                          <div className="flex-1 relative h-6 bg-[#F0F0F0] rounded overflow-hidden">
-                            <div className="absolute top-0 left-0 h-full rounded" style={{ width: share + '%', background: f.color, opacity: 0.75 }} />
-                            <span className="absolute inset-0 flex items-center pl-2 text-[10px] font-bold text-white drop-shadow">{fmt(f.total, 'compact')} · {share.toFixed(1)}%</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="mt-1 pt-2 border-t border-[#F0F0F0] flex items-center justify-between text-[10px] text-[#999]">
-                      <span>{sorted.length} favorecidos no total</span>
-                      <span className="font-bold text-[#333]">Total: {fmt(totalFav, 'compact')}</span>
-                    </div>
-                  </div>
+                  <SegmentacaoFornecedores segData={segData} sorted={sorted} totalFav={totalFav} />
                 </Card>
 
                 {/* Curva de concentração (Pareto visual) */}

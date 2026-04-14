@@ -14,7 +14,7 @@
 
 const SUPABASE_URL = 'https://teikzwrfsxjipxozzhbr.supabase.co';
 const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc4OTA0NCwiZXhwIjoyMDkxMzY1MDQ0fQ.YUaFE11ZfuKAaRj1UMmhvLr3bN_1yjP9D2WDBcpBee0';
-const BATCH_SIZE   = 5000;
+const BATCH_SIZE   = 1000;
 
 const HEADERS = {
   apikey: SERVICE_KEY,
