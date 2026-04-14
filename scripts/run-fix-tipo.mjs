@@ -1,10 +1,10 @@
 /**
  * run-fix-tipo.mjs
  * ─────────────────────────────────────────────────────────────────
- * Chama fix_tipo_despesa_by_pattern() para reclassificar tipo_despesa
- * com base em padrões de descricao_processo.
+ * Reclassifica tipo_despesa processando um ano por vez para evitar
+ * timeout do gateway HTTP (30s). Usa fix_tipo_despesa_by_year(ano).
  *
- * PRÉ-REQUISITO: Execute fix-tipo-despesa-pattern.sql no Supabase SQL Editor
+ * PRÉ-REQUISITO: Execute fix-tipo-by-year.sql no Supabase SQL Editor
  *
  * USO:
  *   $env:NODE_TLS_REJECT_UNAUTHORIZED="0"
@@ -32,19 +32,33 @@ async function callRpc(name, body = {}) {
   return JSON.parse(text);
 }
 
+// Anos a processar — ajuste se necessário
+const ANOS = [2023, 2024, 2025, 2026];
+
 async function main() {
-  console.log('=== Reclassificando tipo_despesa por padrão de descricao_processo ===\n');
-  const start = Date.now();
+  console.log('=== Reclassificando tipo_despesa (um ano por vez) ===\n');
+  const globalStart = Date.now();
+  let totalUpdated = 0;
 
-  console.log('Chamando fix_tipo_despesa_by_pattern()...');
-  console.log('(pode demorar 2-5 minutos para 460k linhas)\n');
+  for (const ano of ANOS) {
+    const t = Date.now();
+    process.stdout.write(`  Ano ${ano}... `);
+    let result;
+    try {
+      result = await callRpc('fix_tipo_despesa_by_year', { p_ano: ano });
+    } catch (err) {
+      console.log(`ERRO: ${err.message}`);
+      continue;
+    }
+    const n = result?.updated ?? 0;
+    const s = ((Date.now() - t) / 1000).toFixed(1);
+    console.log(`${n.toLocaleString('pt-BR')} linhas atualizadas (${s}s)`);
+    totalUpdated += n;
+  }
 
-  const result = await callRpc('fix_tipo_despesa_by_pattern');
-  const updated = result?.updated ?? 0;
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-
-  console.log(`✓ Concluído em ${elapsed}s: ${updated.toLocaleString('pt-BR')} registros reclassificados.`);
-  if (updated === 0) {
+  const elapsed = ((Date.now() - globalStart) / 1000).toFixed(1);
+  console.log(`\n✓ Concluído em ${elapsed}s: ${totalUpdated.toLocaleString('pt-BR')} registros reclassificados.`);
+  if (totalUpdated === 0) {
     console.log('  → Nenhuma linha alterada: todos os tipos já estão corretos.');
   }
 }
