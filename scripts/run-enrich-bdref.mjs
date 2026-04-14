@@ -63,6 +63,12 @@ async function main() {
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
   console.log(`\n\n✓ Concluído em ${elapsed}s: ${totalUpdated} registros atualizados.`);
+
+  // Passo 3: preenche rotulo com tipo_despesa onde ainda NULL
+  console.log('\n3. Preenchendo rotulo a partir de tipo_despesa (onde rotulo = NULL)...');
+  const r3 = await callRpc('fill_rotulo_from_tipo');
+  console.log(`   ${r3?.updated ?? 0} linhas atualizadas.`);
+  console.log('\n✓ Todos os campos enriquecidos com sucesso.');
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

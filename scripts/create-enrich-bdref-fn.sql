@@ -28,8 +28,10 @@ DECLARE
   ref_unidade      text;
   ref_rotulo       text;
   ref_tipo_despesa text;
-  updated_count    integer;
+  n1               integer := 0;
+  n2               integer := 0;
 BEGIN
+  -- bd_ref.codigo é TEXT → comparação direta
   SELECT unidade, rotulo, tipo_despesa
   INTO ref_unidade, ref_rotulo, ref_tipo_despesa
   FROM public.bd_ref
@@ -40,40 +42,65 @@ BEGIN
     RETURN json_build_object('updated', 0);
   END IF;
 
-  -- Atualiza apenas linhas que ainda têm NULL (preserva valores já preenchidos)
-  -- Usa índice no codigo_projeto_atividade → muito rápido
+  -- codigo_projeto_atividade é TEXT → comparação direta, usa índice idx_lc131_cod_projeto
   UPDATE public.lc131_despesas
   SET
     unidade      = COALESCE(unidade,      ref_unidade),
     rotulo       = COALESCE(rotulo,       ref_rotulo),
     tipo_despesa = COALESCE(tipo_despesa, ref_tipo_despesa)
-  WHERE codigo_projeto_atividade::text = p_codigo
+  WHERE codigo_projeto_atividade = p_codigo
     AND (
       (unidade      IS NULL AND ref_unidade      IS NOT NULL) OR
       (rotulo       IS NULL AND ref_rotulo        IS NOT NULL) OR
       (tipo_despesa IS NULL AND ref_tipo_despesa  IS NOT NULL)
     );
+  GET DIAGNOSTICS n1 = ROW_COUNT;
 
-  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  -- codigo_ug é NUMERIC → só faz cast se p_codigo for numérico
+  IF p_codigo ~ '^\d+$' THEN
+    UPDATE public.lc131_despesas
+    SET
+      unidade      = COALESCE(unidade,      ref_unidade),
+      rotulo       = COALESCE(rotulo,       ref_rotulo),
+      tipo_despesa = COALESCE(tipo_despesa, ref_tipo_despesa)
+    WHERE codigo_ug = p_codigo::numeric
+      AND (codigo_projeto_atividade IS NULL OR codigo_projeto_atividade <> p_codigo)
+      AND (
+        (unidade      IS NULL AND ref_unidade      IS NOT NULL) OR
+        (rotulo       IS NULL AND ref_rotulo        IS NOT NULL) OR
+        (tipo_despesa IS NULL AND ref_tipo_despesa  IS NOT NULL)
+      );
+    GET DIAGNOSTICS n2 = ROW_COUNT;
+  END IF;
 
-  -- Fallback: tenta também via codigo_ug (para linhas sem codigo_projeto_atividade)
-  UPDATE public.lc131_despesas
-  SET
-    unidade      = COALESCE(unidade,      ref_unidade),
-    rotulo       = COALESCE(rotulo,       ref_rotulo),
-    tipo_despesa = COALESCE(tipo_despesa, ref_tipo_despesa)
-  WHERE codigo_ug::text = p_codigo
-    AND (codigo_projeto_atividade IS NULL OR codigo_projeto_atividade::text <> p_codigo)
-    AND (
-      (unidade      IS NULL AND ref_unidade      IS NOT NULL) OR
-      (rotulo       IS NULL AND ref_rotulo        IS NOT NULL) OR
-      (tipo_despesa IS NULL AND ref_tipo_despesa  IS NOT NULL)
-    );
-
-  updated_count := updated_count + ROW_COUNT;
-
-  RETURN json_build_object('updated', updated_count);
+  RETURN json_build_object('updated', n1 + n2);
 END;
 $$;
 
 SELECT 'Funções list_bdref_codigos e enrich_bdref_by_code criadas' AS status;
+
+-- ================================================================
+-- Função 3: preenche rotulo a partir de tipo_despesa onde ainda NULL
+-- Chamada única — não precisa de paginação
+-- ================================================================
+CREATE OR REPLACE FUNCTION public.fill_rotulo_from_tipo()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  n integer;
+BEGIN
+  UPDATE public.lc131_despesas
+  SET rotulo = tipo_despesa
+  WHERE rotulo IS NULL
+    AND tipo_despesa IS NOT NULL
+    AND tipo_despesa <> '';
+
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RETURN json_build_object('updated', n);
+END;
+$$;
+
+SELECT 'Funções criadas: list_bdref_codigos, enrich_bdref_by_code, fill_rotulo_from_tipo' AS status;
