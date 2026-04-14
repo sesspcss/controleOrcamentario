@@ -2209,14 +2209,14 @@ export default function App() {
               </div>
             )}
 
-            {/* Rótulo + UG */}
+            {/* UG */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Rótulos  - Empenhado" icon={<FileText className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
-                </Card>
                 <Card title="Top 5 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
                   <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={200} />
+                </Card>
+                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                  <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -2226,9 +2226,6 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
                   <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={200} />
-                </Card>
-                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={200} />
                 </Card>
               </div>
             )}
@@ -2615,8 +2612,8 @@ export default function App() {
                 </Card>
               </div>
 
-              {/* Tipo de Despesa + Rótulo */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Tipo de Despesa */}
+              <div className="grid grid-cols-1 gap-5">
                 <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}>
                   {data.porTipoDespesa.length > 0 ? (
                     <div className="flex flex-col gap-2.5">
@@ -2649,11 +2646,6 @@ export default function App() {
                       })}
                     </div>
                   ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
-                </Card>
-
-                <Card title="Rótulo LC 131 — Empenhado / Pago" icon={<BarChart3 className="w-4 h-4" />}>
-                  <HGroupedBarChart data={data.porRotulo as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2}
-                    height={Math.max(200, data.porRotulo.length * 50)} />
                 </Card>
               </div>
 
