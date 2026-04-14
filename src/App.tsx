@@ -80,7 +80,7 @@ const S2 = [
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -413,6 +413,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'despesas',      label: 'Despesas',       icon: <Briefcase className="w-3.5 h-3.5" /> },
   { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
+  { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
 ];
 
 type UploadStep = 'idle'|'parsing'|'preview'|'uploading'|'done'|'error';
@@ -1676,6 +1677,15 @@ export default function App() {
   const [xlsxLoading, setXlsxLoading]     = useState(false);
   const DETAIL_PAGE_SIZE = 200;
 
+  // -- Pivot tab --
+  type PivotRawRow = { municipio: string; rotulo: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
+  const [pivotRaw, setPivotRaw]             = useState<PivotRawRow[]>([]);
+  const [pivotLoading, setPivotLoading]     = useState(false);
+  const [pivotError, setPivotError]         = useState<string|null>(null);
+  const [pivotExpanded, setPivotExpanded]   = useState<Set<string>>(new Set());
+  const [pivotValueKey, setPivotValueKey]   = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
+  const [pivotXlsxLoading, setPivotXlsxLoading] = useState(false);
+
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -1845,6 +1855,31 @@ export default function App() {
     return () => clearTimeout(detailDeb.current);
   }, [filters, anoSel, activeTab]);
 
+  // -- Load pivot --
+  const loadPivot = useCallback(async () => {
+    setPivotLoading(true); setPivotError(null);
+    try {
+      const SKIP_KEYS = new Set(['p_codigo_ug', 'p_fonte_recurso']);
+      const params: Record<string, unknown> = {};
+      Object.entries(filters).forEach(([k, v]) => {
+        if (SKIP_KEYS.has(k)) return;
+        if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
+      });
+      const { data, error } = await supabase.rpc('lc131_pivot', params);
+      if (error) throw new Error(error.message);
+      setPivotRaw(data ?? []);
+    } catch (e: unknown) {
+      setPivotError((e as Error).message);
+    } finally {
+      setPivotLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    if (activeTab !== 'pivot') return;
+    loadPivot();
+  }, [activeTab, filters, loadPivot]);
+
   useEffect(() => {
     if (!initialLoaded.current) return;
     loadDistincts(filters, anoSel);
@@ -1863,6 +1898,7 @@ export default function App() {
   const switchTab = (t: Tab) => {
     setActiveTab(t);
     if (t === 'dados') { loadDetail(0, tableSearch); if (Object.keys(distincts).length === 0) loadDistincts(filters, anoSel); }
+    if (t === 'pivot') loadPivot();
   };
 
   const exportCSV = () => {
@@ -3035,6 +3071,219 @@ export default function App() {
             </div>
           </>
         )}
+
+        {/* ---------- TAB: TABELA DINÂMICA ---------- */}
+        {activeTab === 'pivot' && (() => {
+          // Derive years present in the data
+          const pivotAnos = Array.from(new Set(pivotRaw.map(r => r.ano_referencia))).sort((a, b) => a - b);
+
+          // Build hierarchical structure: municipio → rotulos → byYear
+          type PivotMunic = {
+            municipio: string;
+            byYear: Record<number, number>;
+            total: number;
+            rotulos: { rotulo: string; byYear: Record<number, number>; total: number }[];
+          };
+          const municMap = new Map<string, PivotMunic>();
+          for (const row of pivotRaw) {
+            const v = (row[pivotValueKey] as number) ?? 0;
+            if (!municMap.has(row.municipio)) {
+              municMap.set(row.municipio, { municipio: row.municipio, byYear: {}, total: 0, rotulos: [] });
+            }
+            const munic = municMap.get(row.municipio)!;
+            munic.byYear[row.ano_referencia] = (munic.byYear[row.ano_referencia] ?? 0) + v;
+            munic.total += v;
+            let rot = munic.rotulos.find(r => r.rotulo === row.rotulo);
+            if (!rot) { rot = { rotulo: row.rotulo, byYear: {}, total: 0 }; munic.rotulos.push(rot); }
+            rot.byYear[row.ano_referencia] = (rot.byYear[row.ano_referencia] ?? 0) + v;
+            rot.total += v;
+          }
+          const municRows = Array.from(municMap.values())
+            .sort((a, b) => a.municipio.localeCompare(b.municipio, 'pt-BR'));
+          municRows.forEach(m => m.rotulos.sort((a, b) => b.total - a.total));
+
+          // Grand totals
+          const grandByYear: Record<number, number> = {};
+          let grandTotal = 0;
+          for (const m of municRows) {
+            for (const ano of pivotAnos) { grandByYear[ano] = (grandByYear[ano] ?? 0) + (m.byYear[ano] ?? 0); }
+            grandTotal += m.total;
+          }
+
+          // XLSX export — flat rows: municipio | rotulo | ano1 | ano2 | ... | total
+          const downloadPivotXlsx = async () => {
+            setPivotXlsxLoading(true);
+            try {
+              const XLSX = await import('xlsx');
+              const valLabel = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
+              const header = ['Município', 'Rótulo', ...pivotAnos.map(String), 'Total Geral'];
+              const rows: (string | number)[][] = [header];
+              for (const m of municRows) {
+                // municipality summary row
+                rows.push([m.municipio, `TOTAL ${m.municipio}`, ...pivotAnos.map(a => m.byYear[a] ?? 0), m.total]);
+                // rotulo sub-rows
+                for (const r of m.rotulos) {
+                  rows.push([m.municipio, r.rotulo, ...pivotAnos.map(a => r.byYear[a] ?? 0), r.total]);
+                }
+              }
+              // grand total row
+              rows.push(['TOTAL GERAL', '', ...pivotAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
+              const ws = XLSX.utils.aoa_to_sheet(rows);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, valLabel);
+              XLSX.writeFile(wb, `pivot_municipio_rotulo_${pivotValueKey}.xlsx`);
+            } catch (e: unknown) {
+              alert('Erro ao gerar XLSX: ' + (e as Error).message);
+            } finally {
+              setPivotXlsxLoading(false);
+            }
+          };
+
+          const COL_W = 130;
+          const totalPages = municRows.length;
+
+          return (
+            <>
+              {/* Toolbar */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-semibold text-[#666]">Valor:</span>
+                {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
+                  <button key={k} onClick={() => setPivotValueKey(k)}
+                    className={cn('px-2.5 py-1.5 text-xs font-bold rounded-lg transition',
+                      pivotValueKey === k ? 'bg-[#118DFF] text-white' : 'bg-white border border-[#D0D0D0] text-[#555] hover:bg-[#F0F0F0]')}>
+                    {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
+                  </button>
+                ))}
+                <div className="flex-1" />
+                <button onClick={() => setPivotExpanded(new Set(municRows.map(m => m.municipio)))}
+                  className="px-2.5 py-1.5 text-xs font-semibold bg-white border border-[#D0D0D0] rounded hover:bg-[#F0F0F0]">
+                  Expandir todos
+                </button>
+                <button onClick={() => setPivotExpanded(new Set())}
+                  className="px-2.5 py-1.5 text-xs font-semibold bg-white border border-[#D0D0D0] rounded hover:bg-[#F0F0F0]">
+                  Recolher todos
+                </button>
+                <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotRaw.length}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-xs font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40">
+                  {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
+                  Exportar XLSX
+                </button>
+                <span className="text-xs text-[#999]">
+                  {pivotLoading ? <Spinner size={3} /> : `${fmt(totalPages)} municípios`}
+                </span>
+              </div>
+
+              <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
+                {pivotError ? (
+                  <div className="p-5 flex items-start gap-2 text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-sm">Erro</p>
+                      <p className="text-xs font-mono mt-0.5">{pivotError.includes('Could not find the function') ? 'Função lc131_pivot não encontrada. Execute scripts/create-pivot-fn.sql no Supabase SQL Editor.' : pivotError}</p>
+                      <button onClick={loadPivot} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
+                    </div>
+                  </div>
+                ) : pivotLoading && !pivotRaw.length ? (
+                  <div className="py-16 flex items-center justify-center"><Spinner size={8} /></div>
+                ) : (
+                  <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
+                    <table className="text-xs border-collapse w-full">
+                      <thead className="sticky top-0 z-20">
+                        <tr className="bg-[#1B1B1B] text-white">
+                          <th className="sticky left-0 z-30 bg-[#1B1B1B] px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
+                            style={{ minWidth: '220px' }}>
+                            Município / Rótulo
+                          </th>
+                          {pivotAnos.map(ano => (
+                            <th key={ano} className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
+                              style={{ minWidth: `${COL_W}px` }}>{ano}</th>
+                          ))}
+                          <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wide text-[#FFD700] whitespace-nowrap"
+                            style={{ minWidth: `${COL_W}px` }}>Total Geral</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F0F0F0]">
+                        {municRows.map((munic, mi) => {
+                          const isOpen = pivotExpanded.has(munic.municipio);
+                          return (
+                            <React.Fragment key={munic.municipio}>
+                              {/* Municipality row */}
+                              <tr
+                                className={cn('cursor-pointer select-none', mi % 2 === 0 ? 'bg-[#F0F6FF]' : 'bg-[#E8F0FE]', 'hover:bg-[#D8EBFF]')}
+                                onClick={() => setPivotExpanded(prev => {
+                                  const next = new Set(prev);
+                                  isOpen ? next.delete(munic.municipio) : next.add(munic.municipio);
+                                  return next;
+                                })}
+                              >
+                                <td className="sticky left-0 z-10 px-3 py-2 font-bold text-[#1B1B1B] whitespace-nowrap border-r border-[#D0D8E8]"
+                                  style={{ minWidth: '220px', background: mi % 2 === 0 ? '#F0F6FF' : '#E8F0FE' }}>
+                                  <span className="flex items-center gap-1.5">
+                                    {isOpen
+                                      ? <ChevronDown className="w-3 h-3 text-[#118DFF] shrink-0" />
+                                      : <ChevronRight className="w-3 h-3 text-[#999] shrink-0" />}
+                                    {munic.municipio}
+                                  </span>
+                                </td>
+                                {pivotAnos.map(ano => (
+                                  <td key={ano} className="px-3 py-2 text-right font-mono font-semibold text-[#1B1B1B] whitespace-nowrap border-r border-[#D0D8E8]">
+                                    {munic.byYear[ano] ? fmt(munic.byYear[ano], 'currency') : <span className="text-[#CCC]">-</span>}
+                                  </td>
+                                ))}
+                                <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] whitespace-nowrap">
+                                  {fmt(munic.total, 'currency')}
+                                </td>
+                              </tr>
+                              {/* Rotulo sub-rows */}
+                              {isOpen && munic.rotulos.map(rot => (
+                                <tr key={rot.rotulo} className="bg-white hover:bg-[#F8FAFF]">
+                                  <td className="sticky left-0 z-10 px-3 py-1.5 text-[#444] whitespace-nowrap border-r border-[#F0F0F0] bg-white"
+                                    style={{ minWidth: '220px' }}>
+                                    <span className="pl-6">{rot.rotulo}</span>
+                                  </td>
+                                  {pivotAnos.map(ano => (
+                                    <td key={ano} className="px-3 py-1.5 text-right font-mono text-[#555] whitespace-nowrap border-r border-[#F0F0F0]">
+                                      {rot.byYear[ano] ? fmt(rot.byYear[ano], 'currency') : <span className="text-[#EEE]">-</span>}
+                                    </td>
+                                  ))}
+                                  <td className="px-3 py-1.5 text-right font-mono font-semibold text-[#333] whitespace-nowrap">
+                                    {fmt(rot.total, 'currency')}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
+                        {/* Grand total row */}
+                        {municRows.length > 0 && (
+                          <tr className="bg-[#1B1B1B] text-white">
+                            <td className="sticky left-0 z-10 px-3 py-2.5 font-bold text-[10px] uppercase tracking-wide text-[#888] bg-[#1B1B1B]"
+                              style={{ minWidth: '220px' }}>
+                              Total Geral
+                            </td>
+                            {pivotAnos.map(ano => (
+                              <td key={ano} className="px-3 py-2.5 text-right font-mono font-bold text-blue-300 whitespace-nowrap border-r border-white/10">
+                                {fmt(grandByYear[ano] ?? 0, 'currency')}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2.5 text-right font-mono font-bold text-[#FFD700] whitespace-nowrap">
+                              {fmt(grandTotal, 'currency')}
+                            </td>
+                          </tr>
+                        )}
+                        {!pivotLoading && !pivotRaw.length && (
+                          <tr><td colSpan={pivotAnos.length + 2} className="py-14 text-center text-[#CCC]">
+                            <Database className="w-7 h-7 mx-auto mb-1 opacity-30" /><p>Nenhum dado encontrado</p>
+                          </td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
 
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
