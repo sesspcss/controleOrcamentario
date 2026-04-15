@@ -97,7 +97,7 @@ BEGIN
     'FROM ( ' ||
     '  SELECT ' ||
     '    COALESCE(' || v_dim    || ', '''')              AS dim1, ' ||
-    '    COALESCE(' || v_subdim || ', ''(Sem Dado)'')    AS subdim, ' ||
+    '    COALESCE(' || v_subdim || ', ''SEM CLASSIFICAÇÃO'')   AS subdim, ' ||
     '    d.ano_referencia::INT                           AS ano_referencia, ' ||
     '    SUM(COALESCE(d.pago, 0) + COALESCE(d.pago_anos_anteriores, 0))::NUMERIC AS pago_total, ' ||
     '    SUM(COALESCE(d.empenhado,  0))::NUMERIC         AS empenhado, ' ||

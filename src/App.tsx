@@ -877,8 +877,8 @@ function ProgressModal({ message }: { message: string }) {
     return () => cancelAnimationFrame(frame);
   }, []);
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1B1B1B] rounded-2xl p-8 shadow-2xl border border-[#333] w-[360px] flex flex-col items-center gap-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
+      <div className="bg-[#1B1B1B] rounded-2xl p-8 shadow-2xl border border-[#333] w-[360px] flex flex-col items-center gap-4 pointer-events-auto">
         <div className="relative w-16 h-16">
           <svg viewBox="0 0 44 44" className="w-full h-full animate-spin" style={{ animationDuration: '1.4s' }}>
             <circle cx="22" cy="22" r="18" fill="none" stroke="#333" strokeWidth="4" />
