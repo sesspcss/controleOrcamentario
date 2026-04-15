@@ -102,8 +102,7 @@ RETURNS TEXT LANGUAGE sql IMMUTABLE STRICT SET search_path = public AS $$
     WHEN 'CONTRATO GESTAO'               THEN 'ORGANIZAÇÃO SOCIAL'
     WHEN 'CONTRATO DE GESTAO'            THEN 'ORGANIZAÇÃO SOCIAL'
     WHEN 'CONTRATO GESTAO'              THEN 'ORGANIZAÇÃO SOCIAL'
-    WHEN 'CONTRATO DE GESTAO'           THEN 'ORGANIZAÇÃO SOCIAL'
-    ELSE t
+    WHEN 'CONTRATO DE GESTAO'           THEN 'ORGANIZAÇÃO SOCIAL'    WHEN 'TABELASUS PAULISTA'            THEN 'TABELA SUS PAULISTA'    ELSE t
   END
 $$;
 GRANT EXECUTE ON FUNCTION public.norm_tipo_final(TEXT) TO anon, authenticated;
@@ -135,6 +134,12 @@ CREATE TABLE public.bd_ref_lookup_l3 (
   PRIMARY KEY (codigo_nome_ug, codigo_nome_projeto_atividade)
 );
 
+-- L4: tipo majoritário por UG — fallback genérico (cobre linhas sem match exato em L1/L2/L3)
+CREATE TABLE public.bd_ref_lookup_l4 (
+  codigo_nome_ug TEXT NOT NULL PRIMARY KEY,
+  tipo_despesa   TEXT NOT NULL
+);
+
 -- ─ 4. Índices em lc131_despesas ──────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_lc131_ano_id
   ON public.lc131_despesas (ano_referencia, id);
@@ -150,7 +155,7 @@ RETURNS json LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  n1 INT; n2 INT; n3 INT;
+  n1 INT; n2 INT; n3 INT; n4 INT;
 BEGIN
   -- L1: tipo mais frequente por (ug + desc + proj)
   TRUNCATE TABLE public.bd_ref_lookup_l1;
@@ -199,14 +204,31 @@ BEGIN
   HAVING COUNT(DISTINCT tipo_despesa) = 1;
   GET DIAGNOSTICS n3 = ROW_COUNT;
 
+  -- L4: tipo mais frequente por UG — fallback para linhas que L1/L2/L3 não cobrem
+  TRUNCATE TABLE public.bd_ref_lookup_l4;
+  INSERT INTO public.bd_ref_lookup_l4 (codigo_nome_ug, tipo_despesa)
+  SELECT DISTINCT ON (codigo_nome_ug)
+    codigo_nome_ug,
+    public.norm_tipo_final(tipo_despesa)
+  FROM (
+    SELECT codigo_nome_ug, tipo_despesa, count(*) AS cnt
+    FROM bd_ref_tipo
+    WHERE codigo_nome_ug IS NOT NULL AND tipo_despesa IS NOT NULL
+    GROUP BY codigo_nome_ug, tipo_despesa
+  ) g
+  ORDER BY codigo_nome_ug, cnt DESC;
+  GET DIAGNOSTICS n4 = ROW_COUNT;
+
   ANALYZE public.bd_ref_lookup_l1;
   ANALYZE public.bd_ref_lookup_l2;
   ANALYZE public.bd_ref_lookup_l3;
+  ANALYZE public.bd_ref_lookup_l4;
 
   RETURN json_build_object(
     'l1_ug_desc_proj',  n1,
     'l2_ug_desc_unico', n2,
-    'l3_ug_proj_unico', n3
+    'l3_ug_proj_unico', n3,
+    'l4_ug_fallback',   n4
   );
 END;
 $$;
@@ -332,13 +354,13 @@ BEGIN
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%ACAO CIVIL%BAURU%'    THEN 'AÇÃO CIVIL - BAURU'
           -- ── Tabelasus — VEM ANTES de GESTÃO ESTADUAL ────────────
           -- (TETO FIXO FILANTROPICOS é pagamento tabela SUS, não gestão estadual)
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TABELASUS PAULISTA%'  THEN 'TABELASUS PAULISTA'
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TABELA SUS PAULISTA%'
+          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TABELASUS PAULISTA%'
+            OR norm_tipo_desc(lc.descricao_processo) LIKE '%TABELA SUS PAULISTA%'
             OR norm_tipo_desc(lc.codigo_nome_projeto_atividade) LIKE '%TABELA SUS PAULISTA%' THEN 'TABELA SUS PAULISTA'
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TETO FIXO FILANTROPICOS%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%TETO MAC FILANTROPICOS%' THEN 'TABELASUS PAULISTA'
+            OR norm_tipo_desc(lc.descricao_processo) LIKE '%TETO MAC FILANTROPICOS%' THEN 'TABELA SUS PAULISTA'
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS N%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 198%'    THEN 'TABELASUS PAULISTA'
+            OR norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 198%'    THEN 'TABELA SUS PAULISTA'
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 164%'
             OR norm_tipo_desc(lc.descricao_processo) LIKE '%PAGAMENTO RESOLUCAO SS%' THEN 'TABELA SUS PAULISTA'
           -- ── Intraorçamentária ────────────────────────────────────
@@ -396,15 +418,14 @@ BEGIN
             OR norm_tipo_desc(lc.descricao_processo) LIKE '%TRANSF%VOLUNTARIA%'   THEN 'TRANSFERÊNCIA VOLUNTÁRIA'
           -- SEM ELSE: retorna NULL → proxima camada COALESCE entra em ação
         END,
-        -- ─── PRIORIDADE 2-4: Lookup bd_ref_tipo (já normalizado) ──
+        -- ─── PRIORIDADE 2-5: Lookup bd_ref_tipo (já normalizado) ──
         r1.tipo_despesa,
         r2.tipo_despesa,
         r3.tipo_despesa,
-        -- ─── PRIORIDADE 5: normaliza o tipo existente ─────────────
+        r4.tipo_despesa,  -- L4: fallback por UG (cobre quase tudo que L1/L2/L3 não pegou)
+        -- ─── PRIORIDADE 6: normaliza o tipo existente ─────────────
         public.norm_tipo_final(lc.tipo_despesa),
-        lc.tipo_despesa,
-        -- ─── PRIORIDADE 6: fallback para nunca deixar NULL ─────────
-        'SEM CLASSIFICAÇÃO'
+        lc.tipo_despesa
       ) AS novo_tipo
     FROM public.lc131_despesas lc
     LEFT JOIN public.bd_ref_lookup_l1 r1
@@ -417,6 +438,8 @@ BEGIN
     LEFT JOIN public.bd_ref_lookup_l3 r3
       ON  r3.codigo_nome_ug                = lc.codigo_nome_ug
       AND r3.codigo_nome_projeto_atividade = lc.codigo_nome_projeto_atividade
+    LEFT JOIN public.bd_ref_lookup_l4 r4
+      ON  r4.codigo_nome_ug = lc.codigo_nome_ug
     WHERE lc.ano_referencia = p_ano
       AND (p_id_min IS NULL OR lc.id >= p_id_min)
       AND (p_id_max IS NULL OR lc.id <= p_id_max)
@@ -444,4 +467,4 @@ AS $$
 $$;
 GRANT EXECUTE ON FUNCTION public.get_lc131_id_range(INT) TO anon, authenticated;
 
-SELECT 'fix_tipo_despesa_by_year v9.0 (CASE-WHEN-first + lookup fallback + norm_tipo_final) criada com sucesso' AS status;
+SELECT 'fix_tipo_despesa_by_year v9.1 (L4 UG fallback + TABELA SUS canonical + sem SEM CLASSIFICACAO) criada com sucesso' AS status;
