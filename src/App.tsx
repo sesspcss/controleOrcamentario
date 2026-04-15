@@ -31,7 +31,7 @@ function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 function fmt(val: number | null | undefined, type: 'currency' | 'number' | 'compact' = 'number'): string {
   if (val === null || val === undefined || isNaN(Number(val))) return ' -';
   const n = Number(val);
-  if (type === 'currency') return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  if (type === 'currency') return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (type === 'compact') {
     if (n >= 1e9) return 'R$ ' + (n / 1e9).toFixed(2) + 'B';
     if (n >= 1e6) return 'R$ ' + (n / 1e6).toFixed(1) + 'M';
@@ -275,6 +275,7 @@ function classifyTipoDespesaClient(descricao: unknown, tipo: unknown): string {
   if (d.includes('ONCOCENT')) return 'AUTARQUIA - ONCOCENTRO';
   if (d.includes('GESTAO ESTADUAL') || d.includes('GESTAO PLENA')) return 'GESTÃO ESTADUAL';
   if (d.includes('CONVENIO')) return 'CONVÊNIO';
+  if (d.includes('CONTRATO DE GESTAO') || d.includes('CONTRATO GESTAO')) return 'ORGANIZAÇÃO SOCIAL';
   if (d.includes('EMENDA')) return 'EMENDA';
   if (d.includes('PEROLA BYINGTON') || d.includes('PPP')) return 'PPP';
   if (d.includes('CORUJAO') || d.includes('CIRURGIA ELETIVA') || d.includes('MUTIRAO CIRURGIA')) return 'CIRURGIAS ELETIVAS';
@@ -289,6 +290,9 @@ function classifyTipoDespesaClient(descricao: unknown, tipo: unknown): string {
   if (d.includes('ATENCAO BASICA')) return 'ATENÇÃO BÁSICA';
   if (d.includes('SORRIA SP')) return 'SORRIA SP';
   if (d.includes('IGM SUS PAULISTA')) return 'IGM SUS PAULISTA';
+  if (d.includes('TABELASUS PAULISTA')) return 'TABELASUS PAULISTA';
+  if (d.includes('TABELASUS PAULISTA')) return 'TABELASUS PAULISTA';
+  if (d.includes('TABELASUS PAULISTA')) return 'TABELASUS PAULISTA';
   if (d.includes('TABELA SUS')) return 'TABELA SUS PAULISTA';
   if (d.includes('REPELENTE')) return 'REPELENTE';
   if (d.includes('TEA') || d.includes('AUTISTA')) return 'TEA';
@@ -401,6 +405,8 @@ function enrichDetailRow(r: Record<string, unknown>): DetailRow {
     : 'Demais Fontes';
   const g = String(row.codigo_nome_grupo ?? '');
   row.grupo_simpl = g.startsWith('1') ? 'Pessoal' : g.startsWith('2') ? 'Dívida' : g.startsWith('3') ? 'Custeio' : g.startsWith('4') ? 'Investimento' : 'Outros';
+  // Fallback: unidade uses codigo_nome_uo when not populated from source
+  if (!row.unidade) row.unidade = String(row.codigo_nome_uo ?? '');
   // tipo_despesa is already enriched from TIPO_DESPESA.xlsx via tipo_despesa_ref
   row.pago_total = (Number(row.pago) || 0) + (Number(row.pago_anos_anteriores) || 0);
   return row;
@@ -415,6 +421,23 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
   { id: 'pivot',         label: 'Pagamentos',     icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
 ];
+
+// Pivot grouping dimensions — maps UI key → p_dim/p_subdim parameter values for lc131_pivot RPC
+const PIVOT_DIMS: { key: string; label: string }[] = [
+  { key: 'municipio',     label: 'Município'        },
+  { key: 'drs',           label: 'DRS'              },
+  { key: 'rras',          label: 'RRAS'             },
+  { key: 'regiao_ad',     label: 'Região Admin.'    },
+  { key: 'regiao_sa',     label: 'Região de Saúde'  },
+  { key: 'grupo_despesa', label: 'Grupo Despesa'    },
+  { key: 'elemento',      label: 'Elemento'         },
+  { key: 'rotulo',        label: 'Rótulo'           },
+  { key: 'fonte_recurso', label: 'Fonte de Recurso' },
+  { key: 'tipo_despesa',  label: 'Tipo de Despesa'  },
+];
+
+// Filters shown in the pivot's own filter panel (subset of FILTER_META)
+const PIVOT_FILTER_KEYS = new Set(['p_drs','p_rras','p_regiao_ad','p_regiao_sa','p_municipio','p_grupo_despesa','p_tipo_despesa','p_rotulo','p_elemento']);
 
 type UploadStep = 'idle'|'parsing'|'preview'|'uploading'|'done'|'error';
 
@@ -1014,7 +1037,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
         if (!rName) return;
         const mu = municByName[mName];
         layer.bindTooltip(
-          `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#2563eb;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'compact')}</strong></div>` : ''}</div>`,
+          `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#2563eb;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'currency')}</strong></div>` : ''}</div>`,
           { className: 'map-tooltip-dark', direction: 'top' }
         );
         layer.on({
@@ -1033,7 +1056,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       if (!c) return;
       const icon = L.divIcon({
         className: 'drs-label',
-        html: `<div class="drs-label-inner drs-label-clickable"><strong>${reg.name.replace(/^DRS\s*/i, '').replace(/^\d+\s*-\s*/, '').trim() || reg.name}</strong><span>${fmt(reg.empenhado, 'compact')}</span></div>`,
+        html: `<div class="drs-label-inner drs-label-clickable"><strong>${reg.name.replace(/^DRS\s*/i, '').replace(/^\d+\s*-\s*/, '').trim() || reg.name}</strong><span>${fmt(reg.empenhado, 'currency')}</span></div>`,
         iconSize: [150, 48], iconAnchor: [75, 24],
       });
       const marker = L.marker([c.lat, c.lng], { icon, interactive: true }).addTo(labelsRef.current!);
@@ -1069,9 +1092,9 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const pct = mu && mu.empenhado > 0 ? ((mu.pago_total / mu.empenhado) * 100).toFixed(1) : '0';
         layer.bindTooltip(
           `<div style="min-width:200px"><strong style="font-size:13px">${mName}</strong><br/><div style="margin-top:4px;display:grid;grid-template-columns:1fr auto;gap:3px 12px">
-            <span style="color:#2563eb">Empenhado:</span><strong>${mu ? fmt(mu.empenhado, 'compact') : ' -'}</strong>
-            <span style="color:#16a34a">Liquidado:</span><strong>${mu ? fmt(mu.liquidado, 'compact') : ' -'}</strong>
-            <span style="color:#ea580c">Pago Total:</span><strong>${mu ? fmt(mu.pago_total, 'compact') : ' -'}</strong>
+            <span style="color:#2563eb">Empenhado:</span><strong>${mu ? fmt(mu.empenhado, 'currency') : ' -'}</strong>
+            <span style="color:#16a34a">Liquidado:</span><strong>${mu ? fmt(mu.liquidado, 'currency') : ' -'}</strong>
+            <span style="color:#ea580c">Pago Total:</span><strong>${mu ? fmt(mu.pago_total, 'currency') : ' -'}</strong>
             <span style="color:#555">Execução:</span><strong>${pct}%</strong></div></div>`,
           { className: 'map-tooltip-dark', direction: 'top' }
         );
@@ -1108,7 +1131,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       const radius = Math.max(14, Math.sqrt(reg.empenhado / maxEmp) * 48);
       const color = execPct(reg.empenhado, reg.pago_total);
       L.circleMarker([c.lat, c.lng], { radius, fillColor: color, color: '#fff', weight: 2, opacity: 0.9, fillOpacity: 0.7 })
-        .bindTooltip(`<strong>${reg.name}</strong><br/>Emp: ${fmt(reg.empenhado, 'compact')}`, { className: 'map-tooltip-dark', direction: 'top' })
+        .bindTooltip(`<strong>${reg.name}</strong><br/>Emp: ${fmt(reg.empenhado, 'currency')}`, { className: 'map-tooltip-dark', direction: 'top' })
         .on('click', () => drillIntoRegion(reg.name))
         .addTo(labelsRef.current!);
     });
@@ -1678,13 +1701,17 @@ export default function App() {
   const DETAIL_PAGE_SIZE = 200;
 
   // -- Pivot tab --
-  type PivotRawRow = { municipio: string; tipo_despesa: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
+  type PivotRawRow = { dim1: string; subdim: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
   const [pivotRaw, setPivotRaw]             = useState<PivotRawRow[]>([]);
   const [pivotLoading, setPivotLoading]     = useState(false);
   const [pivotError, setPivotError]         = useState<string|null>(null);
   const [pivotExpanded, setPivotExpanded]   = useState<Set<string>>(new Set());
   const [pivotValueKey, setPivotValueKey]   = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
   const [pivotXlsxLoading, setPivotXlsxLoading] = useState(false);
+  const [pivotRowDim, setPivotRowDim]       = useState<string>('municipio');
+  const [pivotSubDim, setPivotSubDim]       = useState<string>('tipo_despesa');
+  const [pivotFilters, setPivotFilters]     = useState<Partial<Record<DetailFilterKey, string[]>>>({});
+  const [pivotFiltersOpen, setPivotFiltersOpen] = useState(false);
 
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
@@ -1860,9 +1887,10 @@ export default function App() {
     setPivotLoading(true); setPivotError(null);
     try {
       const SKIP_KEYS = new Set(['p_codigo_ug', 'p_fonte_recurso']);
-      const params: Record<string, unknown> = {};
+      const mergedFilters = { ...filters, ...pivotFilters };
+      const params: Record<string, unknown> = { p_dim: pivotRowDim, p_subdim: pivotSubDim };
       if (anoSel !== 'todos') params.p_ano = Number(anoSel);
-      Object.entries(filters).forEach(([k, v]) => {
+      Object.entries(mergedFilters).forEach(([k, v]) => {
         if (SKIP_KEYS.has(k)) return;
         if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
       });
@@ -1875,7 +1903,7 @@ export default function App() {
     } finally {
       setPivotLoading(false);
     }
-  }, [filters, anoSel]);
+  }, [filters, anoSel, pivotRowDim, pivotSubDim, pivotFilters]);
 
   useEffect(() => {
     if (activeTab !== 'pivot') return;
@@ -3076,61 +3104,64 @@ export default function App() {
 
         {/* ---------- TAB: TABELA DINÂMICA ---------- */}
         {activeTab === 'pivot' && (() => {
+          const rowDimLabel = PIVOT_DIMS.find(d => d.key === pivotRowDim)?.label ?? pivotRowDim;
+          const subDimLabel = PIVOT_DIMS.find(d => d.key === pivotSubDim)?.label ?? pivotSubDim;
+
           // Derive years present in the data
           const pivotAnos = Array.from(new Set(pivotRaw.map(r => r.ano_referencia))).sort((a, b) => a - b);
 
-          // Build hierarchical structure: municipio → tipos de despesa → byYear
-          type PivotMunic = {
-            municipio: string;
+          // Build hierarchical structure: dim1 → subdims → byYear
+          type PivotGroup = {
+            dim1: string;
             byYear: Record<number, number>;
             total: number;
-            tipos: { tipo: string; byYear: Record<number, number>; total: number }[];
+            subs: { subdim: string; byYear: Record<number, number>; total: number }[];
           };
-          const municMap = new Map<string, PivotMunic>();
+          const groupMap = new Map<string, PivotGroup>();
           for (const row of pivotRaw) {
             const v = (row[pivotValueKey] as number) ?? 0;
-            if (!municMap.has(row.municipio)) {
-              municMap.set(row.municipio, { municipio: row.municipio, byYear: {}, total: 0, tipos: [] });
+            if (!groupMap.has(row.dim1)) {
+              groupMap.set(row.dim1, { dim1: row.dim1, byYear: {}, total: 0, subs: [] });
             }
-            const munic = municMap.get(row.municipio)!;
-            munic.byYear[row.ano_referencia] = (munic.byYear[row.ano_referencia] ?? 0) + v;
-            munic.total += v;
-            let tp = munic.tipos.find(r => r.tipo === row.tipo_despesa);
-            if (!tp) { tp = { tipo: row.tipo_despesa, byYear: {}, total: 0 }; munic.tipos.push(tp); }
-            tp.byYear[row.ano_referencia] = (tp.byYear[row.ano_referencia] ?? 0) + v;
-            tp.total += v;
+            const grp = groupMap.get(row.dim1)!;
+            grp.byYear[row.ano_referencia] = (grp.byYear[row.ano_referencia] ?? 0) + v;
+            grp.total += v;
+            let sub = grp.subs.find(r => r.subdim === row.subdim);
+            if (!sub) { sub = { subdim: row.subdim, byYear: {}, total: 0 }; grp.subs.push(sub); }
+            sub.byYear[row.ano_referencia] = (sub.byYear[row.ano_referencia] ?? 0) + v;
+            sub.total += v;
           }
-          const municRows = Array.from(municMap.values())
-            .sort((a, b) => a.municipio.localeCompare(b.municipio, 'pt-BR'));
-          municRows.forEach(m => m.tipos.sort((a, b) => b.total - a.total));
+          const groupRows = Array.from(groupMap.values())
+            .sort((a, b) => a.dim1.localeCompare(b.dim1, 'pt-BR'));
+          groupRows.forEach(g => g.subs.sort((a, b) => b.total - a.total));
 
           // Grand totals
           const grandByYear: Record<number, number> = {};
           let grandTotal = 0;
-          for (const m of municRows) {
-            for (const ano of pivotAnos) { grandByYear[ano] = (grandByYear[ano] ?? 0) + (m.byYear[ano] ?? 0); }
-            grandTotal += m.total;
+          for (const g of groupRows) {
+            for (const ano of pivotAnos) { grandByYear[ano] = (grandByYear[ano] ?? 0) + (g.byYear[ano] ?? 0); }
+            grandTotal += g.total;
           }
 
-          // XLSX export — flat rows: municipio | rotulo | ano1 | ano2 | ... | total
+          // XLSX export
           const downloadPivotXlsx = async () => {
             setPivotXlsxLoading(true);
             try {
               const XLSX = await import('xlsx');
               const valLabel = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
-              const header = ['Município', 'Tipo de Despesa', ...pivotAnos.map(String), 'Total Geral'];
+              const header = [rowDimLabel, subDimLabel, ...pivotAnos.map(String), 'Total Geral'];
               const rows: (string | number)[][] = [header];
-              for (const m of municRows) {
-                rows.push([m.municipio, `TOTAL ${m.municipio}`, ...pivotAnos.map(a => m.byYear[a] ?? 0), m.total]);
-                for (const tp of m.tipos) {
-                  rows.push([m.municipio, tp.tipo, ...pivotAnos.map(a => tp.byYear[a] ?? 0), tp.total]);
+              for (const g of groupRows) {
+                rows.push([g.dim1, `TOTAL ${g.dim1}`, ...pivotAnos.map(a => g.byYear[a] ?? 0), g.total]);
+                for (const sub of g.subs) {
+                  rows.push([g.dim1, sub.subdim, ...pivotAnos.map(a => sub.byYear[a] ?? 0), sub.total]);
                 }
               }
               rows.push(['TOTAL GERAL', '', ...pivotAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
               const ws = XLSX.utils.aoa_to_sheet(rows);
               const wb = XLSX.utils.book_new();
               XLSX.utils.book_append_sheet(wb, ws, valLabel);
-              XLSX.writeFile(wb, `pivot_municipio_tipo_despesa_${pivotValueKey}.xlsx`);
+              XLSX.writeFile(wb, `pivot_${pivotRowDim}_${pivotSubDim}_${pivotValueKey}.xlsx`);
             } catch (e: unknown) {
               alert('Erro ao gerar XLSX: ' + (e as Error).message);
             } finally {
@@ -3138,39 +3169,102 @@ export default function App() {
             }
           };
 
-          const COL_W = 130;
-          const totalPages = municRows.length;
+          const COL_W = 180;
+          const pivotFilterCount = Object.values(pivotFilters).filter(v => Array.isArray(v) && v.length > 0).length;
 
           return (
             <>
               {/* Toolbar */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-semibold text-[#666]">Valor:</span>
+              <div className="flex items-center gap-2 flex-wrap bg-white border border-[#E5E5E5] rounded-xl px-4 py-2.5 shadow-sm">
+                {/* Value selector */}
+                <span className="text-[11px] font-bold text-[#888] uppercase tracking-wide">Valor:</span>
                 {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
                   <button key={k} onClick={() => setPivotValueKey(k)}
-                    className={cn('px-2.5 py-1.5 text-xs font-bold rounded-lg transition',
-                      pivotValueKey === k ? 'bg-[#118DFF] text-white' : 'bg-white border border-[#D0D0D0] text-[#555] hover:bg-[#F0F0F0]')}>
+                    className={cn('px-3 py-1.5 text-[11px] font-bold rounded-lg transition',
+                      pivotValueKey === k ? 'bg-[#118DFF] text-white shadow-sm' : 'bg-[#F3F4F6] text-[#555] hover:bg-[#E5E7EB]')}>
                     {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
                   </button>
                 ))}
-                <div className="flex-1" />
-                <button onClick={() => setPivotExpanded(new Set(municRows.map(m => m.municipio)))}
-                  className="px-2.5 py-1.5 text-xs font-semibold bg-white border border-[#D0D0D0] rounded hover:bg-[#F0F0F0]">
+                <div className="w-px h-5 bg-[#E5E5E5] mx-1" />
+                {/* Row dimension selector */}
+                <span className="text-[11px] font-bold text-[#888] uppercase tracking-wide">Agrupar:</span>
+                <select
+                  value={pivotRowDim}
+                  onChange={e => {
+                    const nd = e.target.value;
+                    setPivotRowDim(nd);
+                    if (pivotSubDim === nd) setPivotSubDim(nd === 'tipo_despesa' ? 'municipio' : 'tipo_despesa');
+                    setPivotExpanded(new Set());
+                  }}
+                  className="text-[11px] border border-[#D0D0D0] rounded-lg px-2.5 py-1.5 bg-white text-[#333] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
+                  {PIVOT_DIMS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                </select>
+                <span className="text-[#999] text-[11px]">▸</span>
+                <select
+                  value={pivotSubDim}
+                  onChange={e => setPivotSubDim(e.target.value)}
+                  className="text-[11px] border border-[#D0D0D0] rounded-lg px-2.5 py-1.5 bg-white text-[#333] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
+                  {PIVOT_DIMS.filter(d => d.key !== pivotRowDim).map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                </select>
+                <div className="w-px h-5 bg-[#E5E5E5] mx-1" />
+                <button onClick={() => setPivotExpanded(new Set(groupRows.map(g => g.dim1)))}
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-lg hover:bg-[#E5E7EB] transition">
                   Expandir todos
                 </button>
                 <button onClick={() => setPivotExpanded(new Set())}
-                  className="px-2.5 py-1.5 text-xs font-semibold bg-white border border-[#D0D0D0] rounded hover:bg-[#F0F0F0]">
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-lg hover:bg-[#E5E7EB] transition">
                   Recolher todos
                 </button>
+                <div className="flex-1" />
+                {/* Pivot-local filter toggle */}
+                <button
+                  onClick={() => setPivotFiltersOpen(v => !v)}
+                  className={cn('flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg transition',
+                    pivotFiltersOpen || pivotFilterCount > 0
+                      ? 'bg-[#118DFF] text-white shadow-sm'
+                      : 'bg-[#F3F4F6] text-[#555] hover:bg-[#E5E7EB]')}>
+                  <Filter className="w-3 h-3" />
+                  Filtros{pivotFilterCount > 0 ? ` (${pivotFilterCount})` : ''}
+                </button>
                 <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotRaw.length}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-xs font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40">
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition shadow-sm">
                   {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
                   Exportar XLSX
                 </button>
-                <span className="text-xs text-[#999]">
-                  {pivotLoading ? <Spinner size={3} /> : `${fmt(totalPages)} municípios`}
+                <span className="text-[11px] text-[#999] font-mono">
+                  {pivotLoading ? <Spinner size={3} /> : `${fmt(groupRows.length)} ${rowDimLabel.toLowerCase()}s`}
                 </span>
               </div>
+
+              {/* Pivot-local filter panel */}
+              {pivotFiltersOpen && (
+                <div className="bg-white border border-[#E5E5E5] rounded-xl px-4 py-3 shadow-sm">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-9 gap-2">
+                    {FILTER_META.filter(f => PIVOT_FILTER_KEYS.has(f.key)).map(f => (
+                      <MultiSelect
+                        key={f.key}
+                        label={f.label}
+                        options={(distincts[f.distinctKey] ?? []) as string[]}
+                        value={pivotFilters[f.key] ?? []}
+                        onChange={(v: string[]) => {
+                          const nf = { ...pivotFilters };
+                          if (v.length > 0) nf[f.key] = v; else delete nf[f.key];
+                          setPivotFilters(nf);
+                        }}
+                        loading={distinctsLoading}
+                      />
+                    ))}
+                  </div>
+                  {pivotFilterCount > 0 && (
+                    <div className="flex justify-end mt-2">
+                      <button onClick={() => setPivotFilters({})}
+                        className="text-[11px] text-red-500 hover:text-red-700 font-semibold flex items-center gap-1">
+                        <X className="w-3 h-3" /> Limpar filtros do painel ({pivotFilterCount})
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
                 {pivotError ? (
@@ -3185,68 +3279,76 @@ export default function App() {
                 ) : pivotLoading && !pivotRaw.length ? (
                   <div className="py-16 flex items-center justify-center"><Spinner size={8} /></div>
                 ) : (
-                  <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
-                    <table className="text-xs border-collapse w-full">
+                  <div className="overflow-auto" style={{ maxHeight: '72vh' }}>
+                    <table className="border-collapse w-full" style={{ fontSize: '12px' }}>
                       <thead className="sticky top-0 z-20">
-                        <tr className="bg-[#1B1B1B] text-white">
-                          <th className="sticky left-0 z-30 bg-[#1B1B1B] px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
-                            style={{ minWidth: '220px' }}>
-                            Município / Tipo de Despesa
+                        <tr style={{ background: '#1a2234' }}>
+                          <th className="sticky left-0 z-30 px-4 py-3 text-left font-semibold whitespace-nowrap border-r"
+                            style={{ minWidth: '240px', background: '#1a2234', color: '#94a3b8', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', borderColor: 'rgba(255,255,255,0.08)' }}>
+                            {rowDimLabel} / {subDimLabel}
                           </th>
                           {pivotAnos.map(ano => (
-                            <th key={ano} className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wide text-[#888] whitespace-nowrap border-r border-white/10"
-                              style={{ minWidth: `${COL_W}px` }}>{ano}</th>
+                            <th key={ano} className="px-4 py-3 text-right font-semibold whitespace-nowrap border-r"
+                              style={{ minWidth: `${COL_W}px`, color: '#e2e8f0', fontSize: '13px', letterSpacing: '0.03em', borderColor: 'rgba(255,255,255,0.08)' }}>{ano}</th>
                           ))}
-                          <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wide text-[#FFD700] whitespace-nowrap"
-                            style={{ minWidth: `${COL_W}px` }}>Total Geral</th>
+                          <th className="px-4 py-3 text-right font-bold whitespace-nowrap"
+                            style={{ minWidth: `${COL_W}px`, color: '#fbbf24', fontSize: '13px' }}>Total Geral</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#F0F0F0]">
-                        {municRows.map((munic, mi) => {
-                          const isOpen = pivotExpanded.has(munic.municipio);
+                      <tbody>
+                        {groupRows.map((grp, gi) => {
+                          const isOpen = pivotExpanded.has(grp.dim1);
                           return (
-                            <React.Fragment key={munic.municipio}>
-                              {/* Municipality row */}
+                            <React.Fragment key={grp.dim1}>
+                              {/* Primary dimension row */}
                               <tr
-                                className={cn('cursor-pointer select-none', mi % 2 === 0 ? 'bg-[#F0F6FF]' : 'bg-[#E8F0FE]', 'hover:bg-[#D8EBFF]')}
+                                className="cursor-pointer select-none"
+                                style={{ background: isOpen ? '#dbeafe' : gi % 2 === 0 ? '#f1f5fd' : '#e8f0fe' }}
                                 onClick={() => setPivotExpanded(prev => {
                                   const next = new Set(prev);
-                                  isOpen ? next.delete(munic.municipio) : next.add(munic.municipio);
+                                  isOpen ? next.delete(grp.dim1) : next.add(grp.dim1);
                                   return next;
                                 })}
                               >
-                                <td className="sticky left-0 z-10 px-3 py-2 font-bold text-[#1B1B1B] whitespace-nowrap border-r border-[#D0D8E8]"
-                                  style={{ minWidth: '220px', background: mi % 2 === 0 ? '#F0F6FF' : '#E8F0FE' }}>
-                                  <span className="flex items-center gap-1.5">
-                                    {isOpen
-                                      ? <ChevronDown className="w-3 h-3 text-[#118DFF] shrink-0" />
-                                      : <ChevronRight className="w-3 h-3 text-[#999] shrink-0" />}
-                                    {munic.municipio}
+                                <td className="sticky left-0 z-10 px-4 py-2.5 font-bold whitespace-nowrap border-r border-b"
+                                  style={{ minWidth: '240px', background: isOpen ? '#dbeafe' : gi % 2 === 0 ? '#f1f5fd' : '#e8f0fe', color: '#1e3a5f', borderColor: '#c7d8f0', fontSize: '12.5px' }}>
+                                  <span className="flex items-center gap-2">
+                                    <span style={{ color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                                      {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                    </span>
+                                    {stripNumPrefix(grp.dim1) || grp.dim1 || '(Vazio)'}
                                   </span>
                                 </td>
                                 {pivotAnos.map(ano => (
-                                  <td key={ano} className="px-3 py-2 text-right font-mono font-semibold text-[#1B1B1B] whitespace-nowrap border-r border-[#D0D8E8]">
-                                    {munic.byYear[ano] ? fmt(munic.byYear[ano], 'currency') : <span className="text-[#CCC]">-</span>}
+                                  <td key={ano} className="px-4 py-2.5 text-right font-mono font-semibold whitespace-nowrap border-r border-b"
+                                    style={{ color: '#1e3a5f', borderColor: '#c7d8f0', letterSpacing: '-0.01em' }}>
+                                    {grp.byYear[ano] ? fmt(grp.byYear[ano], 'currency') : <span style={{ color: '#c0cfe8' }}>—</span>}
                                   </td>
                                 ))}
-                                <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] whitespace-nowrap">
-                                  {fmt(munic.total, 'currency')}
+                                <td className="px-4 py-2.5 text-right font-mono font-bold whitespace-nowrap border-b"
+                                  style={{ color: '#1d4ed8', borderColor: '#c7d8f0' }}>
+                                  {fmt(grp.total, 'currency')}
                                 </td>
                               </tr>
-                              {/* Tipo de despesa sub-rows */}
-                              {isOpen && munic.tipos.map(tp => (
-                                <tr key={tp.tipo} className="bg-white hover:bg-[#F8FAFF]">
-                                  <td className="sticky left-0 z-10 px-3 py-1.5 text-[#444] whitespace-nowrap border-r border-[#F0F0F0] bg-white"
-                                    style={{ minWidth: '220px' }}>
-                                    <span className="pl-6">{tp.tipo}</span>
+                              {/* Sub-dimension rows */}
+                              {isOpen && grp.subs.map((sub, si) => (
+                                <tr key={sub.subdim} style={{ background: si % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                                  <td className="sticky left-0 z-10 px-4 py-2 whitespace-nowrap border-r border-b"
+                                    style={{ minWidth: '240px', background: si % 2 === 0 ? '#ffffff' : '#f9fafb', color: '#374151', borderColor: '#e5eaf2', fontSize: '12px' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '24px' }}>
+                                      <span style={{ width: '3px', height: '14px', borderRadius: '2px', background: '#93c5fd', flexShrink: 0 }} />
+                                      {stripNumPrefix(sub.subdim) || sub.subdim || '(Vazio)'}
+                                    </span>
                                   </td>
                                   {pivotAnos.map(ano => (
-                                    <td key={ano} className="px-3 py-1.5 text-right font-mono text-[#555] whitespace-nowrap border-r border-[#F0F0F0]">
-                                      {tp.byYear[ano] ? fmt(tp.byYear[ano], 'currency') : <span className="text-[#EEE]">-</span>}
+                                    <td key={ano} className="px-4 py-2 text-right font-mono whitespace-nowrap border-r border-b"
+                                      style={{ color: '#4b5563', borderColor: '#e5eaf2', letterSpacing: '-0.01em' }}>
+                                      {sub.byYear[ano] ? fmt(sub.byYear[ano], 'currency') : <span style={{ color: '#d1d5db' }}>—</span>}
                                     </td>
                                   ))}
-                                  <td className="px-3 py-1.5 text-right font-mono font-semibold text-[#333] whitespace-nowrap">
-                                    {fmt(tp.total, 'currency')}
+                                  <td className="px-4 py-2 text-right font-mono font-semibold whitespace-nowrap border-b"
+                                    style={{ color: '#1f2937', borderColor: '#e5eaf2' }}>
+                                    {fmt(sub.total, 'currency')}
                                   </td>
                                 </tr>
                               ))}
@@ -3254,25 +3356,27 @@ export default function App() {
                           );
                         })}
                         {/* Grand total row */}
-                        {municRows.length > 0 && (
-                          <tr className="bg-[#1B1B1B] text-white">
-                            <td className="sticky left-0 z-10 px-3 py-2.5 font-bold text-[10px] uppercase tracking-wide text-[#888] bg-[#1B1B1B]"
-                              style={{ minWidth: '220px' }}>
+                        {groupRows.length > 0 && (
+                          <tr style={{ background: '#1a2234', borderTop: '2px solid #334155' }}>
+                            <td className="sticky left-0 z-10 px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap"
+                              style={{ minWidth: '240px', background: '#1a2234', color: '#94a3b8', fontSize: '11px' }}>
                               Total Geral
                             </td>
                             {pivotAnos.map(ano => (
-                              <td key={ano} className="px-3 py-2.5 text-right font-mono font-bold text-blue-300 whitespace-nowrap border-r border-white/10">
+                              <td key={ano} className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap border-r"
+                                style={{ color: '#93c5fd', borderColor: 'rgba(255,255,255,0.08)', letterSpacing: '-0.01em' }}>
                                 {fmt(grandByYear[ano] ?? 0, 'currency')}
                               </td>
                             ))}
-                            <td className="px-3 py-2.5 text-right font-mono font-bold text-[#FFD700] whitespace-nowrap">
+                            <td className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap"
+                              style={{ color: '#fbbf24', letterSpacing: '-0.01em' }}>
                               {fmt(grandTotal, 'currency')}
                             </td>
                           </tr>
                         )}
                         {!pivotLoading && !pivotRaw.length && (
-                          <tr><td colSpan={pivotAnos.length + 2} className="py-14 text-center text-[#CCC]">
-                            <Database className="w-7 h-7 mx-auto mb-1 opacity-30" /><p>Nenhum dado encontrado</p>
+                          <tr><td colSpan={pivotAnos.length + 2} className="py-16 text-center" style={{ color: '#9ca3af' }}>
+                            <Database className="w-8 h-8 mx-auto mb-2 opacity-25" /><p style={{ fontSize: '13px' }}>Nenhum dado encontrado</p>
                           </td></tr>
                         )}
                       </tbody>
