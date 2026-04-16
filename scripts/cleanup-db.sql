@@ -108,11 +108,38 @@ WHERE tipo_despesa IS NULL
 
 -- ── Corrige fonte_recurso de TABELA SUS PAULISTA para Tesouro ─────
 -- Pagamentos da tabela SUS paulista são financiados pelo Tesouro Estadual.
+-- Exceto os que têm elemento 334130 ou fonte 163150 (não são produção hospitalar).
 UPDATE public.lc131_despesas
 SET codigo_nome_fonte_recurso = '01 - Tesouro - Fonte Ordinaria'
 WHERE tipo_despesa = 'TABELA SUS PAULISTA'
+  AND codigo_nome_elemento NOT LIKE '%334130%'
+  AND codigo_nome_fonte_recurso NOT LIKE '%163150%'
   AND (codigo_nome_fonte_recurso IS NULL
        OR lower(codigo_nome_fonte_recurso) NOT LIKE '%tesouro%');
+
+-- ── Reclassifica TABELA SUS PAULISTA com elemento 334130 ou fonte 163150 ──
+-- Esses registros não são pagamentos de produção hospitalar:
+--   334130 = Material de Consumo  → compra de insumos, Grupo 3 → OUTRAS DESPESAS CORRENTES
+--   163150 = fonte federal específica → provavelmente outro programa federal
+-- Retorna ao grupo de despesa como fallback seguro.
+UPDATE public.lc131_despesas
+SET tipo_despesa = CASE
+  WHEN codigo_nome_grupo LIKE '3%' THEN 'OUTRAS DESPESAS CORRENTES'
+  WHEN codigo_nome_grupo LIKE '4%' THEN 'INVESTIMENTOS'
+  WHEN codigo_nome_grupo LIKE '1%' THEN 'PESSOAL E ENCARGOS SOCIAIS'
+  ELSE 'OUTRAS DESPESAS CORRENTES'
+END
+WHERE tipo_despesa = 'TABELA SUS PAULISTA'
+  AND (codigo_nome_elemento LIKE '%334130%'
+       OR codigo_nome_fonte_recurso LIKE '%163150%');
+
+-- Verificação
+SELECT tipo_despesa, count(*) FROM public.lc131_despesas
+WHERE codigo_nome_elemento LIKE '%334130%' AND tipo_despesa = 'TABELA SUS PAULISTA'
+GROUP BY 1;
+SELECT tipo_despesa, count(*) FROM public.lc131_despesas
+WHERE codigo_nome_fonte_recurso LIKE '%163150%' AND tipo_despesa = 'TABELA SUS PAULISTA'
+GROUP BY 1;
 
 -- Verificação final: não deve haver linhas sem tipo
 SELECT count(*) AS sem_classificacao

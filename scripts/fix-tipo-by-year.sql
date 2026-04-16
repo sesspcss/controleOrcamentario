@@ -354,15 +354,25 @@ BEGIN
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%ACAO CIVIL%BAURU%'    THEN 'AÇÃO CIVIL - BAURU'
           -- ── Tabelasus — VEM ANTES de GESTÃO ESTADUAL ────────────
           -- (TETO FIXO FILANTROPICOS é pagamento tabela SUS, não gestão estadual)
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TABELASUS PAULISTA%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%TABELA SUS PAULISTA%'
-            OR norm_tipo_desc(lc.codigo_nome_projeto_atividade) LIKE '%TABELA SUS PAULISTA%' THEN 'TABELA SUS PAULISTA'
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TETO FIXO FILANTROPICOS%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%TETO MAC FILANTROPICOS%' THEN 'TABELA SUS PAULISTA'
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS N%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 198%'    THEN 'TABELA SUS PAULISTA'
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 164%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%PAGAMENTO RESOLUCAO SS%' THEN 'TABELA SUS PAULISTA'
+          -- EXCLUIR: elemento 334130 (Material de Consumo) e fonte 163150
+          -- não são pagamentos de produção hospitalar — têm tipo diferente
+          WHEN (norm_tipo_desc(lc.descricao_processo) LIKE '%TABELASUS PAULISTA%'
+            OR  norm_tipo_desc(lc.descricao_processo) LIKE '%TABELA SUS PAULISTA%'
+            OR  norm_tipo_desc(lc.codigo_nome_projeto_atividade) LIKE '%TABELA SUS PAULISTA%')
+            AND lc.codigo_nome_elemento NOT LIKE '%334130%'
+            AND lc.codigo_nome_fonte_recurso NOT LIKE '%163150%'       THEN 'TABELA SUS PAULISTA'
+          WHEN (norm_tipo_desc(lc.descricao_processo) LIKE '%TETO FIXO FILANTROPICOS%'
+            OR  norm_tipo_desc(lc.descricao_processo) LIKE '%TETO MAC FILANTROPICOS%')
+            AND lc.codigo_nome_elemento NOT LIKE '%334130%'
+            AND lc.codigo_nome_fonte_recurso NOT LIKE '%163150%'       THEN 'TABELA SUS PAULISTA'
+          WHEN (norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS N%'
+            OR  norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 198%')
+            AND lc.codigo_nome_elemento NOT LIKE '%334130%'
+            AND lc.codigo_nome_fonte_recurso NOT LIKE '%163150%'       THEN 'TABELA SUS PAULISTA'
+          WHEN (norm_tipo_desc(lc.descricao_processo) LIKE '%RESOLUCAO SS 164%'
+            OR  norm_tipo_desc(lc.descricao_processo) LIKE '%PAGAMENTO RESOLUCAO SS%')
+            AND lc.codigo_nome_elemento NOT LIKE '%334130%'
+            AND lc.codigo_nome_fonte_recurso NOT LIKE '%163150%'       THEN 'TABELA SUS PAULISTA'
           -- ── Intraorçamentária ────────────────────────────────────
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%BATA CINZA%'          THEN 'INTRAORÇAMENTÁRIA - BATA CINZA PPP'
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%INTRAORCAMENTARIA%'
