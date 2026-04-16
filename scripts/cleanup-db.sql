@@ -4,12 +4,55 @@
 -- NÃO altera lógica, funções nem schema.
 -- ================================================================
 -- ORDEM OBRIGATÓRIA:
---   1. Deploy fix-tipo-by-year.sql (v9.1) no SQL Editor
+--   1. Deploy fix-tipo-by-year.sql (v9.2) no SQL Editor
 --   2. SELECT public.refresh_bdref_lookup();   ← popula L4 com UG→tipo
 --   3. node scripts/run-fix-tipo.mjs           ← classifica tudo
---   4. Execute PARTE A deste script            ← libera bd_ref_tipo
---   5. Execute PARTE B (VACUUMs) separadamente
+--   4. Executar bloco DO $$ de rótulo (final do fix-tipo-by-year.sql)
+--   5. Execute PARTE 0 deste script            ← normaliza nomes DRS/RRAS
+--   6. Execute PARTE A deste script            ← libera bd_ref_tipo
+--   7. Execute PARTE B (VACUUMs) separadamente
 -- ================================================================
+
+-- ════════════════════════════════════════════
+-- PARTE 0 — Normalizar nomes duplicados de DRS
+-- O campo drs pode ter dois formatos para a mesma regional:
+--   "01 GRANDE SÃO PAULO"  →  "DRS I - GRANDE SÃO PAULO"
+-- Execute esta parte uma única vez.
+-- ════════════════════════════════════════════
+
+-- Diagnóstico: ver todos os valores distintos de DRS antes de normalizar
+SELECT drs, count(*) AS qtd
+FROM public.lc131_despesas
+GROUP BY drs ORDER BY drs;
+
+-- Normalização: mapeia prefixo numérico → formato canônico com algarismo romano
+UPDATE public.lc131_despesas
+SET drs = CASE drs
+  WHEN '01 GRANDE SÃO PAULO'      THEN 'DRS I - GRANDE SÃO PAULO'
+  WHEN '02 ARAÇATUBA'             THEN 'DRS II - ARAÇATUBA'
+  WHEN '03 ARARAQUARA'            THEN 'DRS III - ARARAQUARA'
+  WHEN '04 BAIXADA SANTISTA'      THEN 'DRS IV - BAIXADA SANTISTA'
+  WHEN '05 BARRETOS'              THEN 'DRS V - BARRETOS'
+  WHEN '06 BAURU'                 THEN 'DRS VI - BAURU'
+  WHEN '07 CAMPINAS'              THEN 'DRS VII - CAMPINAS'
+  WHEN '08 FRANCA'                THEN 'DRS VIII - FRANCA'
+  WHEN '09 MARÍLIA'               THEN 'DRS IX - MARÍLIA'
+  WHEN '10 PIRACICABA'            THEN 'DRS X - PIRACICABA'
+  WHEN '11 PRESIDENTE PRUDENTE'   THEN 'DRS XI - PRESIDENTE PRUDENTE'
+  WHEN '12 REGISTRO'              THEN 'DRS XII - REGISTRO'
+  WHEN '13 RIBEIRÃO PRETO'        THEN 'DRS XIII - RIBEIRÃO PRETO'
+  WHEN '14 SÃO JOÃO DA BOA VISTA' THEN 'DRS XIV - SÃO JOÃO DA BOA VISTA'
+  WHEN '15 SÃO JOSÉ DO RIO PRETO' THEN 'DRS XV - SÃO JOSÉ DO RIO PRETO'
+  WHEN '16 SOROCABA'              THEN 'DRS XVI - SOROCABA'
+  WHEN '17 TAUBATÉ'               THEN 'DRS XVII - TAUBATÉ'
+  ELSE drs
+END
+WHERE drs ~ E'^[0-9]{2} ';
+
+-- Verificar resultado: deve haver somente um registro por DRS canonical
+SELECT drs, count(*) AS qtd
+FROM public.lc131_despesas
+GROUP BY drs ORDER BY drs;
 
 -- ════════════════════════════════════════════
 -- PARTE A — Cole e execute no SQL Editor
