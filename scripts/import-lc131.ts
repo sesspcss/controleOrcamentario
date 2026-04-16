@@ -100,7 +100,7 @@ function readXlsx(filePath: string): { headers: string[]; rows: Record<string, a
   console.log(`   → Cabeçalho detectado na linha ${headerRowIdx + 1}`);
 
   const rawHeaders: string[] = rawMatrix[headerRowIdx].map(String);
-  const normalizedHeaders = disambiguateCols(rawHeaders.map(normalizeColName));
+  const normalizedHeaders = disambiguateCols(rawHeaders.map(normalizeColName)).map(applyColAlias);
 
   // Monta as linhas de dados (a partir da linha seguinte ao cabeçalho)
   const rows: Record<string, any>[] = [];
@@ -119,7 +119,83 @@ function readXlsx(filePath: string): { headers: string[]; rows: Record<string, a
   return { headers: normalizedHeaders, rows };
 }
 
-// ─── Geração do SQL CREATE TABLE ─────────────────────────────────────────────
+// ─── Mapeamento de colunas: variações de nome de cabeçalho → nome canônico do DB ───
+// Garante que mudanças no nome da coluna no XLSX não quebram o upload.
+const COL_ALIAS: Record<string, string> = {
+  // pagamento / valores
+  'pago_total':                   'pago',
+  'pagamento':                    'pago',
+  'vl_pago':                      'pago',
+  'valor_pago':                   'pago',
+  'pago_exercicio':               'pago',
+  'pago_anos_anteriores':         'pago_anos_anteriores',
+  'pago_ano_anterior':            'pago_anos_anteriores',
+  'vl_empenhado':                 'empenhado',
+  'valor_empenhado':              'empenhado',
+  'vl_liquidado':                 'liquidado',
+  'valor_liquidado':              'liquidado',
+  // identificadores
+  'ano':                          'ano_referencia',
+  'ano_ref':                      'ano_referencia',
+  'exercicio':                    'ano_referencia',
+  'cod_ibge':                     'cod_ibge',
+  'codigo_ibge':                  'cod_ibge',
+  'ibge':                         'cod_ibge',
+  // geograficos
+  'nome_municipio':               'municipio',
+  'municipio_nome':               'municipio',
+  // organizacionais
+  'codigo_nome_unidade_orcamentaria': 'codigo_nome_uo',
+  'unidade_orcamentaria':         'codigo_nome_uo',
+  'codigo_nome_unidade_gestora':  'codigo_nome_ug',
+  'unidade_gestora':              'codigo_nome_ug',
+  'codigo_unidade_gestora':       'codigo_ug',
+  // despesa
+  'codigo_nome_grupo_de_despesas': 'codigo_nome_grupo',
+  'grupo_de_despesas':            'codigo_nome_grupo',
+  'codigo_nome_elemento_de_despesa': 'codigo_nome_elemento',
+  'elemento_de_despesa':          'codigo_nome_elemento',
+  'codigo_nome_fonte_de_recursos': 'codigo_nome_fonte_recurso',
+  'fonte_de_recursos':            'codigo_nome_fonte_recurso',
+  'descricao':                    'descricao_processo',
+  'processo':                     'descricao_processo',
+};
+
+/** Aplica alias de coluna: se o nome normalizado está no mapa, retorna o nome canônico */
+function applyColAlias(normalizedName: string): string {
+  return COL_ALIAS[normalizedName] ?? normalizedName;
+}
+
+// Colunas de pagamento obrigatórias — se todas forem NULL o import falhou
+const PAYMENT_COLS = ['pago', 'empenhado', 'liquidado'];
+
+/** Valida que pelo menos uma coluna de pagamento tem dados reais */
+function validatePaymentCols(rows: Record<string, any>[]): void {
+  if (rows.length === 0) return;
+  const sample = rows.slice(0, Math.min(100, rows.length));
+  const colsPresent = Object.keys(sample[0]);
+  const missing = PAYMENT_COLS.filter(c => !colsPresent.includes(c));
+  if (missing.length > 0) {
+    console.warn(`\n⚠️  ATENÇÃO: colunas de pagamento não encontradas: ${missing.join(', ')}`);
+    console.warn('   Verifique os nomes das colunas no XLSX. O upload continuará, mas os valores podem ficar NULL.\n');
+  }
+  const nullPct = PAYMENT_COLS.filter(c => colsPresent.includes(c)).map(c => {
+    const nullCount = sample.filter(r => r[c] == null).length;
+    return { col: c, pct: Math.round(nullCount / sample.length * 100) };
+  });
+  const critical = nullPct.filter(x => x.pct > 80);
+  if (critical.length > 0) {
+    const msg = critical.map(x => `${x.col}: ${x.pct}% nulos`).join(', ');
+    throw new Error(
+      `❌ ABORTADO: ${msg} — as colunas de pagamento estão quase todas nulas.\n` +
+      `   Verifique se os nomes das colunas no XLSX correspondem às esperadas:\n` +
+      `   ${PAYMENT_COLS.join(', ')}\n` +
+      `   Colunas encontradas no arquivo: ${colsPresent.join(', ')}`
+    );
+  }
+}
+
+
 
 function generateCreateTableSQL(tableName: string, headers: string[], sampleRows: Record<string, any>[]): string {
   const colDefs = headers.map(col => {
@@ -183,6 +259,10 @@ async function uploadToSupabase(tableName: string, rows: Record<string, any>[]):
   let uploaded = 0;
 
   const cleanRows = sanitizeRows(rows);
+
+  // Safety check: abort if payment columns are all null
+  validatePaymentCols(cleanRows);
+
   process.stdout.write(`\n📤 Enviando ${cleanRows.length.toLocaleString('pt-BR')} registros em chunks de ${CHUNK_SIZE}...\n`);
 
   for (let i = 0; i < cleanRows.length; i += CHUNK_SIZE) {
@@ -205,9 +285,10 @@ async function main() {
   const args = process.argv.slice(2);
 
   // Flags
-  const force    = args.includes('--force');    // pula confirmações interativas
-  const doAppend = args.includes('--append');   // adiciona sem limpar
-  const doTrunc  = args.includes('--truncate'); // limpa antes de inserir
+  const force      = args.includes('--force');       // pula confirmações interativas
+  const doAppend   = args.includes('--append');      // adiciona sem limpar
+  const doTrunc    = args.includes('--truncate');    // limpa SOMENTE o ano do arquivo
+  const doTruncAll = args.includes('--truncate-all'); // ⚠️ limpa TUDO (todos os anos)
 
   // Arquivo
   const fileArg = args.find(a => !a.startsWith('--'));
@@ -233,9 +314,10 @@ async function main() {
   console.log(`  Arquivo : ${path.basename(filePath)}`);
   console.log(`  Tabela  : ${tableName}`);
   console.log(`  URL     : ${SUPABASE_URL}`);
-  if (force)    console.log('  Modo    : --force (não-interativo)');
-  if (doTrunc)  console.log('  Modo    : --truncate (limpa antes de inserir)');
-  if (doAppend) console.log('  Modo    : --append (adiciona sem limpar)');
+  if (force)       console.log('  Modo    : --force (não-interativo)');
+  if (doTrunc)     console.log('  Modo    : --truncate (apaga somente o ano do arquivo)');
+  if (doTruncAll)  console.log('  Modo    : --truncate-all ⚠️ APAGA TODOS OS ANOS');
+  if (doAppend)    console.log('  Modo    : --append (adiciona sem limpar)');
   console.log('════════════════════════════════════════════════════════\n');
 
   // 1. Lê e processa o arquivo
@@ -246,7 +328,16 @@ async function main() {
   console.log(`   ${headers.length} colunas normalizadas:`);
   headers.forEach((h, i) => console.log(`      ${String(i + 1).padStart(2)}. ${h}`));
 
-  // 2. Gera SQL
+  // Detecta o ano dos dados para truncate seguro por ano
+  const anoValues = rows
+    .map(r => Number(r['ano_referencia']))
+    .filter(v => v > 2000 && v < 2100);
+  const anoDetectado: number | undefined = anoValues.length > 0
+    ? Math.round(anoValues.reduce((a, b) => a + b, 0) / anoValues.length)
+    : undefined;
+  if (anoDetectado) console.log(`\n📅 Ano detectado no arquivo: ${anoDetectado}`);
+
+  // Gera SQL
   const sql = generateCreateTableSQL(tableName, headers, rows.slice(0, 100));
   const sqlFile = path.join(path.dirname(filePath), `create_${tableName}.sql`);
   fs.writeFileSync(sqlFile, sql, { encoding: 'utf8' });
@@ -269,9 +360,13 @@ async function main() {
       process.exit(0);
     }
 
-    const truncAns = await ask('Deseja limpar dados existentes antes de importar? (s/N): ');
+    const truncAns = await ask('Deseja limpar os dados DESTE ANO antes de importar? (s/N): ');
     if (truncAns.trim().toLowerCase() === 's') {
-      await truncateTable(tableName);
+      if (anoDetectado) {
+        await truncateTable(tableName, anoDetectado);
+      } else {
+        console.warn('   ⚠️  Ano não detectado. Use --truncate para apagar somente o ano correto.');
+      }
     }
   } else {
     // Modo --force: verifica se a tabela existe antes de tentar inserir
@@ -288,10 +383,17 @@ async function main() {
     }
     console.log('   ✔ Tabela encontrada.');
 
-    if (doTrunc) {
+    if (doTruncAll) {
+      const confirm = await ask(`\n⚠️  --truncate-all apagará TODOS OS ANOS da tabela. Confirmar? (sim/N): `);
+      if (confirm.trim().toLowerCase() !== 'sim') {
+        console.log('Abortado.'); process.exit(0);
+      }
       await truncateTable(tableName);
+    } else if (doTrunc) {
+      if (!anoDetectado) throw new Error('Não foi possível detectar o ano. Verifique a coluna ano_referencia.');
+      await truncateTable(tableName, anoDetectado);
     } else if (!doAppend) {
-      console.log('   ℹ️  Modo padrão: appending (use --truncate para limpar antes)');
+      console.log('   ℹ️  Modo padrão: append seguro (use --truncate para apagar o ano antes)');
     }
   }
 
@@ -299,17 +401,35 @@ async function main() {
   await uploadToSupabase(tableName, rows);
 
   console.log(`\n✅ Importação concluída com sucesso!`);
-  console.log(`   ${rows.length.toLocaleString('pt-BR')} registros em "${tableName}"\n`);
+  console.log(`   ${rows.length.toLocaleString('pt-BR')} registros em "${tableName}"`);
+  console.log(`\n📋 PRÓXIMOS PASSOS OBRIGATÓRIOS:`);
+  console.log(`   1. node scripts/run-fix-tipo.mjs  ← classifica tipo_despesa nas novas linhas`);
+  console.log(`   2. Execute PARTE 0 do cleanup-db.sql  ← normaliza DRS/RRAS/fonte/rótulo\n`);
 }
 
-async function truncateTable(tableName: string): Promise<void> {
-  console.log('\n🧹 Limpando tabela...');
+async function truncateTable(tableName: string, anoToDelete?: number): Promise<void> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  const { error } = await supabase.from(tableName).delete().not('id', 'is', null);
-  if (error) {
-    console.warn(`   ⚠️  Aviso ao limpar: ${error.message}`);
+  if (anoToDelete) {
+    // Seguro: apaga SOMENTE o ano sendo reimportado
+    console.log(`\n🧹 Removendo registros do ano ${anoToDelete}...`);
+    const { error, count } = await supabase
+      .from(tableName)
+      .delete({ count: 'exact' })
+      .eq('ano_referencia', anoToDelete);
+    if (error) {
+      console.warn(`   ⚠️  Aviso ao limpar ano ${anoToDelete}: ${error.message}`);
+    } else {
+      console.log(`   ✔ ${(count ?? 0).toLocaleString('pt-BR')} registros de ${anoToDelete} removidos.`);
+    }
   } else {
-    console.log('   ✔ Tabela limpa.');
+    // Modo legado: apaga tudo (somente com confirmação explícita --truncate-all)
+    console.log('\n🧹 Limpando tabela inteira...');
+    const { error } = await supabase.from(tableName).delete().not('id', 'is', null);
+    if (error) {
+      console.warn(`   ⚠️  Aviso ao limpar: ${error.message}`);
+    } else {
+      console.log('   ✔ Tabela limpa.');
+    }
   }
 }
 

@@ -192,27 +192,32 @@ FROM pg_tables WHERE schemaname = 'public';
 
 
 -- ════════════════════════════════════════════════════════════════════
--- PARTE B — Execute cada VACUUM em aba separada (não pode estar em bloco)
+-- PARTE B — VACUUM FULL: execute CADA LINHA em uma aba separada do SQL Editor
+-- (VACUUM não pode rodar dentro de bloco ou transação)
+-- Estes comandos são OBRIGATÓRIOS para liberar espaço físico.
+-- Cada VACUUM pode demorar 2–10 min na primeira vez. É normal.
 -- ════════════════════════════════════════════════════════════════════
 
--- Aba 1 — O mais importante: libera bloat dos bulk UPDATEs de tipo_despesa
-/*
+-- ── Aba 1 — MAIS IMPORTANTE: libera bloat de todos os bulk UPDATEs
 VACUUM FULL ANALYZE public.lc131_despesas;
-*/
 
--- Aba 2 — Libera espaço físico do bd_ref_tipo após TRUNCATE
-/*
+-- ── Aba 2 — Libera espaço do bd_ref_tipo após TRUNCATE (somente após PARTE A)
 VACUUM FULL ANALYZE public.bd_ref_tipo;
-*/
 
--- Aba 3 — Verificar tamanho final
-/*
+-- ── Aba 3 — Libera espaço dos lookup tables (pequenos, rápido)
+VACUUM FULL ANALYZE public.bd_ref_lookup_l1;
+VACUUM FULL ANALYZE public.bd_ref_lookup_l2;
+VACUUM FULL ANALYZE public.bd_ref_lookup_l3;
+VACUUM FULL ANALYZE public.bd_ref_lookup_l4;
+
+-- ── Aba 4 — Verificar tamanho final (cole em nova aba após os VACUUMs)
 SELECT
   tablename,
-  pg_size_pretty(pg_total_relation_size('public.'||tablename)) AS total_size
+  pg_size_pretty(pg_total_relation_size('public.'||tablename)) AS total_size,
+  pg_size_pretty(pg_relation_size('public.'||tablename))       AS data_size,
+  pg_size_pretty(pg_indexes_size('public.'||tablename))        AS index_size
 FROM pg_tables WHERE schemaname = 'public'
 ORDER BY pg_total_relation_size('public.'||tablename) DESC;
 
 SELECT pg_size_pretty(sum(pg_total_relation_size(schemaname||'.'||tablename))) AS total_db_size
 FROM pg_tables WHERE schemaname = 'public';
-*/
