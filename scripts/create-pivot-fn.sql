@@ -53,6 +53,7 @@ BEGIN
     WHEN 'rotulo'        THEN 'COALESCE(NULLIF(TRIM(d.rotulo),''''), d.codigo_nome_projeto_atividade, d.tipo_despesa)'
     WHEN 'fonte_recurso' THEN $fonteExpr$
       CASE
+        WHEN d.tipo_despesa = 'TABELA SUS PAULISTA' THEN 'Tesouro'
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%tesouro%' THEN 'Tesouro'
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%fed%'
           OR lower(d.codigo_nome_fonte_recurso) LIKE '%uni%o%'
@@ -79,6 +80,7 @@ BEGIN
     WHEN 'rotulo'        THEN 'COALESCE(NULLIF(TRIM(d.rotulo),''''), d.codigo_nome_projeto_atividade, d.tipo_despesa)'
     WHEN 'fonte_recurso' THEN $fonteExpr2$
       CASE
+        WHEN d.tipo_despesa = 'TABELA SUS PAULISTA' THEN 'Tesouro'
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%tesouro%' THEN 'Tesouro'
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%fed%'
           OR lower(d.codigo_nome_fonte_recurso) LIKE '%uni%o%'

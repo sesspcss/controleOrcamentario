@@ -49,10 +49,72 @@ SET drs = CASE drs
 END
 WHERE drs ~ E'^[0-9]{2} ';
 
--- Verificar resultado: deve haver somente um registro por DRS canonical
+-- Verificação resultado DRS
 SELECT drs, count(*) AS qtd
 FROM public.lc131_despesas
 GROUP BY drs ORDER BY drs;
+
+-- ── Popula DRS nulo usando o valor mais frequente para o mesmo município ────
+WITH drs_map AS (
+  SELECT municipio, drs
+  FROM (
+    SELECT municipio, drs, count(*) AS cnt,
+           ROW_NUMBER() OVER (PARTITION BY municipio ORDER BY count(*) DESC) AS rn
+    FROM public.lc131_despesas
+    WHERE drs IS NOT NULL AND drs <> '' AND municipio IS NOT NULL
+    GROUP BY municipio, drs
+  ) t WHERE rn = 1
+)
+UPDATE public.lc131_despesas a
+SET drs = m.drs
+FROM drs_map m
+WHERE a.municipio = m.municipio
+  AND (a.drs IS NULL OR a.drs = '');
+
+-- ── Popula RRAS nulo da mesma forma ───────────────────────────────
+WITH rras_map AS (
+  SELECT municipio, rras
+  FROM (
+    SELECT municipio, rras, count(*) AS cnt,
+           ROW_NUMBER() OVER (PARTITION BY municipio ORDER BY count(*) DESC) AS rn
+    FROM public.lc131_despesas
+    WHERE rras IS NOT NULL AND rras <> '' AND municipio IS NOT NULL
+    GROUP BY municipio, rras
+  ) t WHERE rn = 1
+)
+UPDATE public.lc131_despesas a
+SET rras = m.rras
+FROM rras_map m
+WHERE a.municipio = m.municipio
+  AND (a.rras IS NULL OR a.rras = '');
+
+-- ── Forcça reclassificação: NULL e SEM CLASSIFICAÇÃO → baseado no grupo de despesa ──
+-- Este UPDATE é o último recurso absoluto; elimina qualquer linha sem tipo.
+UPDATE public.lc131_despesas
+SET tipo_despesa = CASE
+  WHEN codigo_nome_grupo LIKE '1%' THEN 'PESSOAL E ENCARGOS SOCIAIS'
+  WHEN codigo_nome_grupo LIKE '2%' THEN 'JUROS E ENCARGOS DA DÍVIDA'
+  WHEN codigo_nome_grupo LIKE '3%' THEN 'OUTRAS DESPESAS CORRENTES'
+  WHEN codigo_nome_grupo LIKE '4%' THEN 'INVESTIMENTOS'
+  WHEN codigo_nome_grupo LIKE '5%' THEN 'INVERSÕES FINANCEIRAS'
+  ELSE 'OUTRAS DESPESAS CORRENTES'   -- último recurso absoluto
+END
+WHERE tipo_despesa IS NULL
+   OR tipo_despesa = 'SEM CLASSIFICAÇÃO'
+   OR TRIM(tipo_despesa) = '';
+
+-- ── Corrige fonte_recurso de TABELA SUS PAULISTA para Tesouro ─────
+-- Pagamentos da tabela SUS paulista são financiados pelo Tesouro Estadual.
+UPDATE public.lc131_despesas
+SET codigo_nome_fonte_recurso = '01 - Tesouro - Fonte Ordinaria'
+WHERE tipo_despesa = 'TABELA SUS PAULISTA'
+  AND (codigo_nome_fonte_recurso IS NULL
+       OR lower(codigo_nome_fonte_recurso) NOT LIKE '%tesouro%');
+
+-- Verificação final: não deve haver linhas sem tipo
+SELECT count(*) AS sem_classificacao
+FROM public.lc131_despesas
+WHERE tipo_despesa IS NULL OR tipo_despesa = 'SEM CLASSIFICAÇÃO' OR TRIM(tipo_despesa) = '';
 
 -- ════════════════════════════════════════════
 -- PARTE A — Cole e execute no SQL Editor
