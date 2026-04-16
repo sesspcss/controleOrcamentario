@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import {
   RefreshCw, AlertCircle, DollarSign, TrendingUp, CheckCircle2,
-  Download, Filter, X, Upload, FileSpreadsheet,
+  Download, X, Upload, FileSpreadsheet,
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
@@ -3174,97 +3174,110 @@ export default function App() {
 
           return (
             <>
-              {/* Toolbar */}
-              <div className="flex items-center gap-2 flex-wrap bg-white border border-[#E5E5E5] rounded-xl px-4 py-2.5 shadow-sm">
-                {/* Value selector */}
-                <span className="text-[11px] font-bold text-[#888] uppercase tracking-wide">Valor:</span>
-                {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
-                  <button key={k} onClick={() => setPivotValueKey(k)}
-                    className={cn('px-3 py-1.5 text-[11px] font-bold rounded-lg transition',
-                      pivotValueKey === k ? 'bg-[#118DFF] text-white shadow-sm' : 'bg-[#F3F4F6] text-[#555] hover:bg-[#E5E7EB]')}>
-                    {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
-                  </button>
-                ))}
-                <div className="w-px h-5 bg-[#E5E5E5] mx-1" />
-                {/* Row dimension selector */}
-                <span className="text-[11px] font-bold text-[#888] uppercase tracking-wide">Agrupar:</span>
-                <select
-                  value={pivotRowDim}
-                  onChange={e => {
-                    const nd = e.target.value;
-                    setPivotRowDim(nd);
-                    if (pivotSubDim === nd) setPivotSubDim(nd === 'tipo_despesa' ? 'municipio' : 'tipo_despesa');
-                    setPivotExpanded(new Set());
-                  }}
-                  className="text-[11px] border border-[#D0D0D0] rounded-lg px-2.5 py-1.5 bg-white text-[#333] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
-                  {PIVOT_DIMS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
-                </select>
-                <span className="text-[#999] text-[11px]">▸</span>
-                <select
-                  value={pivotSubDim}
-                  onChange={e => setPivotSubDim(e.target.value)}
-                  className="text-[11px] border border-[#D0D0D0] rounded-lg px-2.5 py-1.5 bg-white text-[#333] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
-                  {PIVOT_DIMS.filter(d => d.key !== pivotRowDim).map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
-                </select>
-                <div className="w-px h-5 bg-[#E5E5E5] mx-1" />
-                <button onClick={() => setPivotExpanded(new Set(groupRows.map(g => g.dim1)))}
-                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-lg hover:bg-[#E5E7EB] transition">
-                  Expandir todos
-                </button>
-                <button onClick={() => setPivotExpanded(new Set())}
-                  className="px-3 py-1.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-lg hover:bg-[#E5E7EB] transition">
-                  Recolher todos
-                </button>
-                <div className="flex-1" />
-                {/* Pivot-local filter toggle */}
-                <button
-                  onClick={() => setPivotFiltersOpen(v => !v)}
-                  className={cn('flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg transition',
-                    pivotFiltersOpen || pivotFilterCount > 0
-                      ? 'bg-[#118DFF] text-white shadow-sm'
-                      : 'bg-[#F3F4F6] text-[#555] hover:bg-[#E5E7EB]')}>
-                  <Filter className="w-3 h-3" />
-                  Filtros{pivotFilterCount > 0 ? ` (${pivotFilterCount})` : ''}
-                </button>
-                <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotRaw.length}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition shadow-sm">
-                  {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
-                  Exportar XLSX
-                </button>
-                <span className="text-[11px] text-[#999] font-mono">
-                  {pivotLoading ? <Spinner size={3} /> : `${fmt(groupRows.length)} ${rowDimLabel.toLowerCase()}s`}
-                </span>
-              </div>
+              {/* ── Painel de controle unificado ── */}
+              <div className="bg-white border border-[#E5E5E5] rounded-xl shadow-sm overflow-visible">
 
-              {/* Pivot-local filter panel */}
-              {pivotFiltersOpen && (
-                <div className="bg-white border border-[#E5E5E5] rounded-xl px-4 py-3 shadow-sm">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-9 gap-2">
-                    {FILTER_META.filter(f => PIVOT_FILTER_KEYS.has(f.key)).map(f => (
-                      <MultiSelect
-                        key={f.key}
-                        label={f.label}
-                        options={(distincts[f.distinctKey] ?? []) as string[]}
-                        value={pivotFilters[f.key] ?? []}
-                        onChange={(v: string[]) => {
-                          const nf = { ...pivotFilters };
-                          if (v.length > 0) nf[f.key] = v; else delete nf[f.key];
-                          setPivotFilters(nf);
-                        }}
-                        loading={distinctsLoading}
-                      />
-                    ))}
-                  </div>
-                  {pivotFilterCount > 0 && (
-                    <div className="flex justify-end mt-2">
-                      <button onClick={() => setPivotFilters({})}
-                        className="text-[11px] text-red-500 hover:text-red-700 font-semibold flex items-center gap-1">
-                        <X className="w-3 h-3" /> Limpar filtros do painel ({pivotFilterCount})
-                      </button>
+                {/* Linha 1: Métrica | Agrupar | Ações | XLSX | Contador */}
+                <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b border-[#F0F0F0]">
+
+                  {/* Métrica */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Métrica</span>
+                    <div className="flex items-center gap-1">
+                      {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
+                        <button key={k} onClick={() => setPivotValueKey(k)}
+                          className={cn('px-2.5 py-1 text-[11px] font-bold rounded-md transition-all',
+                            pivotValueKey === k
+                              ? 'bg-[#118DFF] text-white shadow-sm'
+                              : 'bg-[#F3F4F6] text-[#666] hover:bg-[#E5E7EB]')}>
+                          {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                  {/* Agrupar */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Agrupar</span>
+                    <select
+                      value={pivotRowDim}
+                      onChange={e => {
+                        const nd = e.target.value;
+                        setPivotRowDim(nd);
+                        if (pivotSubDim === nd) setPivotSubDim(nd === 'tipo_despesa' ? 'municipio' : 'tipo_despesa');
+                        setPivotExpanded(new Set());
+                      }}
+                      className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
+                      {PIVOT_DIMS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                    </select>
+                    <ChevronRight className="w-3 h-3 text-[#BBB] shrink-0" />
+                    <select
+                      value={pivotSubDim}
+                      onChange={e => setPivotSubDim(e.target.value)}
+                      className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
+                      {PIVOT_DIMS.filter(d => d.key !== pivotRowDim).map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                  {/* Expandir / Recolher */}
+                  <button onClick={() => setPivotExpanded(new Set(groupRows.map(g => g.dim1)))}
+                    className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
+                    + Todos
+                  </button>
+                  <button onClick={() => setPivotExpanded(new Set())}
+                    className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
+                    − Todos
+                  </button>
+
+                  <div className="flex-1" />
+
+                  {/* Contador */}
+                  <span className="text-[11px] text-[#BBB] font-mono shrink-0">
+                    {pivotLoading
+                      ? <Spinner size={3} />
+                      : `${fmt(groupRows.length)} ${rowDimLabel.toLowerCase()}s`}
+                  </span>
+
+                  {/* Exportar XLSX */}
+                  <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotRaw.length}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition-all shadow-sm shrink-0">
+                    {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
+                    Exportar XLSX
+                  </button>
                 </div>
-              )}
+
+                {/* Linha 2: Filtros — sempre visível */}
+                <div className="px-4 py-2.5 bg-[#FAFAFA]">
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0 mt-2">Filtrar</span>
+                    {FILTER_META.filter(f => PIVOT_FILTER_KEYS.has(f.key)).map(f => (
+                      <div key={f.key} className="w-32">
+                        <MultiSelect
+                          label={f.label}
+                          options={(distincts[f.distinctKey] ?? []) as string[]}
+                          value={pivotFilters[f.key] ?? []}
+                          onChange={(v: string[]) => {
+                            const nf = { ...pivotFilters };
+                            if (v.length > 0) nf[f.key] = v; else delete nf[f.key];
+                            setPivotFilters(nf);
+                          }}
+                          loading={distinctsLoading}
+                        />
+                      </div>
+                    ))}
+                    {pivotFilterCount > 0 && (
+                      <button onClick={() => setPivotFilters({})}
+                        className="flex items-center gap-1 px-2.5 py-1 mt-1 text-[11px] text-red-500 hover:text-red-700 font-semibold rounded-md hover:bg-red-50 transition-all shrink-0">
+                        <X className="w-3 h-3" /> Limpar ({pivotFilterCount})
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
                 {pivotError ? (

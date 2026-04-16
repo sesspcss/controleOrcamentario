@@ -407,15 +407,18 @@ BEGIN
           -- ── ICESP → OS ──────────────────────────────────────────
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%ICESP%'
             OR norm_tipo_desc(lc.codigo_nome_ug)     LIKE '%ICESP%'              THEN 'ORGANIZAÇÃO SOCIAL'
-          -- ── OS / Convênio ────────────────────────────────────────
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%EXECUCAO DAS ATIVIDADES%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%CONTRATO DE GESTAO%'
-            OR norm_tipo_desc(lc.descricao_processo) LIKE '%CONTRATO GESTAO%'    THEN 'ORGANIZAÇÃO SOCIAL'
-          WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%CONVENIO%'
-            OR norm_tipo_desc(lc.codigo_nome_projeto_atividade) LIKE '%CONVENIO%' THEN 'CONVÊNIO'
+          -- ── Transferência Voluntária ───────────────────────────────
           WHEN norm_tipo_desc(lc.descricao_processo) LIKE '%TRANSFERENCIA VOLUNTARIA%'
             OR norm_tipo_desc(lc.descricao_processo) LIKE '%TRANFERENCIA VOLUNTARIA%'
             OR norm_tipo_desc(lc.descricao_processo) LIKE '%TRANSF%VOLUNTARIA%'   THEN 'TRANSFERÊNCIA VOLUNTÁRIA'
+          -- ── Catch-all baseado na UG (cobre contratos sem padrão textual) ──
+          WHEN norm_tipo_desc(lc.codigo_nome_ug) LIKE '%ORGANIZ%SOCIAL%'
+            OR norm_tipo_desc(lc.codigo_nome_ug) LIKE '%CONTRATO DE GESTAO%'    THEN 'ORGANIZAÇÃO SOCIAL'
+          WHEN norm_tipo_desc(lc.codigo_nome_ug) LIKE '%DEPTO%REG%SAUDE%'
+            OR norm_tipo_desc(lc.codigo_nome_ug) LIKE '%DEPARTAMENTO%REGIONAL%' THEN 'GESTÃO ESTADUAL SUS'
+          WHEN norm_tipo_desc(lc.codigo_nome_ug) LIKE '%UNIDADE%PROPRIA%'
+            OR norm_tipo_desc(lc.codigo_nome_ug) LIKE '%HOSPITAL%'
+            OR norm_tipo_desc(lc.codigo_nome_ug) LIKE '%AMBULATORIO%'           THEN 'UNIDADE PRÓPRIA'
           -- SEM ELSE: retorna NULL → proxima camada COALESCE entra em ação
         END,
         -- ─── PRIORIDADE 2-5: Lookup bd_ref_tipo (já normalizado) ──
@@ -423,9 +426,18 @@ BEGIN
         r2.tipo_despesa,
         r3.tipo_despesa,
         r4.tipo_despesa,  -- L4: fallback por UG (cobre quase tudo que L1/L2/L3 não pegou)
-        -- ─── PRIORIDADE 6: normaliza o tipo existente ─────────────
+        -- ─── PRIORIDADE 6: normaliza o tipo existente ─────────────────
         public.norm_tipo_final(lc.tipo_despesa),
-        lc.tipo_despesa
+        lc.tipo_despesa,
+        -- ─── PRIORIDADE 7 (último recurso): tipo baseado no grupo de despesa ──
+        -- Grupo 3 = Custeio, 4 = Investimento, 1 = Pessoal, 2 = Dívida
+        CASE
+          WHEN lc.codigo_nome_grupo LIKE '1%' THEN 'PESSOAL E ENCARGOS SOCIAIS'
+          WHEN lc.codigo_nome_grupo LIKE '2%' THEN 'JUROS E ENCARGOS DA DÍVIDA'
+          WHEN lc.codigo_nome_grupo LIKE '3%' THEN 'OUTRAS DESPESAS CORRENTES'
+          WHEN lc.codigo_nome_grupo LIKE '4%' THEN 'INVESTIMENTOS'
+          WHEN lc.codigo_nome_grupo LIKE '5%' THEN 'INVERSÕES FINANCEIRAS'
+        END
       ) AS novo_tipo
     FROM public.lc131_despesas lc
     LEFT JOIN public.bd_ref_lookup_l1 r1
@@ -467,4 +479,20 @@ AS $$
 $$;
 GRANT EXECUTE ON FUNCTION public.get_lc131_id_range(INT) TO anon, authenticated;
 
-SELECT 'fix_tipo_despesa_by_year v9.1 (L4 UG fallback + TABELA SUS canonical + sem SEM CLASSIFICACAO) criada com sucesso' AS status;
+SELECT 'fix_tipo_despesa_by_year v9.2 (L4 UG fallback + grupo fallback + TABELA SUS canonical + rotulo population) criada com sucesso' AS status;
+
+-- ─ 8. Popula rotulo onde ainda está vazio ──────────────────────────
+-- Usar codigo_nome_projeto_atividade como rótulo proxy quando rotulo é NULL/vazio.
+-- Executar UMA VEZ após rodar run-fix-tipo.mjs.
+DO $$
+DECLARE n INT;
+BEGIN
+  UPDATE public.lc131_despesas
+  SET rotulo = TRIM(codigo_nome_projeto_atividade)
+  WHERE (rotulo IS NULL OR rotulo = '')
+    AND codigo_nome_projeto_atividade IS NOT NULL
+    AND codigo_nome_projeto_atividade <> '';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RAISE NOTICE 'rotulo populado: % linhas', n;
+END;
+$$;

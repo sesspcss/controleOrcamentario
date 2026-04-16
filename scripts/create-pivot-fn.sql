@@ -50,7 +50,7 @@ BEGIN
     WHEN 'regiao_sa'     THEN 'd.regiao_sa'
     WHEN 'grupo_despesa' THEN 'd.codigo_nome_grupo'
     WHEN 'elemento'      THEN 'd.codigo_nome_elemento'
-    WHEN 'rotulo'        THEN 'd.rotulo'
+    WHEN 'rotulo'        THEN 'COALESCE(NULLIF(TRIM(d.rotulo),''''), d.codigo_nome_projeto_atividade, d.tipo_despesa)'
     WHEN 'fonte_recurso' THEN $fonteExpr$
       CASE
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%tesouro%' THEN 'Tesouro'
@@ -76,7 +76,7 @@ BEGIN
     WHEN 'regiao_sa'     THEN 'd.regiao_sa'
     WHEN 'grupo_despesa' THEN 'd.codigo_nome_grupo'
     WHEN 'elemento'      THEN 'd.codigo_nome_elemento'
-    WHEN 'rotulo'        THEN 'd.rotulo'
+    WHEN 'rotulo'        THEN 'COALESCE(NULLIF(TRIM(d.rotulo),''''), d.codigo_nome_projeto_atividade, d.tipo_despesa)'
     WHEN 'fonte_recurso' THEN $fonteExpr2$
       CASE
         WHEN lower(d.codigo_nome_fonte_recurso) LIKE '%tesouro%' THEN 'Tesouro'
@@ -97,7 +97,7 @@ BEGIN
     'FROM ( ' ||
     '  SELECT ' ||
     '    COALESCE(' || v_dim    || ', '''')              AS dim1, ' ||
-    '    COALESCE(' || v_subdim || ', ''SEM CLASSIFICAÇÃO'')   AS subdim, ' ||
+    '    COALESCE(NULLIF(TRIM(' || v_subdim || '),''''), ''(Sem Dado)'') AS subdim, ' ||
     '    d.ano_referencia::INT                           AS ano_referencia, ' ||
     '    SUM(COALESCE(d.pago, 0) + COALESCE(d.pago_anos_anteriores, 0))::NUMERIC AS pago_total, ' ||
     '    SUM(COALESCE(d.empenhado,  0))::NUMERIC         AS empenhado, ' ||
