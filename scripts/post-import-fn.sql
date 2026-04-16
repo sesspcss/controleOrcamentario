@@ -36,8 +36,8 @@ BEGIN
     WHEN '11 Presidente Prudente'    THEN 'DRS XI - Presidente Prudente'
     WHEN '12 Registro'               THEN 'DRS XII - Registro'
     WHEN '13 Ribeirão Preto'         THEN 'DRS XIII - Ribeirão Preto'
-    WHEN '14 São João Da Boa Vista'  THEN 'DRS XIV - São João Da Boa Vista'
-    WHEN '15 São José Do Rio Preto'  THEN 'DRS XV - São José Do Rio Preto'
+    WHEN '14 São João da Boa Vista'  THEN 'DRS XIV - São João da Boa Vista'
+    WHEN '15 São José do Rio Preto'  THEN 'DRS XV - São José do Rio Preto'
     WHEN '16 Sorocaba'               THEN 'DRS XVI - Sorocaba'
     WHEN '17 Taubaté'                THEN 'DRS XVII - Taubaté'
     ELSE drs
@@ -171,8 +171,8 @@ BEGIN
     WHEN '11 Presidente Prudente'    THEN 'DRS XI - Presidente Prudente'
     WHEN '12 Registro'               THEN 'DRS XII - Registro'
     WHEN '13 Ribeirão Preto'         THEN 'DRS XIII - Ribeirão Preto'
-    WHEN '14 São João Da Boa Vista'  THEN 'DRS XIV - São João Da Boa Vista'
-    WHEN '15 São José Do Rio Preto'  THEN 'DRS XV - São José Do Rio Preto'
+    WHEN '14 São João da Boa Vista'  THEN 'DRS XIV - São João da Boa Vista'
+    WHEN '15 São José do Rio Preto'  THEN 'DRS XV - São José do Rio Preto'
     WHEN '16 Sorocaba'               THEN 'DRS XVI - Sorocaba'
     WHEN '17 Taubaté'                THEN 'DRS XVII - Taubaté'
     ELSE drs
