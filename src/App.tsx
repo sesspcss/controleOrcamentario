@@ -1886,7 +1886,7 @@ export default function App() {
   const loadPivot = useCallback(async () => {
     setPivotLoading(true); setPivotError(null);
     try {
-      const SKIP_KEYS = new Set(['p_codigo_ug', 'p_fonte_recurso']);
+      const SKIP_KEYS = new Set(['p_codigo_ug']);
       const params: Record<string, unknown> = { p_dim: pivotRowDim, p_subdim: pivotSubDim };
       if (anoSel !== 'todos') params.p_ano = Number(anoSel);
       Object.entries(filters).forEach(([k, v]) => {

@@ -42,6 +42,7 @@ BEGIN
       AND (p_rotulo        IS NULL OR rotulo                    = ANY(string_to_array(p_rotulo, '|')))
       AND (p_fonte_recurso IS NULL OR (
             CASE
+              WHEN tipo_despesa = 'TABELA SUS PAULISTA' THEN 'Tesouro'
               WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
               WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
                 OR codigo_nome_fonte_recurso ILIKE '%união%'
@@ -68,6 +69,7 @@ BEGIN
     'distinct_rotulo',     (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT rotulo AS d FROM filtered WHERE rotulo IS NOT NULL AND rotulo<>'') x),
     'distinct_fonte',      (SELECT json_agg(d ORDER BY d) FROM (SELECT DISTINCT
                               CASE
+                                WHEN tipo_despesa = 'TABELA SUS PAULISTA' THEN 'Tesouro'
                                 WHEN codigo_nome_fonte_recurso ILIKE '%tesouro%' THEN 'Tesouro'
                                 WHEN codigo_nome_fonte_recurso ILIKE '%fed%'
                                   OR codigo_nome_fonte_recurso ILIKE '%união%'

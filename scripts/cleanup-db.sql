@@ -17,6 +17,9 @@
 -- PARTE 0 — Normalizar nomes duplicados de DRS
 -- O campo drs pode ter dois formatos para a mesma regional:
 --   "01 GRANDE SÃO PAULO"  →  "DRS I - GRANDE SÃO PAULO"
+-- IMPORTANTE: execute 'node scripts/run-fix-tipo.mjs' ANTES desta parte
+--             para maximizar a qualidade das classificações. O UPDATE de
+--             força no final desta parte usa apenas o grupo de despesa.
 -- Execute esta parte uma única vez.
 -- ════════════════════════════════════════════
 

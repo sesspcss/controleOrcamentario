@@ -12,6 +12,7 @@
 DROP FUNCTION IF EXISTS public.lc131_pivot(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP FUNCTION IF EXISTS public.lc131_pivot(INT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP FUNCTION IF EXISTS public.lc131_pivot(INT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
+DROP FUNCTION IF EXISTS public.lc131_pivot(INT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 
 CREATE OR REPLACE FUNCTION public.lc131_pivot(
   p_ano           INT  DEFAULT NULL,
@@ -23,6 +24,7 @@ CREATE OR REPLACE FUNCTION public.lc131_pivot(
   p_grupo_despesa TEXT DEFAULT NULL,
   p_tipo_despesa  TEXT DEFAULT NULL,
   p_rotulo        TEXT DEFAULT NULL,
+  p_fonte_recurso TEXT DEFAULT NULL,
   p_uo            TEXT DEFAULT NULL,
   p_elemento      TEXT DEFAULT NULL,
   p_favorecido    TEXT DEFAULT NULL,
@@ -114,21 +116,31 @@ BEGIN
     '    AND ($7  IS NULL OR d.codigo_nome_grupo      = ANY(string_to_array($7,  ''|''))) ' ||
     '    AND ($8  IS NULL OR d.tipo_despesa           = ANY(string_to_array($8,  ''|''))) ' ||
     '    AND ($9  IS NULL OR d.rotulo                 = ANY(string_to_array($9,  ''|''))) ' ||
-    '    AND ($10 IS NULL OR d.codigo_nome_uo         = ANY(string_to_array($10, ''|''))) ' ||
-    '    AND ($11 IS NULL OR d.codigo_nome_elemento   = ANY(string_to_array($11, ''|''))) ' ||
-    '    AND ($12 IS NULL OR d.codigo_nome_favorecido = ANY(string_to_array($12, ''|''))) ' ||
+    '    AND ($10 IS NULL OR (CASE ' ||
+    '          WHEN d.tipo_despesa = ''TABELA SUS PAULISTA'' THEN ''Tesouro'' ' ||
+    '          WHEN lower(d.codigo_nome_fonte_recurso) LIKE ''%tesouro%'' THEN ''Tesouro'' ' ||
+    '          WHEN lower(d.codigo_nome_fonte_recurso) LIKE ''%fed%'' ' ||
+    '            OR lower(d.codigo_nome_fonte_recurso) LIKE ''%uni%o%'' ' ||
+    '            OR lower(d.codigo_nome_fonte_recurso) LIKE ''%fundo nacional%'' ' ||
+    '            OR lower(d.codigo_nome_fonte_recurso) LIKE ''%transfer%ncia%'' ' ||
+    '            OR lower(d.codigo_nome_fonte_recurso) LIKE ''%transferencia%'' ' ||
+    '            OR lower(d.codigo_nome_fonte_recurso) LIKE ''%sus%'' THEN ''Federal'' ' ||
+    '          ELSE ''Demais Fontes'' END) = ANY(string_to_array($10, ''|''))) ' ||
+    '    AND ($11 IS NULL OR d.codigo_nome_uo         = ANY(string_to_array($11, ''|''))) ' ||
+    '    AND ($12 IS NULL OR d.codigo_nome_elemento   = ANY(string_to_array($12, ''|''))) ' ||
+    '    AND ($13 IS NULL OR d.codigo_nome_favorecido = ANY(string_to_array($13, ''|''))) ' ||
     '  GROUP BY 1, 2, d.ano_referencia ' ||
     ') r';
 
   EXECUTE v_sql INTO v_result
     USING p_ano, p_drs, p_regiao_ad, p_rras, p_regiao_sa, p_municipio,
-          p_grupo_despesa, p_tipo_despesa, p_rotulo, p_uo, p_elemento, p_favorecido;
+          p_grupo_despesa, p_tipo_despesa, p_rotulo, p_fonte_recurso, p_uo, p_elemento, p_favorecido;
 
   RETURN v_result;
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.lc131_pivot(INT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.lc131_pivot(INT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) TO anon, authenticated;
 
 -- Índices para acelerar GROUP BY nas dimensões mais usadas
 CREATE INDEX IF NOT EXISTS idx_lc131_pivot
