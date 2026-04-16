@@ -1887,10 +1887,9 @@ export default function App() {
     setPivotLoading(true); setPivotError(null);
     try {
       const SKIP_KEYS = new Set(['p_codigo_ug', 'p_fonte_recurso']);
-      const mergedFilters = { ...filters, ...pivotFilters };
       const params: Record<string, unknown> = { p_dim: pivotRowDim, p_subdim: pivotSubDim };
       if (anoSel !== 'todos') params.p_ano = Number(anoSel);
-      Object.entries(mergedFilters).forEach(([k, v]) => {
+      Object.entries(filters).forEach(([k, v]) => {
         if (SKIP_KEYS.has(k)) return;
         if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
       });
@@ -1903,7 +1902,7 @@ export default function App() {
     } finally {
       setPivotLoading(false);
     }
-  }, [filters, anoSel, pivotRowDim, pivotSubDim, pivotFilters]);
+  }, [filters, anoSel, pivotRowDim, pivotSubDim]);
 
   useEffect(() => {
     if (activeTab !== 'pivot') return;
@@ -3170,7 +3169,7 @@ export default function App() {
           };
 
           const COL_W = 180;
-          const pivotFilterCount = Object.values(pivotFilters).filter(v => Array.isArray(v) && v.length > 0).length;
+          const pivotFilterCount = 0; // pivot uses global filter bar only
 
           return (
             <>
@@ -3250,33 +3249,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Linha 2: Filtros — sempre visível */}
-                <div className="px-4 py-2.5 bg-[#FAFAFA]">
-                  <div className="flex items-start gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0 mt-2">Filtrar</span>
-                    {FILTER_META.filter(f => PIVOT_FILTER_KEYS.has(f.key)).map(f => (
-                      <div key={f.key} className="w-32">
-                        <MultiSelect
-                          label={f.label}
-                          options={(distincts[f.distinctKey] ?? []) as string[]}
-                          value={pivotFilters[f.key] ?? []}
-                          onChange={(v: string[]) => {
-                            const nf = { ...pivotFilters };
-                            if (v.length > 0) nf[f.key] = v; else delete nf[f.key];
-                            setPivotFilters(nf);
-                          }}
-                          loading={distinctsLoading}
-                        />
-                      </div>
-                    ))}
-                    {pivotFilterCount > 0 && (
-                      <button onClick={() => setPivotFilters({})}
-                        className="flex items-center gap-1 px-2.5 py-1 mt-1 text-[11px] text-red-500 hover:text-red-700 font-semibold rounded-md hover:bg-red-50 transition-all shrink-0">
-                        <X className="w-3 h-3" /> Limpar ({pivotFilterCount})
-                      </button>
-                    )}
-                  </div>
-                </div>
               </div>
 
               <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">

@@ -426,9 +426,9 @@ BEGIN
         r2.tipo_despesa,
         r3.tipo_despesa,
         r4.tipo_despesa,  -- L4: fallback por UG (cobre quase tudo que L1/L2/L3 não pegou)
-        -- ─── PRIORIDADE 6: normaliza o tipo existente ─────────────────
-        public.norm_tipo_final(lc.tipo_despesa),
-        lc.tipo_despesa,
+        -- ─── PRIORIDADE 6: normaliza o tipo existente (exclui 'SEM CLASSIFICAÇÃO') ───
+        NULLIF(public.norm_tipo_final(lc.tipo_despesa), 'SEM CLASSIFICAÇÃO'),
+        NULLIF(lc.tipo_despesa, 'SEM CLASSIFICAÇÃO'),
         -- ─── PRIORIDADE 7 (último recurso): tipo baseado no grupo de despesa ──
         -- Grupo 3 = Custeio, 4 = Investimento, 1 = Pessoal, 2 = Dívida
         CASE
@@ -479,7 +479,7 @@ AS $$
 $$;
 GRANT EXECUTE ON FUNCTION public.get_lc131_id_range(INT) TO anon, authenticated;
 
-SELECT 'fix_tipo_despesa_by_year v9.2 (L4 UG fallback + grupo fallback + TABELA SUS canonical + rotulo population) criada com sucesso' AS status;
+SELECT 'fix_tipo_despesa_by_year v9.3 (NULLIF SEM CLASSIFICAÇÃO + grupo fallback + rotulo population) criada com sucesso' AS status;
 
 -- ─ 8. Popula rotulo onde ainda está vazio ──────────────────────────
 -- Usar codigo_nome_projeto_atividade como rótulo proxy quando rotulo é NULL/vazio.
