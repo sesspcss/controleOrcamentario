@@ -4,13 +4,15 @@
 -- NÃO altera lógica, funções nem schema.
 -- ================================================================
 -- ORDEM OBRIGATÓRIA:
---   1. Deploy fix-tipo-by-year.sql (v9.2) no SQL Editor
+--   0. Deploy post-import-fn.sql  ← UMA VEZ (cria função post_import_cleanup)
+--   1. Deploy fix-tipo-by-year.sql (v9.3) no SQL Editor
 --   2. SELECT public.refresh_bdref_lookup();   ← popula L4 com UG→tipo
 --   3. node scripts/run-fix-tipo.mjs           ← classifica tudo
 --   4. Executar bloco DO $$ de rótulo (final do fix-tipo-by-year.sql)
 --   5. Execute PARTE 0 deste script            ← normaliza nomes DRS/RRAS
---   6. Execute PARTE A deste script            ← libera bd_ref_tipo
---   7. Execute PARTE B (VACUUMs) separadamente
+--   6. Execute PARTE C deste script            ← compressão lz4 (UMA VEZ)
+--   7. Execute PARTE A deste script            ← libera bd_ref_tipo
+--   8. Execute PARTE B (VACUUMs) separadamente
 -- ================================================================
 
 -- ════════════════════════════════════════════
@@ -190,6 +192,28 @@ ORDER BY pg_total_relation_size('public.'||tablename) DESC;
 SELECT pg_size_pretty(sum(pg_total_relation_size(schemaname||'.'||tablename))) AS total_db_size
 FROM pg_tables WHERE schemaname = 'public';
 
+
+-- ════════════════════════════════════════════════════════════════════
+-- PARTE C — COMPRESSÃO lz4 (executar UMA VEZ antes do primeiro VACUUM)
+-- Instrui o PostgreSQL a usar LZ4 nos campos de texto longos.
+-- NÃO causa reescrita imediata. O VACUUM FULL da PARTE B aplica a
+-- nova compressão e é quando o espaço realmente é liberado.
+-- Ganho estimado: +15-25% sobre o VACUUM sozinho.
+-- ════════════════════════════════════════════════════════════════════
+
+ALTER TABLE public.lc131_despesas
+  ALTER COLUMN codigo_nome_ug                SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_uo                SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_elemento          SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_grupo             SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_fonte_recurso     SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_projeto_atividade SET COMPRESSION lz4,
+  ALTER COLUMN codigo_nome_favorecido        SET COMPRESSION lz4,
+  ALTER COLUMN rotulo                        SET COMPRESSION lz4,
+  ALTER COLUMN descricao_processo            SET COMPRESSION lz4,
+  ALTER COLUMN municipio                     SET COMPRESSION lz4,
+  ALTER COLUMN drs                           SET COMPRESSION lz4,
+  ALTER COLUMN rras                          SET COMPRESSION lz4;
 
 -- ════════════════════════════════════════════════════════════════════
 -- PARTE B — VACUUM FULL: execute CADA LINHA em uma aba separada do SQL Editor

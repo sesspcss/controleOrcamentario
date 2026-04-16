@@ -19,7 +19,9 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 import * as path from 'path';
 import * as readline from 'readline';
 import { createRequire } from 'module';
@@ -30,6 +32,9 @@ process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 // CJS interop for xlsx (CommonJS package)
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx') as typeof import('xlsx');
+
+// Diretório deste script (para localizar post-import.mjs)
+const __importDir = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Configuração Supabase ───────────────────────────────────────────────────
 const SUPABASE_URL  = 'https://teikzwrfsxjipxozzhbr.supabase.co';
@@ -279,6 +284,33 @@ async function uploadToSupabase(tableName: string, rows: Record<string, any>[]):
   process.stdout.write('\n');
 }
 
+// ─── Pós-import automático ───────────────────────────────────────────────────
+
+async function runPostImport(ano?: number): Promise<void> {
+  const scriptPath = path.join(__importDir, 'post-import.mjs');
+  if (!fs.existsSync(scriptPath)) {
+    console.warn(`\n⚠️  post-import.mjs não encontrado em ${scriptPath}`);
+    console.warn('   Execute manualmente: node scripts/run-fix-tipo.mjs');
+    return;
+  }
+  const args = ano ? [scriptPath, String(ano)] : [scriptPath];
+  return new Promise(resolve => {
+    const child = spawn('node', args, { stdio: 'inherit' });
+    child.on('error', err => {
+      console.warn(`\n⚠️  Erro ao iniciar pós-import: ${err.message}`);
+      console.warn(`   Execute manualmente: node scripts/post-import.mjs${ano ? ' ' + ano : ''}`);
+      resolve();
+    });
+    child.on('close', code => {
+      if (code !== 0) {
+        console.warn(`\n⚠️  Pós-import terminou com código ${code}. Verifique acima.`);
+        console.warn(`   Execute: node scripts/post-import.mjs${ano ? ' ' + ano : ''}`);
+      }
+      resolve(); // sempre resolve — o upload já foi salvo com sucesso
+    });
+  });
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -400,11 +432,10 @@ async function main() {
   // 3. Faz o upload
   await uploadToSupabase(tableName, rows);
 
-  console.log(`\n✅ Importação concluída com sucesso!`);
-  console.log(`   ${rows.length.toLocaleString('pt-BR')} registros em "${tableName}"`);
-  console.log(`\n📋 PRÓXIMOS PASSOS OBRIGATÓRIOS:`);
-  console.log(`   1. node scripts/run-fix-tipo.mjs  ← classifica tipo_despesa nas novas linhas`);
-  console.log(`   2. Execute PARTE 0 do cleanup-db.sql  ← normaliza DRS/RRAS/fonte/rótulo\n`);
+  console.log(`\n✅ Upload concluído: ${rows.length.toLocaleString('pt-BR')} registros em "${tableName}"`);
+
+  // 4. Pós-import automático: classifica, normaliza DRS/RRAS, corrige TABELA SUS, limpa bd_ref_tipo
+  await runPostImport(anoDetectado);
 }
 
 async function truncateTable(tableName: string, anoToDelete?: number): Promise<void> {
