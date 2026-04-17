@@ -16,7 +16,9 @@
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION public.post_import_cleanup(p_ano INT DEFAULT NULL)
-RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER
+SET statement_timeout = 0    -- sem limite de tempo (mesmas garantias de fix_tipo)
+AS $$
 DECLARE
   r JSONB := '{}';
   n INT;
@@ -38,6 +40,15 @@ BEGIN
     ALTER COLUMN municipio                     SET COMPRESSION lz4,
     ALTER COLUMN drs                           SET COMPRESSION lz4,
     ALTER COLUMN rras                          SET COMPRESSION lz4;
+
+  -- ── 0.1: Autovacuum agressivo — limpa dead tuples automaticamente após cada import
+  -- Com 1% de dead tuples (scale_factor = 0.01), autovacuum inicia sozinho logo após o import.
+  -- Isso mantém o banco compacto sem necessidade de VACUUM FULL manual periódico.
+  ALTER TABLE public.lc131_despesas SET (
+    autovacuum_vacuum_scale_factor   = 0.01,
+    autovacuum_analyze_scale_factor  = 0.01,
+    autovacuum_vacuum_cost_delay     = 2
+  );
 
   -- ── 1. Normalizar DRS: prefixo numérico → algarismo romano ──────────────
   UPDATE public.lc131_despesas
@@ -61,7 +72,8 @@ BEGIN
     WHEN '17 Taubaté'                THEN 'DRS XVII - Taubaté'
     ELSE drs
   END
-  WHERE drs ~ E'^[0-9]{2} ';
+  WHERE drs ~ E'^[0-9]{2} '
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_normalized', n);
 
@@ -80,7 +92,8 @@ BEGIN
   SET drs = m.drs
   FROM drs_map m
   WHERE a.municipio = m.municipio
-    AND (a.drs IS NULL OR a.drs = '');
+    AND (a.drs IS NULL OR a.drs = '')
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_filled', n);
 
@@ -99,7 +112,8 @@ BEGIN
   SET rras = m.rras
   FROM rras_map m
   WHERE a.municipio = m.municipio
-    AND (a.rras IS NULL OR a.rras = '');
+    AND (a.rras IS NULL OR a.rras = '')
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_filled', n);
 
@@ -114,9 +128,10 @@ BEGIN
     WHEN codigo_nome_grupo LIKE '5%' THEN 'INVERSÕES FINANCEIRAS'
     ELSE 'OUTRAS DESPESAS CORRENTES'
   END
-  WHERE tipo_despesa IS NULL
+  WHERE (tipo_despesa IS NULL
      OR tipo_despesa = 'SEM CLASSIFICAÇÃO'
-     OR TRIM(tipo_despesa) = '';
+     OR TRIM(tipo_despesa) = '')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('sem_classificacao_fixed', n);
 
@@ -127,7 +142,8 @@ BEGIN
     AND codigo_nome_elemento NOT LIKE '%334130%'
     AND codigo_nome_fonte_recurso NOT LIKE '%163150%'
     AND (codigo_nome_fonte_recurso IS NULL
-         OR lower(codigo_nome_fonte_recurso) NOT LIKE '%tesouro%');
+         OR lower(codigo_nome_fonte_recurso) NOT LIKE '%tesouro%')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('tabela_sus_fonte_fixed', n);
 
@@ -141,7 +157,8 @@ BEGIN
   END
   WHERE tipo_despesa = 'TABELA SUS PAULISTA'
     AND (codigo_nome_elemento LIKE '%334130%'
-         OR codigo_nome_fonte_recurso LIKE '%163150%');
+         OR codigo_nome_fonte_recurso LIKE '%163150%')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('tabela_sus_reclassified', n);
 
@@ -181,6 +198,32 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.post_import_cleanup(INT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.post_import_cleanup(INT) TO authenticated;
+
+-- ================================================================
+-- fill_rotulo_ano — fallback autônomo para preencher rótulo
+-- Chamado pelo post-import.mjs se post_import_cleanup falhar ou
+-- retornar rotulo_filled = 0.
+-- Não depende de bd_ref_tipo, L1-4 nem de nenhuma outra função.
+-- ================================================================
+CREATE OR REPLACE FUNCTION public.fill_rotulo_ano(p_ano INT DEFAULT NULL)
+RETURNS INT LANGUAGE plpgsql SECURITY DEFINER
+SET statement_timeout = 0
+AS $$
+DECLARE n INT;
+BEGIN
+  UPDATE public.lc131_despesas
+  SET rotulo = TRIM(codigo_nome_projeto_atividade)
+  WHERE (rotulo IS NULL OR rotulo = '')
+    AND codigo_nome_projeto_atividade IS NOT NULL
+    AND codigo_nome_projeto_atividade <> ''
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RETURN n;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.fill_rotulo_ano(INT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fill_rotulo_ano(INT) TO authenticated;
 
 -- ================================================================
 -- fix_drs_range — normaliza DRS em uma faixa de IDs (evita timeout)

@@ -92,8 +92,15 @@ async function runFixTipo(ano) {
 
 async function runCleanup(ano) {
   process.stdout.write(`  [3/3] post_import_cleanup(${ano ?? 'todos'})... `);
-  const result = await callRpc('post_import_cleanup', { p_ano: ano ?? null });
-  console.log('✔\n');
+  let result = null;
+  try {
+    result = await callRpc('post_import_cleanup', { p_ano: ano ?? null });
+    console.log('✔\n');
+  } catch (err) {
+    console.warn(`\n  ⚠️  post_import_cleanup falhou: ${err.message.substring(0, 120)}`);
+    console.warn('     Continuando com fallbacks automáticos...\n');
+    return { rotulo_filled: 0, cleanup_failed: true };
+  }
 
   if (result && typeof result === 'object') {
     const fmt = (k, v) =>
@@ -124,6 +131,72 @@ async function runCleanup(ano) {
     } else {
       console.log('\n  ✅ Zero linhas sem classificação. Dados 100% completos.');
     }
+  }
+  return result ?? {};
+}
+
+// ─── Passo 3.1: Fallback tipo_despesa por grupo (REST direto, sem SQL) ────────
+// Roda sempre após runCleanup. Se ainda há NULLs, preenche pelo grupo de despesa.
+// Não depende de nenhuma função SQL implantada no Supabase.
+
+async function runTipoFallback(ano) {
+  const GRUPO_MAP = [
+    { prefix: '1', tipo: 'PESSOAL E ENCARGOS SOCIAIS' },
+    { prefix: '2', tipo: 'JUROS E ENCARGOS DA DÍVIDA' },
+    { prefix: '3', tipo: 'OUTRAS DESPESAS CORRENTES' },
+    { prefix: '4', tipo: 'INVESTIMENTOS' },
+    { prefix: '5', tipo: 'INVERSÕES FINANCEIRAS' },
+  ];
+
+  let total = 0;
+  for (const { prefix, tipo } of GRUPO_MAP) {
+    const url = `${SUPABASE_URL}/rest/v1/lc131_despesas` +
+      `?ano_referencia=eq.${ano}&tipo_despesa=is.null` +
+      `&codigo_nome_grupo=like.${prefix}%25`;
+    const r = await fetch(url, {
+      method: 'PATCH',
+      headers: { ...HEADERS, Prefer: 'count=exact', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo_despesa: tipo }),
+    });
+    if (r.ok) {
+      const range = r.headers.get('content-range');
+      const n = parseInt((range?.split('/')[1] ?? '0'), 10);
+      if (!isNaN(n)) total += n;
+    }
+  }
+  // Default: qualquer NULL restante (grupos raros)
+  const defaultUrl = `${SUPABASE_URL}/rest/v1/lc131_despesas` +
+    `?ano_referencia=eq.${ano}&tipo_despesa=is.null`;
+  const dr = await fetch(defaultUrl, {
+    method: 'PATCH',
+    headers: { ...HEADERS, Prefer: 'count=exact', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo_despesa: 'OUTRAS DESPESAS CORRENTES' }),
+  });
+  if (dr.ok) {
+    const range = dr.headers.get('content-range');
+    const n = parseInt((range?.split('/')[1] ?? '0'), 10);
+    if (!isNaN(n)) total += n;
+  }
+  if (total > 0) {
+    console.log(`  [fallback] tipo_despesa (grupo)  : ${total.toLocaleString('pt-BR')} linhas preenchidas`);
+  }
+  return total;
+}
+
+// ─── Passo 3.2: Fallback rótulo via fill_rotulo_ano() ────────────────────────
+// Chama a função SQL standalone fill_rotulo_ano(p_ano).
+// Se a função não existir ainda (deploy pendente), loga aviso e continua.
+
+async function runRotuloFallback(ano) {
+  process.stdout.write(`  [fallback] fill_rotulo_ano(${ano})... `);
+  try {
+    const n = await callRpc('fill_rotulo_ano', { p_ano: ano ?? null });
+    const count = typeof n === 'number' ? n : 0;
+    console.log(count > 0 ? `${count.toLocaleString('pt-BR')} rótulos preenchidos` : 'nenhum NULL restante');
+    return count;
+  } catch (err) {
+    console.warn(`aviso: ${err.message.substring(0, 80)} — deploy post-import-fn.sql no Supabase corrige isso`);
+    return 0;
   }
 }
 
@@ -159,7 +232,18 @@ async function main() {
     console.log('        use: node scripts/run-fix-tipo.mjs (para todos os anos)\n');
   }
 
-  await runCleanup(ano);
+  const cleanupResult = await runCleanup(ano);
+
+  // Fallbacks automáticos — garantem tipo_despesa e rótulo mesmo se
+  // post_import_cleanup falhou (timeout) ou é versão antiga (sem esses passos).
+  if (ano) {
+    await runTipoFallback(ano);
+    // Chama fill_rotulo_ano apenas se cleanup falhou OU não preencheu rótulos
+    const rotuloJaFilled = (cleanupResult?.rotulo_filled ?? 0) > 0;
+    if (!rotuloJaFilled) {
+      await runRotuloFallback(ano);
+    }
+  }
 
   const elapsed = ((Date.now() - t) / 1000).toFixed(1);
 
