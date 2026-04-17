@@ -28,7 +28,7 @@ const HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const CHUNK_SIZE = 10_000;
+const CHUNK_SIZE = 5_000;
 
 // ─── Utilitários ──────────────────────────────────────────────────
 
@@ -138,7 +138,12 @@ async function main() {
   await refreshLookup();
 
   if (ano) {
-    await runFixTipo(ano);
+    try {
+      await runFixTipo(ano);
+    } catch (err) {
+      console.warn(`\n  ⚠️  fix_tipo_despesa_by_year falhou: ${err.message}`);
+      console.warn('     Continuando para post_import_cleanup (fallback por grupo de despesa)...\n');
+    }
   } else {
     console.log('  [2/3] fix_tipo_despesa_by_year — sem ano específico,');
     console.log('        use: node scripts/run-fix-tipo.mjs (para todos os anos)\n');
