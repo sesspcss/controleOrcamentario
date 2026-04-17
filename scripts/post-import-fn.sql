@@ -9,8 +9,9 @@
 --   3. Força reclassificação de NULL / SEM CLASSIFICAÇÃO → grupo fallback
 --   4. Corrige fonte_recurso de TABELA SUS PAULISTA → Tesouro
 --   5. Reclassifica TABELA SUS com elemento 334130 ou fonte 163150
---   6. Limpa bd_ref_tipo (não necessário após classificação)
+--   6. Popula rotulo vazio (codigo_nome_projeto_atividade)
 --   7. Retorna resumo em JSON
+-- NOTA: bd_ref_tipo NÃO é apagado aqui — apague manualmente via cleanup-db.sql PARTE A
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION public.post_import_cleanup(p_ano INT DEFAULT NULL)
@@ -126,10 +127,16 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('tabela_sus_reclassified', n);
 
-  -- ── 7. Limpa bd_ref_tipo (não necessário após classificação) ─────────────
-  DELETE FROM public.bd_ref_tipo;
+  -- ── 7. Popula rotulo vazio com codigo_nome_projeto_atividade ────────────
+  -- Executado automaticamente aqui para garantir rotulo preenchido após cada import.
+  UPDATE public.lc131_despesas
+  SET rotulo = TRIM(codigo_nome_projeto_atividade)
+  WHERE (rotulo IS NULL OR rotulo = '')
+    AND codigo_nome_projeto_atividade IS NOT NULL
+    AND codigo_nome_projeto_atividade <> ''
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
-  r := r || jsonb_build_object('bd_ref_tipo_cleared', n);
+  r := r || jsonb_build_object('rotulo_filled', n);
 
   -- ── 8. Verificação final: linhas ainda sem classificação ─────────────────
   SELECT count(*) INTO n

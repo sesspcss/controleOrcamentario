@@ -105,7 +105,7 @@ async function runCleanup(ano) {
     console.log(fmt('sem_classificacao_fixed',  result.sem_classificacao_fixed ?? 0));
     console.log(fmt('tabela_sus_fonte_fixed',   result.tabela_sus_fonte_fixed  ?? 0));
     console.log(fmt('tabela_sus_reclassified',  result.tabela_sus_reclassified ?? 0));
-    console.log(fmt('bd_ref_tipo_cleared',      result.bd_ref_tipo_cleared     ?? 0));
+    console.log(fmt('rotulo_filled',             result.rotulo_filled           ?? 0));
 
     const remaining = result.sem_classificacao_remaining ?? 0;
     if (remaining > 0) {
