@@ -21,6 +21,23 @@ DECLARE
   n INT;
 BEGIN
 
+  -- ── 0. Compressão lz4 (idempotente, instantâneo, sem lock prolongado) ──
+  -- Novas linhas inseridas/reescritas passarão a usar lz4.
+  -- Linhas existentes migram para lz4 somente após VACUUM FULL/CLUSTER.
+  ALTER TABLE public.lc131_despesas
+    ALTER COLUMN codigo_nome_ug                SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_uo                SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_elemento          SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_grupo             SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_fonte_recurso     SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_projeto_atividade SET COMPRESSION lz4,
+    ALTER COLUMN codigo_nome_favorecido        SET COMPRESSION lz4,
+    ALTER COLUMN rotulo                        SET COMPRESSION lz4,
+    ALTER COLUMN descricao_processo            SET COMPRESSION lz4,
+    ALTER COLUMN municipio                     SET COMPRESSION lz4,
+    ALTER COLUMN drs                           SET COMPRESSION lz4,
+    ALTER COLUMN rras                          SET COMPRESSION lz4;
+
   -- ── 1. Normalizar DRS: prefixo numérico → algarismo romano ──────────────
   UPDATE public.lc131_despesas
   SET drs = CASE drs
@@ -138,7 +155,18 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rotulo_filled', n);
 
-  -- ── 8. Verificação final: linhas ainda sem classificação ─────────────────
+  -- ── 8. Libera bd_ref_tipo (>200MB) — seguro porque L1-4 já foram
+  --        populados pelo refresh_bdref_lookup() no início do pipeline.
+  --        refresh_bdref_lookup() agora preserva L1-4 se bd_ref_tipo estiver vazio.
+  TRUNCATE TABLE public.bd_ref_tipo;
+  GET DIAGNOSTICS n = ROW_COUNT;  -- sempre 0 após TRUNCATE; apenas para registro
+  r := r || jsonb_build_object('bd_ref_tipo_truncated', true);
+
+  -- ── 9. Tamanho do banco após limpeza ─────────────────────────────────────
+  SELECT pg_database_size(current_database()) INTO n;
+  r := r || jsonb_build_object('db_size_bytes', n);
+
+  -- ── 10. Verificação final: linhas ainda sem classificação ─────────────────
   SELECT count(*) INTO n
   FROM public.lc131_despesas
   WHERE tipo_despesa IS NULL

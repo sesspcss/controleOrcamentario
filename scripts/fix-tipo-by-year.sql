@@ -156,7 +156,25 @@ SET search_path = public
 AS $$
 DECLARE
   n1 INT; n2 INT; n3 INT; n4 INT;
+  bdref_count BIGINT;
 BEGIN
+  -- Guard: se bd_ref_tipo estiver vazio, preserva L1-4 já populados.
+  -- Isso acontece após post_import_cleanup truncar bd_ref_tipo para liberar espaço.
+  SELECT count(*) INTO bdref_count FROM public.bd_ref_tipo;
+  IF bdref_count = 0 THEN
+    SELECT count(*) INTO n1 FROM public.bd_ref_lookup_l1;
+    SELECT count(*) INTO n2 FROM public.bd_ref_lookup_l2;
+    SELECT count(*) INTO n3 FROM public.bd_ref_lookup_l3;
+    SELECT count(*) INTO n4 FROM public.bd_ref_lookup_l4;
+    RETURN json_build_object(
+      'l1_ug_desc_proj',  n1,
+      'l2_ug_desc_unico', n2,
+      'l3_ug_proj_unico', n3,
+      'l4_ug_fallback',   n4,
+      'source', 'cached (bd_ref_tipo vazio — lookups L1-4 preservados)'
+    );
+  END IF;
+
   -- L1: tipo mais frequente por (ug + desc + proj)
   TRUNCATE TABLE public.bd_ref_lookup_l1;
   INSERT INTO public.bd_ref_lookup_l1

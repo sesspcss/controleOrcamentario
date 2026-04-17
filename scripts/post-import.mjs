@@ -105,7 +105,17 @@ async function runCleanup(ano) {
     console.log(fmt('sem_classificacao_fixed',  result.sem_classificacao_fixed ?? 0));
     console.log(fmt('tabela_sus_fonte_fixed',   result.tabela_sus_fonte_fixed  ?? 0));
     console.log(fmt('tabela_sus_reclassified',  result.tabela_sus_reclassified ?? 0));
-    console.log(fmt('rotulo_filled',             result.rotulo_filled           ?? 0));
+    console.log(fmt('rotulo_filled',            result.rotulo_filled           ?? 0));
+    console.log(fmt('bd_ref_tipo_truncated',    result.bd_ref_tipo_truncated   ? 'sim (+200 MB liberados)' : 'não'));
+
+    const dbBytes = result.db_size_bytes ?? 0;
+    const dbMb = (dbBytes / 1024 / 1024).toFixed(0);
+    const dbStatus = dbBytes > 0
+      ? (dbBytes < 500 * 1024 * 1024
+          ? `${dbMb} MB ✅ (< 500 MB)`
+          : `${dbMb} MB ⚠️  (> 500 MB — execute VACUUM FULL)`)
+      : '(indisponível)';
+    console.log(fmt('db_size_atual',            dbStatus));
 
     const remaining = result.sem_classificacao_remaining ?? 0;
     if (remaining > 0) {
@@ -155,13 +165,12 @@ async function main() {
 
   console.log(`\n✅ Pós-import concluído em ${elapsed}s`);
   console.log('\n════════════════════════════════════════════════════════');
-  console.log('  PRÓXIMO PASSO OBRIGATÓRIO — VACUUM FULL');
-  console.log('  Execute no Supabase → SQL Editor (aba separada):');
-  console.log('');
-  console.log('    VACUUM FULL ANALYZE public.lc131_despesas;');
-  console.log('');
-  console.log('  Pode demorar 5-10 min. Veja PARTE B do cleanup-db.sql');
-  console.log('  para os demais VACUUMs (bd_ref_tipo, lookup tables).');
+  console.log('  NOTAS:');
+  console.log('  • bd_ref_tipo truncado — liberta ~200 MB automaticamente.');
+  console.log('  • lz4 aplicado — novos registros usam compressão automática.');
+  console.log('  • VACUUM FULL corre automaticamente às 3h (pg_cron).');
+  console.log('    Se ainda > 500 MB, execute manual no SQL Editor:');
+  console.log('      VACUUM FULL ANALYZE public.lc131_despesas;');
   console.log('════════════════════════════════════════════════════════\n');
 }
 
