@@ -4,14 +4,15 @@
 -- Executada automaticamente após cada import via post-import.mjs.
 --
 -- O QUE FAZ:
+--   0. Aplica compressão lz4 nas colunas de texto (idempotente)
 --   1. Normaliza DRS (prefixo numérico → algarismo romano)
 --   2. Popula DRS/RRAS nulos pelo valor mais frequente do município
 --   3. Força reclassificação de NULL / SEM CLASSIFICAÇÃO → grupo fallback
 --   4. Corrige fonte_recurso de TABELA SUS PAULISTA → Tesouro
 --   5. Reclassifica TABELA SUS com elemento 334130 ou fonte 163150
 --   6. Popula rotulo vazio (codigo_nome_projeto_atividade)
---   7. Retorna resumo em JSON
--- NOTA: bd_ref_tipo NÃO é apagado aqui — apague manualmente via cleanup-db.sql PARTE A
+--   7. TRUNCATE bd_ref_tipo (liberta ~200 MB — seguro: L1-4 já populados)
+--   8. Retorna resumo em JSON com tamanho atual do banco
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION public.post_import_cleanup(p_ano INT DEFAULT NULL)
