@@ -1,20 +1,40 @@
 -- ================================================================
--- vacuum-full.sql — Recupera espaço do banco (dead tuples após UPDATEs)
---
+-- vacuum-full.sql — Recupera espaço do banco
 -- EXECUTE NO SUPABASE SQL EDITOR — cada bloco SEPARADAMENTE
--- (VACUUM não pode correr dentro de uma transação — não execute tudo de uma vez)
---
--- Por quê o banco encheu:
---   O pipeline de classificação atualiza tipo_despesa, rotulo, drs, rras
---   nas ~430k linhas. PostgreSQL grava novas versões das linhas mas mantém
---   as antigas ("dead tuples"). Só VACUUM FULL as remove fisicamente.
---
--- TEMPO ESTIMADO: 2–5 min por bloco (a tabela fica bloqueada durante a execução)
 -- ================================================================
 
 
--- ── PASSO 1: Diagnóstico — tamanho atual antes do vacuuming ──────────────────
--- Execute este bloco PRIMEIRO para ver o que está pesando.
+-- ════════════════════════════════════════════════════════════════
+-- EXECUTE AGORA (nesta ordem) — redução imediata, sem espera
+-- ════════════════════════════════════════════════════════════════
+
+-- Bloco 0a: TRUNCATE bd_ref_tipo
+-- Esta tabela pode ter 100-200 MB e é segura de esvaziar.
+-- Os lookups L1-4 permanentes já estão em bd_ref_lookup_l1/l2/l3/l4.
+-- TRUNCATE devolve espaço IMEDIATAMENTE, sem precisar de VACUUM.
+
+TRUNCATE TABLE public.bd_ref_tipo;
+
+-- Bloco 0b: DROP de 2 índices redundantes
+-- idx_lc131_ano        → já coberto por idx_lc131_ano_id  (ano, id)
+-- idx_lc131_cod_projeto → já coberto por idx_lc131_ano_cod_projeto (ano, cod)
+-- DROP INDEX CONCURRENTLY não bloqueia leitura e devolve espaço imediatamente.
+
+DROP INDEX CONCURRENTLY IF EXISTS public.idx_lc131_ano;
+DROP INDEX CONCURRENTLY IF EXISTS public.idx_lc131_cod_projeto;
+
+-- Bloco 0c: confirmar ganho imediato
+SELECT
+  pg_size_pretty(pg_database_size(current_database())) AS db_total,
+  pg_size_pretty(pg_total_relation_size('public.lc131_despesas')) AS lc131_total,
+  pg_size_pretty(pg_relation_size('public.bd_ref_tipo'))          AS bd_ref_tipo_dados,
+  (SELECT count(*) FROM public.bd_ref_tipo)                       AS bd_ref_tipo_linhas;
+
+-- ════════════════════════════════════════════════════════════════
+
+
+-- ── PASSO 1: Diagnóstico — tamanho por tabela ────────────────────────────────
+-- Execute este bloco para ver o que está pesando.
 
 SELECT
   schemaname,

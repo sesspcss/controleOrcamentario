@@ -259,8 +259,15 @@ BEGIN
   --        populados pelo refresh_bdref_lookup() no início do pipeline.
   --        refresh_bdref_lookup() agora preserva L1-4 se bd_ref_tipo estiver vazio.
   TRUNCATE TABLE public.bd_ref_tipo;
-  GET DIAGNOSTICS n = ROW_COUNT;  -- sempre 0 após TRUNCATE; apenas para registro
   r := r || jsonb_build_object('bd_ref_tipo_truncated', true);
+
+  -- ── 8b. Drop índices redundantes (idempotente — IF EXISTS) ────────────────
+  -- idx_lc131_ano        → coberto por idx_lc131_ano_id  (ano_referencia, id)
+  -- idx_lc131_cod_projeto → coberto por idx_lc131_ano_cod_projeto
+  -- DROP INDEX dentro de função roda em transação normal — sem CONCURRENTLY.
+  DROP INDEX IF EXISTS public.idx_lc131_ano;
+  DROP INDEX IF EXISTS public.idx_lc131_cod_projeto;
+  r := r || jsonb_build_object('redundant_indexes_dropped', true);
 
   -- ── 9. Tamanho do banco após limpeza ─────────────────────────────────────
   SELECT pg_database_size(current_database()) INTO n;
@@ -274,21 +281,35 @@ BEGIN
      OR TRIM(tipo_despesa) = '';
   r := r || jsonb_build_object('sem_classificacao_remaining', n);
 
-  -- ── 11. Agenda pg_cron VACUUM FULL semanal (toda segunda-feira 3h) ────────────
-  -- Retorna espaço ao SO após cada semana de imports com dead tuples.
+  -- ── 11. Agenda pg_cron VACUUM FULL DIÁRIO para TODAS as tabelas ─────────────
+  -- Roda toda noite às 3h — garante que dead tuples do dia sejam removidos.
+  -- Cada tabela tem horário ligeiramente diferente para não sobrecarregar.
   -- Se pg_cron não estiver habilitado, ignora silenciosamente.
   BEGIN
+    -- Remove todos os jobs antigos de vacuum
     PERFORM cron.unschedule(jobid)
     FROM cron.job
-    WHERE jobname = 'vacuum-full-lc131';
-    PERFORM cron.schedule(
-      'vacuum-full-lc131',
-      '0 3 * * 1',
-      'VACUUM FULL ANALYZE public.lc131_despesas'
-    );
-    r := r || jsonb_build_object('cron_vacuum_scheduled', true);
+    WHERE jobname LIKE 'vacuum-auto-%';
+    -- lc131_despesas: maior tabela, roda primeiro
+    PERFORM cron.schedule('vacuum-auto-lc131',    '0 3 * * *',
+      'VACUUM FULL ANALYZE public.lc131_despesas');
+    -- Lookups L1-4: pequenas, em série após a principal
+    PERFORM cron.schedule('vacuum-auto-lookup-l1', '10 3 * * *',
+      'VACUUM FULL ANALYZE public.bd_ref_lookup_l1');
+    PERFORM cron.schedule('vacuum-auto-lookup-l2', '11 3 * * *',
+      'VACUUM FULL ANALYZE public.bd_ref_lookup_l2');
+    PERFORM cron.schedule('vacuum-auto-lookup-l3', '12 3 * * *',
+      'VACUUM FULL ANALYZE public.bd_ref_lookup_l3');
+    PERFORM cron.schedule('vacuum-auto-lookup-l4', '13 3 * * *',
+      'VACUUM FULL ANALYZE public.bd_ref_lookup_l4');
+    -- bd_ref e tab_municipios: tabelas de referência
+    PERFORM cron.schedule('vacuum-auto-bdref',     '20 3 * * *',
+      'VACUUM FULL ANALYZE public.bd_ref');
+    PERFORM cron.schedule('vacuum-auto-municipios','21 3 * * *',
+      'VACUUM FULL ANALYZE public.tab_municipios');
+    r := r || jsonb_build_object('cron_vacuum_scheduled', true, 'cron_tables', 7);
   EXCEPTION WHEN OTHERS THEN
-    r := r || jsonb_build_object('cron_vacuum_scheduled', false);
+    r := r || jsonb_build_object('cron_vacuum_scheduled', false, 'cron_error', SQLERRM);
   END;
 
   RETURN r;
