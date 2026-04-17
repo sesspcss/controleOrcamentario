@@ -77,41 +77,24 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_normalized', n);
 
-  -- ── 2. Popula DRS nulo com o valor mais frequente para o mesmo município ──
-  WITH drs_map AS (
-    SELECT municipio, drs
-    FROM (
-      SELECT municipio, drs, count(*) AS cnt,
-             ROW_NUMBER() OVER (PARTITION BY municipio ORDER BY count(*) DESC) AS rn
-      FROM public.lc131_despesas
-      WHERE drs IS NOT NULL AND drs <> '' AND municipio IS NOT NULL
-      GROUP BY municipio, drs
-    ) t WHERE rn = 1
-  )
+  -- ── 2. Popula DRS nulo usando tab_municipios (lookup rápido, sem CTE full-scan) ──
+  -- tab_municipios tem índice em municipio → muito mais rápido que CTE sobre lc131_despesas
   UPDATE public.lc131_despesas a
   SET drs = m.drs
-  FROM drs_map m
+  FROM public.tab_municipios m
   WHERE a.municipio = m.municipio
+    AND m.drs IS NOT NULL AND m.drs <> ''
     AND (a.drs IS NULL OR a.drs = '')
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_filled', n);
 
-  -- ── 3. Popula RRAS nulo da mesma forma ────────────────────────────────────
-  WITH rras_map AS (
-    SELECT municipio, rras
-    FROM (
-      SELECT municipio, rras, count(*) AS cnt,
-             ROW_NUMBER() OVER (PARTITION BY municipio ORDER BY count(*) DESC) AS rn
-      FROM public.lc131_despesas
-      WHERE rras IS NOT NULL AND rras <> '' AND municipio IS NOT NULL
-      GROUP BY municipio, rras
-    ) t WHERE rn = 1
-  )
+  -- ── 3. Popula RRAS nulo usando tab_municipios (mesmo raciocínio) ──────────
   UPDATE public.lc131_despesas a
   SET rras = m.rras
-  FROM rras_map m
+  FROM public.tab_municipios m
   WHERE a.municipio = m.municipio
+    AND m.rras IS NOT NULL AND m.rras <> ''
     AND (a.rras IS NULL OR a.rras = '')
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;

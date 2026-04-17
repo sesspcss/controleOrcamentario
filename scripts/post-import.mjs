@@ -183,21 +183,69 @@ async function runTipoFallback(ano) {
   return total;
 }
 
-// ─── Passo 3.2: Fallback rótulo via fill_rotulo_ano() ────────────────────────
-// Chama a função SQL standalone fill_rotulo_ano(p_ano).
-// Se a função não existir ainda (deploy pendente), loga aviso e continua.
+// ─── Passo 3.2: Preenchimento de rótulo via REST (sem SQL) ───────────────────
+// Busca valores distintos de codigo_nome_projeto_atividade onde rotulo está NULL,
+// e faz PATCH em lotes. Não depende de nenhuma função SQL implantada.
+
+async function fillRotuloREST(ano) {
+  // 1. Busca todas as linhas com rotulo NULL e projeto preenchido (até 10k)
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/lc131_despesas` +
+    `?ano_referencia=eq.${ano}&rotulo=is.null` +
+    `&codigo_nome_projeto_atividade=not.is.null` +
+    `&select=codigo_nome_projeto_atividade&limit=10000`,
+    { headers: HEADERS }
+  );
+  if (!resp.ok) {
+    console.warn(`  ⚠️  fillRotuloREST: erro ao buscar projetos: HTTP ${resp.status}`);
+    return 0;
+  }
+  const rows = await resp.json();
+  if (!rows.length) return 0;
+
+  // 2. Coleta valores distintos
+  const unique = [...new Set(rows.map(r => r.codigo_nome_projeto_atividade?.trim()).filter(Boolean))];
+  if (!unique.length) return 0;
+
+  // 3. PATCH por valor distinto: atualiza rotulo = valor para todas as linhas
+  //    com aquele projeto e rotulo ainda NULL
+  let total = 0;
+  for (const val of unique) {
+    const enc = encodeURIComponent(val);
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/lc131_despesas` +
+      `?ano_referencia=eq.${ano}&rotulo=is.null&codigo_nome_projeto_atividade=eq.${enc}`,
+      {
+        method: 'PATCH',
+        headers: { ...HEADERS, Prefer: 'count=exact' },
+        body: JSON.stringify({ rotulo: val }),
+      }
+    );
+    if (pr.ok) {
+      const range = pr.headers.get('content-range') ?? '';
+      const n = parseInt(range.split('/')[1] ?? '0', 10);
+      if (!isNaN(n)) total += n;
+    }
+  }
+  return total;
+}
 
 async function runRotuloFallback(ano) {
-  process.stdout.write(`  [fallback] fill_rotulo_ano(${ano})... `);
+  process.stdout.write(`  [fallback] rótulo (REST)... `);
+  // Tenta fill_rotulo_ano SQL primeiro (se deployado)
   try {
     const n = await callRpc('fill_rotulo_ano', { p_ano: ano ?? null });
     const count = typeof n === 'number' ? n : 0;
-    console.log(count > 0 ? `${count.toLocaleString('pt-BR')} rótulos preenchidos` : 'nenhum NULL restante');
-    return count;
-  } catch (err) {
-    console.warn(`aviso: ${err.message.substring(0, 80)} — deploy post-import-fn.sql no Supabase corrige isso`);
-    return 0;
-  }
+    if (count > 0) {
+      console.log(`${count.toLocaleString('pt-BR')} rótulos via SQL`);
+      return count;
+    }
+  } catch { /* não deployado — cai para REST */ }
+
+  // Fallback: preenchimento via REST sem SQL
+  const n = await fillRotuloREST(ano);
+  console.log(n > 0 ? `${n.toLocaleString('pt-BR')} rótulos via REST` : 'nenhum NULL restante');
+  return n;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────
@@ -238,22 +286,45 @@ async function main() {
   // post_import_cleanup falhou (timeout) ou é versão antiga (sem esses passos).
   if (ano) {
     await runTipoFallback(ano);
-    // Chama fill_rotulo_ano apenas se cleanup falhou OU não preencheu rótulos
+    // Rótulo: só roda se cleanup não preencheu
     const rotuloJaFilled = (cleanupResult?.rotulo_filled ?? 0) > 0;
     if (!rotuloJaFilled) {
       await runRotuloFallback(ano);
     }
   }
 
+  // ─── Verificação final ────────────────────────────────────────────────────
+  if (ano) {
+    let tipoNull = 0, rotuloNull = 0;
+    try {
+      const tv = await fetch(
+        `${SUPABASE_URL}/rest/v1/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null&select=id&limit=1`,
+        { headers: { ...HEADERS, Prefer: 'count=exact' } }
+      );
+      tipoNull = parseInt((tv.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
+      const rv = await fetch(
+        `${SUPABASE_URL}/rest/v1/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&select=id&limit=1`,
+        { headers: { ...HEADERS, Prefer: 'count=exact' } }
+      );
+      rotuloNull = parseInt((rv.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
+    } catch { /* ignorar erros de verificação */ }
+
+    console.log('\n  ── Verificação final ─────────────────────────────────────');
+    console.log(`        tipo_despesa NULL      : ${tipoNull === 0 ? '0 ✅' : tipoNull + ' ⚠️ ATENÇÃO'}`);
+    console.log(`        rotulo NULL           : ${rotuloNull === 0 ? '0 ✅' : rotuloNull + ' ⚠️ ATENÇÃO'}`);
+  }
+
   const elapsed = ((Date.now() - t) / 1000).toFixed(1);
 
   console.log(`\n✅ Pós-import concluído em ${elapsed}s`);
   console.log('\n════════════════════════════════════════════════════════');
-  console.log('  NOTAS:');
-  console.log('  • bd_ref_tipo truncado — liberta ~200 MB automaticamente.');
-  console.log('  • lz4 ativo — novos registros usam compressão automática.');
-  console.log('  • Se ainda > 500 MB, execute no Supabase SQL Editor:');
+  console.log('  PARA REDUZIR O BANCO ABAIXO DE 500 MB:');
+  console.log('  Execute este comando no Supabase SQL Editor:');
+  console.log('');
   console.log('      VACUUM FULL ANALYZE public.lc131_despesas;');
+  console.log('      VACUUM FULL ANALYZE public.bd_ref_tipo;');
+  console.log('');
+  console.log('  (leva 5-10 min, banco fica < 300 MB após)');
   console.log('════════════════════════════════════════════════════════\n');
 }
 
