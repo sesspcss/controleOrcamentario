@@ -167,9 +167,8 @@ async function main() {
   console.log('\n════════════════════════════════════════════════════════');
   console.log('  NOTAS:');
   console.log('  • bd_ref_tipo truncado — liberta ~200 MB automaticamente.');
-  console.log('  • lz4 aplicado — novos registros usam compressão automática.');
-  console.log('  • VACUUM FULL corre automaticamente às 3h (pg_cron).');
-  console.log('    Se ainda > 500 MB, execute manual no SQL Editor:');
+  console.log('  • lz4 ativo — novos registros usam compressão automática.');
+  console.log('  • Se ainda > 500 MB, execute no Supabase SQL Editor:');
   console.log('      VACUUM FULL ANALYZE public.lc131_despesas;');
   console.log('════════════════════════════════════════════════════════\n');
 }

@@ -248,23 +248,24 @@ FROM pg_tables WHERE schemaname = 'public';
 
 
 -- ════════════════════════════════════════════════════════════════════
--- PARTE D — VACUUM AUTOMÁTICO NOTURNO (pg_cron — Supabase Pro)
--- Execute UMA VEZ no SQL Editor para agendar VACUUM automático às 3h.
--- Disponível em planos Supabase Pro e superiores.
--- Verifica se pg_cron está instalado antes de executar.
+-- PARTE D — VACUUM AUTOMÁTICO NOTURNO (pg_cron — apenas Supabase Pro)
+-- O plano Free NÃO tem pg_cron. Use o comando abaixo para verificar.
+-- Se retornar false, execute VACUUM FULL manualmente (PARTE B) quando necessário.
 -- ════════════════════════════════════════════════════════════════════
 
 -- ── Verificar se pg_cron está disponível ────────────────────────
 SELECT count(*) > 0 AS pg_cron_disponivel
 FROM pg_extension WHERE extname = 'pg_cron';
 
--- ── Agendar VACUUM ANALYZE diário às 03:00 (UTC) ────────────────
--- Remove jobs antigos com o mesmo nome e cria um novo.
--- Cole e execute em SQL Editor (requer pg_cron instalado):
-
-SELECT cron.unschedule('vacuum-lc131-diario') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'vacuum-lc131-diario'
-);
+-- ── SE pg_cron_disponivel = true, execute o bloco abaixo ────────
+-- (Não execute se retornou false — vai dar erro)
+/*
+DO $$
+BEGIN
+  PERFORM cron.unschedule('vacuum-lc131-diario');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
 
 SELECT cron.schedule(
   'vacuum-lc131-diario',
@@ -272,7 +273,6 @@ SELECT cron.schedule(
   'VACUUM ANALYZE public.lc131_despesas'
 );
 
--- Verificar jobs agendados:
 SELECT jobid, jobname, schedule, command, active
-FROM cron.job
-ORDER BY jobname;
+FROM cron.job ORDER BY jobname;
+*/
