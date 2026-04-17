@@ -47,6 +47,31 @@ BEGIN
   END IF;
   NEW.pago_total := COALESCE(NEW.pago, 0) + COALESCE(NEW.pago_anos_anteriores, 0);
 
+  -- ── DRS: normaliza formato numérico → romano no INSERT ───────────────────────
+  -- Elimina dead tuples do step 1 de post_import_cleanup (que normalizava depois).
+  IF NEW.drs IS NOT NULL AND NEW.drs ~ '^[0-9]{2} ' THEN
+    NEW.drs := CASE NEW.drs
+      WHEN '01 Grande São Paulo'      THEN 'DRS I - Grande São Paulo'
+      WHEN '02 Araçatuba'             THEN 'DRS II - Araçatuba'
+      WHEN '03 Araraquara'            THEN 'DRS III - Araraquara'
+      WHEN '04 Baixada Santista'      THEN 'DRS IV - Baixada Santista'
+      WHEN '05 Barretos'              THEN 'DRS V - Barretos'
+      WHEN '06 Bauru'                 THEN 'DRS VI - Bauru'
+      WHEN '07 Campinas'              THEN 'DRS VII - Campinas'
+      WHEN '08 Franca'                THEN 'DRS VIII - Franca'
+      WHEN '09 Marília'               THEN 'DRS IX - Marília'
+      WHEN '10 Piracicaba'            THEN 'DRS X - Piracicaba'
+      WHEN '11 Presidente Prudente'   THEN 'DRS XI - Presidente Prudente'
+      WHEN '12 Registro'              THEN 'DRS XII - Registro'
+      WHEN '13 Ribeirão Preto'        THEN 'DRS XIII - Ribeirão Preto'
+      WHEN '14 São João da Boa Vista' THEN 'DRS XIV - São João da Boa Vista'
+      WHEN '15 São José do Rio Preto' THEN 'DRS XV - São José do Rio Preto'
+      WHEN '16 Sorocaba'              THEN 'DRS XVI - Sorocaba'
+      WHEN '17 Taubaté'               THEN 'DRS XVII - Taubaté'
+      ELSE NEW.drs
+    END;
+  END IF;
+
   -- ── rotulo: preenche no INSERT → UPDATE posterior toca 0 linhas (sem dead tuples) ──
   IF NEW.rotulo IS NULL OR TRIM(NEW.rotulo) = '' THEN
     NEW.rotulo := TRIM(NEW.codigo_nome_projeto_atividade);

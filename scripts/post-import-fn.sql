@@ -100,6 +100,105 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_filled', n);
 
+  -- ── 2b. DRS: fallback por nome_municipio (ILIKE, sem normalização exata) ────────
+  UPDATE public.lc131_despesas a
+  SET drs = m.drs
+  FROM public.tab_municipios m
+  WHERE (a.drs IS NULL OR a.drs = '')
+    AND a.nome_municipio IS NOT NULL AND a.nome_municipio <> ''
+    AND upper(trim(a.nome_municipio)) = upper(m.municipio)
+    AND m.drs IS NOT NULL AND m.drs <> ''
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('drs_nome_municipio', n);
+
+  -- ── 2c. DRS: fallback por cod_ibge ───────────────────────────────────────────
+  UPDATE public.lc131_despesas a
+  SET drs = m.drs
+  FROM public.tab_municipios m
+  WHERE (a.drs IS NULL OR a.drs = '')
+    AND a.cod_ibge IS NOT NULL AND a.cod_ibge <> ''
+    AND a.cod_ibge = m.cod_ibge
+    AND m.drs IS NOT NULL AND m.drs <> ''
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('drs_cod_ibge', n);
+
+  -- ── 2d. DRS: extrai do texto de codigo_nome_uo ──────────────────────────────
+  -- Verifica do numeral mais longo ao mais curto para evitar falsos positivos:
+  -- '%DRS XI%' seria capturado por '%DRS XII%' se checado depois.
+  UPDATE public.lc131_despesas
+  SET drs = CASE
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XVII%' THEN 'DRS XVII - Taubaté'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XVI%'  THEN 'DRS XVI - Sorocaba'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XV%'   THEN 'DRS XV - São José do Rio Preto'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XIV%'  THEN 'DRS XIV - São João da Boa Vista'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XIII%' THEN 'DRS XIII - Ribeirão Preto'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XII%'  THEN 'DRS XII - Registro'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS XI%'   THEN 'DRS XI - Presidente Prudente'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS X%'    THEN 'DRS X - Piracicaba'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS IX%'   THEN 'DRS IX - Marília'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS VIII%' THEN 'DRS VIII - Franca'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS VII%'  THEN 'DRS VII - Campinas'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS VI%'   THEN 'DRS VI - Bauru'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS V%'    THEN 'DRS V - Barretos'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS IV%'   THEN 'DRS IV - Baixada Santista'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS III%'  THEN 'DRS III - Araraquara'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS II%'   THEN 'DRS II - Araçatuba'
+    WHEN upper(codigo_nome_uo) LIKE '%DRS I%'    THEN 'DRS I - Grande São Paulo'
+  END
+  WHERE (drs IS NULL OR drs = '')
+    AND upper(codigo_nome_uo) LIKE '%DRS%'
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('drs_from_uo', n);
+
+  -- ── 2e. DRS: catch-all — órgãos centrais sem município → DRS I ──────────────
+  -- Linhas sem município são unidades centrais do estado (Gabinete, CGA, CRH...)
+  -- A Secretaria de Estado da Saúde é sediada em São Paulo = DRS I.
+  UPDATE public.lc131_despesas
+  SET drs = 'DRS I - Grande São Paulo'
+  WHERE (drs IS NULL OR drs = '')
+    AND (municipio IS NULL OR municipio = '')
+    AND (nome_municipio IS NULL OR nome_municipio = '')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('drs_catch_all', n);
+
+  -- ── 3b. RRAS: fallback por nome_municipio ────────────────────────────────────
+  UPDATE public.lc131_despesas a
+  SET rras = m.rras
+  FROM public.tab_municipios m
+  WHERE (a.rras IS NULL OR a.rras = '')
+    AND a.nome_municipio IS NOT NULL AND a.nome_municipio <> ''
+    AND upper(trim(a.nome_municipio)) = upper(m.municipio)
+    AND m.rras IS NOT NULL AND m.rras <> ''
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('rras_nome_municipio', n);
+
+  -- ── 3c. RRAS: fallback por cod_ibge ──────────────────────────────────────────
+  UPDATE public.lc131_despesas a
+  SET rras = m.rras
+  FROM public.tab_municipios m
+  WHERE (a.rras IS NULL OR a.rras = '')
+    AND a.cod_ibge IS NOT NULL AND a.cod_ibge <> ''
+    AND a.cod_ibge = m.cod_ibge
+    AND m.rras IS NOT NULL AND m.rras <> ''
+    AND (p_ano IS NULL OR a.ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('rras_cod_ibge', n);
+
+  -- ── 3d. RRAS: catch-all — órgãos centrais sem município → RRAS 6 (SP) ────────
+  UPDATE public.lc131_despesas
+  SET rras = '6'
+  WHERE (rras IS NULL OR rras = '')
+    AND (municipio IS NULL OR municipio = '')
+    AND (nome_municipio IS NULL OR nome_municipio = '')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('rras_catch_all', n);
+
   -- ── 4. Força reclassificação: NULL / SEM CLASSIFICAÇÃO → grupo fallback ──
   -- Último recurso absoluto; elimina qualquer linha sem tipo.
   UPDATE public.lc131_despesas
@@ -174,6 +273,23 @@ BEGIN
      OR tipo_despesa = 'SEM CLASSIFICAÇÃO'
      OR TRIM(tipo_despesa) = '';
   r := r || jsonb_build_object('sem_classificacao_remaining', n);
+
+  -- ── 11. Agenda pg_cron VACUUM FULL semanal (toda segunda-feira 3h) ────────────
+  -- Retorna espaço ao SO após cada semana de imports com dead tuples.
+  -- Se pg_cron não estiver habilitado, ignora silenciosamente.
+  BEGIN
+    PERFORM cron.unschedule(jobid)
+    FROM cron.job
+    WHERE jobname = 'vacuum-full-lc131';
+    PERFORM cron.schedule(
+      'vacuum-full-lc131',
+      '0 3 * * 1',
+      'VACUUM FULL ANALYZE public.lc131_despesas'
+    );
+    r := r || jsonb_build_object('cron_vacuum_scheduled', true);
+  EXCEPTION WHEN OTHERS THEN
+    r := r || jsonb_build_object('cron_vacuum_scheduled', false);
+  END;
 
   RETURN r;
 END;
