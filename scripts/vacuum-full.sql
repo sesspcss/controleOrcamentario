@@ -18,10 +18,9 @@ TRUNCATE TABLE public.bd_ref_tipo;
 -- Bloco 0b: DROP de 2 índices redundantes
 -- idx_lc131_ano        → já coberto por idx_lc131_ano_id  (ano, id)
 -- idx_lc131_cod_projeto → já coberto por idx_lc131_ano_cod_projeto (ano, cod)
--- DROP INDEX CONCURRENTLY não bloqueia leitura e devolve espaço imediatamente.
 
-DROP INDEX CONCURRENTLY IF EXISTS public.idx_lc131_ano;
-DROP INDEX CONCURRENTLY IF EXISTS public.idx_lc131_cod_projeto;
+DROP INDEX IF EXISTS public.idx_lc131_ano;
+DROP INDEX IF EXISTS public.idx_lc131_cod_projeto;
 
 -- Bloco 0c: confirmar ganho imediato
 SELECT
