@@ -46,6 +46,38 @@ BEGIN
     NEW.municipio := public.norm_munic(NEW.nome_municipio);
   END IF;
   NEW.pago_total := COALESCE(NEW.pago, 0) + COALESCE(NEW.pago_anos_anteriores, 0);
+
+  -- ── rotulo: preenche no INSERT → UPDATE posterior toca 0 linhas (sem dead tuples) ──
+  IF NEW.rotulo IS NULL OR TRIM(NEW.rotulo) = '' THEN
+    NEW.rotulo := TRIM(NEW.codigo_nome_projeto_atividade);
+  END IF;
+
+  -- ── tipo_despesa: tenta L1→L2→L3→L4 no INSERT ──────────────────────────────────
+  -- fix_tipo_despesa_by_year usa "IS DISTINCT FROM" → só atualiza se o valor
+  -- estiver errado, pelo que linhas já corretas não geram dead tuples.
+  -- Se os lookups estiverem vazios (primeiro deploy), retorna NULL e fix_tipo
+  -- assume a classificação normalmente.
+  IF NEW.tipo_despesa IS NULL OR TRIM(NEW.tipo_despesa) = '' THEN
+    NEW.tipo_despesa := COALESCE(
+      (SELECT l1.tipo_despesa FROM public.bd_ref_lookup_l1 l1
+       WHERE l1.codigo_nome_ug                = NEW.codigo_nome_ug
+         AND l1.descricao_processo            = NEW.descricao_processo
+         AND l1.codigo_nome_projeto_atividade = NEW.codigo_nome_projeto_atividade
+       LIMIT 1),
+      (SELECT l2.tipo_despesa FROM public.bd_ref_lookup_l2 l2
+       WHERE l2.codigo_nome_ug     = NEW.codigo_nome_ug
+         AND l2.descricao_processo = NEW.descricao_processo
+       LIMIT 1),
+      (SELECT l3.tipo_despesa FROM public.bd_ref_lookup_l3 l3
+       WHERE l3.codigo_nome_ug                = NEW.codigo_nome_ug
+         AND l3.codigo_nome_projeto_atividade = NEW.codigo_nome_projeto_atividade
+       LIMIT 1),
+      (SELECT l4.tipo_despesa FROM public.bd_ref_lookup_l4 l4
+       WHERE l4.codigo_nome_ug = NEW.codigo_nome_ug
+       LIMIT 1)
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $trg$;
