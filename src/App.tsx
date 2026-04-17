@@ -439,7 +439,7 @@ const PIVOT_DIMS: { key: string; label: string }[] = [
 // Filters shown in the pivot's own filter panel (subset of FILTER_META)
 const PIVOT_FILTER_KEYS = new Set(['p_drs','p_rras','p_regiao_ad','p_regiao_sa','p_municipio','p_grupo_despesa','p_tipo_despesa','p_rotulo','p_elemento']);
 
-type UploadStep = 'idle'|'parsing'|'preview'|'uploading'|'done'|'error';
+type UploadStep = 'idle'|'parsing'|'preview'|'uploading'|'processing'|'done'|'error';
 
 function parseCSV(text: string): DataRow[] {
   const lines = text.trim().split('\n');
@@ -1431,12 +1431,148 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [uploadMode, setUploadMode] = useState<'replace'|'incremental'>('incremental');
   const [dbCount, setDbCount] = useState<number | null>(null);
+  const [procSteps, setProcSteps] = useState<{label:string; status:'wait'|'running'|'ok'|'warn'}[]>([]);
+  const [procProgress, setProcProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.from('lc131_despesas').select('id', { count: 'estimated' }).limit(1)
       .then(({ count }) => setDbCount(count ?? 0));
   }, []);
+
+  const SVC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc4OTA0NCwiZXhwIjoyMDkxMzY1MDQ0fQ.YUaFE11ZfuKAaRj1UMmhvLr3bN_1yjP9D2WDBcpBee0';
+  const SVC_HEADERS = { apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}`, 'Content-Type': 'application/json' };
+  const SUPABASE_REST = 'https://teikzwrfsxjipxozzhbr.supabase.co/rest/v1';
+  const CHUNK_SIZE = 5000;
+
+  const runPipeline = async (ano: number) => {
+    setStep('processing');
+    const steps: {label:string; status:'wait'|'running'|'ok'|'warn'}[] = [
+      { label: 'Preparando lookups de classificação', status: 'wait' },
+      { label: 'Classificando tipo de despesa', status: 'wait' },
+      { label: 'Normalizando DRS/RRAS e rótulos', status: 'wait' },
+      { label: 'Verificando dados', status: 'wait' },
+    ];
+    const upd = (i: number, s: 'wait'|'running'|'ok'|'warn', label?: string) => {
+      steps[i] = { ...steps[i], status: s, ...(label ? { label } : {}) };
+      setProcSteps([...steps]);
+    };
+    setProcSteps([...steps]);
+    setProcProgress(0);
+
+    try {
+      // Step 1: refresh_bdref_lookup
+      upd(0, 'running');
+      await supabase.rpc('refresh_bdref_lookup');
+      upd(0, 'ok'); setProcProgress(10);
+
+      // Step 2: fix_tipo_despesa_by_year in chunks
+      upd(1, 'running');
+      let tipoUpdated = 0;
+      try {
+        const { data: range } = await supabase.rpc('get_lc131_id_range', { p_ano: ano });
+        const minId: number = range?.min_id ?? 0;
+        const maxId: number = range?.max_id ?? 0;
+        const total: number = range?.total ?? 0;
+        if (total > 0) {
+          const chunks = Math.ceil((maxId - minId + 1) / CHUNK_SIZE);
+          for (let i = 0; i < chunks; i++) {
+            const idMin = minId + i * CHUNK_SIZE;
+            const idMax = Math.min(idMin + CHUNK_SIZE - 1, maxId);
+            const { data: res } = await supabase.rpc('fix_tipo_despesa_by_year', { p_ano: ano, p_id_min: idMin, p_id_max: idMax });
+            tipoUpdated += res?.updated ?? 0;
+            const pct = 10 + Math.round(((i + 1) / chunks) * 55);
+            upd(1, 'running', `Classificando tipo de despesa (lote ${i+1}/${chunks}: ${tipoUpdated.toLocaleString('pt-BR')} linhas)`);
+            setProcProgress(pct);
+          }
+        }
+        upd(1, 'ok', `Tipo de despesa: ${tipoUpdated.toLocaleString('pt-BR')} linhas classificadas`);
+      } catch {
+        upd(1, 'warn', 'Tipo de despesa: fallback por grupo');
+      }
+      setProcProgress(65);
+
+      // Fallback REST: fill tipo_despesa = NULL by grupo
+      const GRUPO_MAP = [
+        { prefix: '1', tipo: 'PESSOAL E ENCARGOS SOCIAIS' },
+        { prefix: '2', tipo: 'JUROS E ENCARGOS DA DÍVIDA' },
+        { prefix: '3', tipo: 'OUTRAS DESPESAS CORRENTES' },
+        { prefix: '4', tipo: 'INVESTIMENTOS' },
+        { prefix: '5', tipo: 'INVERSÕES FINANCEIRAS' },
+      ];
+      for (const { prefix, tipo } of GRUPO_MAP) {
+        await fetch(
+          `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null&codigo_nome_grupo=like.${prefix}%25`,
+          { method: 'PATCH', headers: { ...SVC_HEADERS }, body: JSON.stringify({ tipo_despesa: tipo }) }
+        );
+      }
+      await fetch(
+        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null`,
+        { method: 'PATCH', headers: { ...SVC_HEADERS }, body: JSON.stringify({ tipo_despesa: 'OUTRAS DESPESAS CORRENTES' }) }
+      );
+      setProcProgress(70);
+
+      // Step 3: post_import_cleanup (DRS, RRAS, rótulo, TRUNCATE bd_ref_tipo)
+      upd(2, 'running');
+      let rotuloFilled = 0;
+      try {
+        const { data: cln } = await supabase.rpc('post_import_cleanup', { p_ano: ano });
+        rotuloFilled = cln?.rotulo_filled ?? 0;
+        upd(2, 'ok', `DRS/RRAS normalizados · ${rotuloFilled.toLocaleString('pt-BR')} rótulos preenchidos`);
+      } catch {
+        upd(2, 'warn', 'Limpeza parcial — preenchendo rótulos via REST');
+      }
+      setProcProgress(80);
+
+      // Fallback: fill rotulo via REST if still NULL
+      if (rotuloFilled === 0) {
+        try {
+          const resp = await fetch(
+            `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&codigo_nome_projeto_atividade=not.is.null&select=codigo_nome_projeto_atividade&limit=5000`,
+            { headers: SVC_HEADERS }
+          );
+          const nullRows: {codigo_nome_projeto_atividade: string}[] = resp.ok ? await resp.json() : [];
+          const unique = [...new Set(nullRows.map(r => r.codigo_nome_projeto_atividade?.trim()).filter(Boolean))];
+          let rFilled = 0;
+          for (const val of unique) {
+            const pr = await fetch(
+              `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&codigo_nome_projeto_atividade=eq.${encodeURIComponent(val)}`,
+              { method: 'PATCH', headers: { ...SVC_HEADERS, Prefer: 'count=exact' }, body: JSON.stringify({ rotulo: val }) }
+            );
+            const n = parseInt((pr.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
+            if (!isNaN(n)) rFilled += n;
+          }
+          if (rFilled > 0) upd(2, 'ok', `${rFilled.toLocaleString('pt-BR')} rótulos preenchidos`);
+        } catch { /* ignorar */ }
+      }
+      setProcProgress(90);
+
+      // Step 4: verificação
+      upd(3, 'running');
+      const vt = await fetch(
+        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null&select=id&limit=1`,
+        { headers: { ...SVC_HEADERS, Prefer: 'count=exact' } }
+      );
+      const tipoNull = parseInt((vt.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
+      const vr = await fetch(
+        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&select=id&limit=1`,
+        { headers: { ...SVC_HEADERS, Prefer: 'count=exact' } }
+      );
+      const rotuloNull = parseInt((vr.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
+      setProcProgress(100);
+
+      if (tipoNull === 0 && rotuloNull === 0) {
+        upd(3, 'ok', '✓ Todos os dados classificados e completos');
+      } else {
+        upd(3, 'warn', `${tipoNull > 0 ? tipoNull+' tipo_despesa nulos' : ''}${tipoNull>0&&rotuloNull>0?' · ':''}${rotuloNull>0?rotuloNull+' rótulos nulos':''}`);
+      }
+      setMessage(`${message || ''} · Pipeline concluído.`);
+      setStep('done');
+    } catch (e: unknown) {
+      setMessage((e as Error).message);
+      setStep('error');
+    }
+  };
 
   const handleFile = async (file: File) => {
     setFileName(file.name); setStep('parsing');
@@ -1544,11 +1680,16 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
       }
 
       try { await supabase.rpc('refresh_dashboard_batch', { p_batch_size: 10000 }); } catch { /* optional */ }
-      setMessage(uploaded.toLocaleString('pt-BR') + ` registros de ${detectedYear ?? '?'} importados com sucesso!`); setStep('done');
+      setMessage(uploaded.toLocaleString('pt-BR') + ` registros de ${detectedYear ?? '?'} importados com sucesso!`);
+      if (detectedYear) {
+        await runPipeline(detectedYear);
+      } else {
+        setStep('done');
+      }
     } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
   };
 
-  const reset = () => { setStep('idle'); setRows([]); setFileName(''); setProgress(0); setMessage(''); setConfirm(false); setUploadMode('incremental'); };
+  const reset = () => { setStep('idle'); setRows([]); setFileName(''); setProgress(0); setMessage(''); setConfirm(false); setUploadMode('incremental'); setProcSteps([]); setProcProgress(0); };
   const cols = rows.length ? Object.keys(rows[0]) : [];
 
   return (
@@ -1643,6 +1784,42 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
               <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
                 <div className="h-full bg-[#118DFF] rounded-full transition-all duration-300" style={{ width: progress + '%' }} />
               </div>
+            </div>
+          )}
+          {step === 'processing' && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-2.5">
+                <Spinner size={4} />
+                <p className="text-sm font-semibold text-[#333]">Processando dados importados...</p>
+              </div>
+              <div className="h-2 bg-[#F0F0F0] rounded-full overflow-hidden">
+                <div className="h-full bg-[#118DFF] rounded-full transition-all duration-500" style={{ width: procProgress + '%' }} />
+              </div>
+              <p className="text-right text-[10px] text-[#999] font-mono">{procProgress}%</p>
+              <div className="space-y-2">
+                {procSteps.map((s, i) => (
+                  <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2 text-xs ${
+                    s.status === 'running' ? 'bg-blue-50 border border-blue-200' :
+                    s.status === 'ok'      ? 'bg-green-50 border border-green-200' :
+                    s.status === 'warn'    ? 'bg-amber-50 border border-amber-200' :
+                    'bg-[#FAFAFA] border border-[#E5E5E5]'
+                  }`}>
+                    <span className="shrink-0 mt-0.5">
+                      {s.status === 'running' ? <Spinner size={3} /> :
+                       s.status === 'ok'      ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> :
+                       s.status === 'warn'    ? <AlertCircle className="w-3.5 h-3.5 text-amber-500" /> :
+                       <span className="w-3.5 h-3.5 rounded-full border border-[#CCC] inline-block" />}
+                    </span>
+                    <span className={`leading-snug ${
+                      s.status === 'running' ? 'text-blue-800 font-semibold' :
+                      s.status === 'ok'      ? 'text-green-800' :
+                      s.status === 'warn'    ? 'text-amber-800' :
+                      'text-[#999]'
+                    }`}>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-[#999] text-center">Não feche esta janela enquanto processa.</p>
             </div>
           )}
           {step === 'done' && (

@@ -181,6 +181,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.post_import_cleanup(INT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.post_import_cleanup(INT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.post_import_cleanup(INT) TO anon;
 
 -- ================================================================
 -- fill_rotulo_ano — fallback autônomo para preencher rótulo
@@ -207,6 +208,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.fill_rotulo_ano(INT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fill_rotulo_ano(INT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fill_rotulo_ano(INT) TO anon;
 
 -- ================================================================
 -- fix_drs_range — normaliza DRS em uma faixa de IDs (evita timeout)
