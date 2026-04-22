@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen, ExternalLink,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -579,15 +579,45 @@ const KpiCard = memo(({ label, value, sub, icon, color }: KpiCardProps) => (
   </div>
 ));
 
-function Card({ title, children, badge, noPad, icon }: {
-  title: string; children: React.ReactNode; badge?: React.ReactNode; noPad?: boolean; icon?: React.ReactNode;
+function Card({ title, children, badge, noPad, icon, info }: {
+  title: string; children: React.ReactNode; badge?: React.ReactNode; noPad?: boolean; icon?: React.ReactNode; info?: string;
 }) {
+  const [showInfo, setShowInfo] = React.useState(false);
+  const infoRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!showInfo) return;
+    const h = (e: MouseEvent) => { if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [showInfo]);
   return (
     <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
       <div className="px-4 py-2.5 border-b border-[#F0F0F0] flex items-center gap-2">
         {icon && <span className="text-[#999]">{icon}</span>}
         <p className="font-semibold text-[#333] text-[13px] flex-1">{title}</p>
         {badge}
+        {info && (
+          <div className="relative shrink-0" ref={infoRef}>
+            <button
+              type="button"
+              onClick={() => setShowInfo(v => !v)}
+              title="Como este gráfico é calculado"
+              className={cn(
+                'w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors',
+                showInfo ? 'bg-[#118DFF] text-white' : 'bg-[#F0F0F0] text-[#888] hover:bg-[#118DFF] hover:text-white'
+              )}>
+              ⓘ
+            </button>
+            {showInfo && (
+              <div className="absolute right-0 top-7 z-50 w-72 bg-white border border-[#E5E5E5] rounded-xl shadow-2xl p-3.5 text-[11px] text-[#444] leading-relaxed">
+                <div className="flex items-center gap-1.5 mb-2 border-b border-[#F0F0F0] pb-2">
+                  <span className="text-[#118DFF] font-bold text-[12px]">Como este gráfico é calculado</span>
+                </div>
+                <div className="whitespace-pre-wrap">{info}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {noPad ? children : <div className="p-4">{children}</div>}
     </div>
@@ -2434,7 +2464,8 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Grupo de Despesa */}
-                <Card title="Grupo de Despesa" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Grupo de Despesa" icon={<Layers className="w-4 h-4" />}
+                  info={"Gráfico de rosca (donut) mostrando a distribuição percentual das despesas pelos grupos orçamentários (Pessoal e Encargos Sociais, Juros, Outras Despesas Correntes, Investimentos e Inversões Financeiras).\n\nFórmula: % = Empenhado do grupo / Empenhado total × 100\n\nOs grupos são derivados do campo codigo_nome_grupo da tabela lc131_despesas, simplificados em categorias (Custeio, Investimento, Pessoal)."}>
                   <div className="flex items-start gap-6">
                     <div className="w-44 h-44 shrink-0">
                       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -2468,7 +2499,8 @@ export default function App() {
                 </Card>
 
                 {/* Fonte de Recursos */}
-                <Card title="Fonte de Recursos" icon={<Database className="w-4 h-4" />}>
+                <Card title="Fonte de Recursos" icon={<Database className="w-4 h-4" />}
+                  info={"Gráfico de rosca (donut) mostrando a distribuição percentual das despesas por origem do financiamento (Recursos Estaduais, Federais, etc.).\n\nFórmula: % = Empenhado da fonte / Empenhado total × 100\n\nDados extraídos do campo codigo_nome_fonte_recurso simplificado em ESTADUAL, FEDERAL ou OUTROS."}>
                   <div className="flex items-start gap-6">
                     <div className="w-44 h-44 shrink-0">
                       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -2505,7 +2537,8 @@ export default function App() {
 
             {/* Evolução Anual */}
             {data && data.porAno.length > 1 && (
-              <Card title="Evolução Anual - Empenhado / Liquidado / Pago" icon={<TrendingUp className="w-4 h-4" />}>
+              <Card title="Evolução Anual - Empenhado / Liquidado / Pago" icon={<TrendingUp className="w-4 h-4" />}
+                info={"Gráfico de barras verticais agrupadas mostrando a evolução ano a ano dos três estágios da despesa.\n\nFórmula: soma de empenhado / liquidado / pago_total agrupada por ano_referencia.\nPago Total = pago (ano corrente) + pago_anos_anteriores (restos a pagar).\n\nPermite comparar a evolução orçamentária entre os anos 2022–2026.\nDados: RPC lc131_dashboard, campo por_ano."}>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={data.porAno} margin={{ left: 10, right: 10, top: 4 }}>
@@ -2532,11 +2565,13 @@ export default function App() {
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Top 5 DRS  - Empenhado" icon={<MapPin className="w-4 h-4" />}
-                  badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}>
+                  badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}
+                  info={"Ranking das 5 Diretorias Regionais de Saúde (DRS) com maior Empenhado, com barras agrupadas mostrando os 3 estágios.\n\nEmpenhado = total comprometido por empenho no período.\nLiquidado = valor cujo serviço/bem foi verificado como entregue.\nPago Total = pago no ano + pago_anos_anteriores (restos a pagar).\n\nDados: RPC lc131_dashboard, campo por_drs. Os dados são ordenados do maior para o menor empenhado."}>
                   <HGroupedBarChart data={data.porDrs.slice(0,5) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={220} />
                 </Card>
                 <Card title="Top 5 Municípios - Empenhado" icon={<Building2 className="w-4 h-4" />}
-                  badge={<span className="text-[10px] font-bold text-[#1AAB40] bg-green-50 px-1.5 py-0.5 rounded">{data.porMunic.length}</span>}>
+                  badge={<span className="text-[10px] font-bold text-[#1AAB40] bg-green-50 px-1.5 py-0.5 rounded">{data.porMunic.length}</span>}
+                  info={"Ranking dos 5 municípios com maior valor empenhado no período selecionado.\n\nFórmula: soma do campo empenhado agrupado por municipio.\n\nCada barra representa o total empenhado do município, com cores diferentes para facilitar a distinção. Dados: RPC lc131_dashboard, campo por_munic."}>
                   <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart data={data.porMunic.slice(0,5)} margin={{ left: 6, right: 10, top: 2 }}>
@@ -2557,7 +2592,8 @@ export default function App() {
             {/* Grupo detalhado + Fonte detalhada */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}>
+                <Card title="Top 5 Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}
+                  info={"Ranking dos 5 grupos orçamentários com maior Empenhado, com barras agrupadas para os 3 estágios da despesa.\n\nGrupos: 1-Pessoal, 2-Juros, 3-Outras Despesas Correntes, 4-Investimentos, 5-Inversões Financeiras.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_grupo, RPC lc131_dashboard."}>
                   <HGroupedBarChart
                     data={data.porGrupo.slice(0,5) as unknown as Record<string,unknown>[]}
                     yKey="grupo_despesa"
@@ -2565,7 +2601,8 @@ export default function App() {
                     height={220}
                   />
                 </Card>
-                <Card title="Top 5 Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}>
+                <Card title="Top 5 Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}
+                  info={"Ranking das 5 fontes de recurso com maior Empenhado.\n\nEmpenhado = total comprometido pela fonte de financiamento.\nPago Total = pago no ano + pago_anos_anteriores (restos a pagar).\n\nDados: campo codigo_nome_fonte_recurso, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porFonte.slice(0,5) as unknown as Record<string,unknown>[]} yKey="fonte_recurso" series={S2} height={200} />
                 </Card>
               </div>
@@ -2574,10 +2611,12 @@ export default function App() {
             {/* Elemento + UO */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}>
+                <Card title="Top 5 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}
+                  info={"Ranking dos 5 elementos de despesa com maior Empenhado. O elemento especifica a natureza do gasto (ex: Outros Serviços de Terceiros, Material de Consumo).\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_elemento, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porElemento.slice(0,5) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                <Card title="Top 5 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                  info={"Ranking das 5 Unidades Orçamentárias (UO) com maior Empenhado. A UO é a divisão administrativa responsável pela dotação orçamentária.\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_uo, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porUo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={220} />
                 </Card>
               </div>
@@ -2586,10 +2625,12 @@ export default function App() {
             {/* RRAS + Região Administrativa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Top 5 RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}
+                  info={"Ranking das 5 Redes Regionais de Atenção à Saúde (RRAS 01–17) com maior Empenhado.\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo rras, populado via tabela tab_municipios, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porRras.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={220} />
                 </Card>
-                <Card title="Top 5 Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}>
+                <Card title="Top 5 Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}
+                  info={"Ranking das 5 Regiões Administrativas do Estado de SP com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo regiao_ad, RPC lc131_dashboard, campo por_regiao_ad."}>
                   <HGroupedBarChart data={data.porRegiaoAd.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={200} />
                 </Card>
               </div>
@@ -2598,10 +2639,12 @@ export default function App() {
             {/* Região de Saúde + Tipo Despesa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}>
+                <Card title="Top 5 Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}
+                  info={"Ranking das 5 Regiões de Saúde do Estado de SP com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo regiao_sa, RPC lc131_dashboard, campo por_regiao_sa."}>
                   <HGroupedBarChart data={data.porRegiaoSa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}>
+                <Card title="Top 5 Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}
+                  info={"Ranking dos 5 tipos de despesa programática com maior Empenhado (ex: ATENÇÃO BÁSICA, ALTA COMPLEXIDADE, MÉDIA COMPLEXIDADE).\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo tipo_despesa, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porTipoDespesa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="tipo_despesa" series={S3} height={220} />
                 </Card>
               </div>
@@ -2610,10 +2653,12 @@ export default function App() {
             {/* UG */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}>
+                <Card title="Top 5 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                  info={"Ranking das 5 Unidades Gestoras (UG) com maior Empenhado. A UG é a unidade que executa efetivamente o orçamento da UO.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_ug, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}
+                  info={"Ranking dos 5 projetos/atividades orçamentárias com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_projeto_atividade, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={200} />
                 </Card>
               </div>
@@ -2622,10 +2667,12 @@ export default function App() {
             {/* Favorecido + Projeto */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}>
+                <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
+                  info={"Ranking dos 5 beneficiários/fornecedores com maior Empenhado no período.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_favorecido, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Rótulos — Empenhado" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Top 5 Rótulos — Empenhado" icon={<Layers className="w-4 h-4" />}
+                  info={"Ranking dos 5 rótulos (nome simplificado do projeto/atividade) com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nRótulo é o campo rotulo da tabela lc131_despesas, preenchido automaticamente a partir de codigo_nome_projeto_atividade quando não informado no arquivo de origem.\nDados: RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
                 </Card>
               </div>
@@ -2683,7 +2730,8 @@ export default function App() {
 
               {/* % Liquidado por DRS - heatmap horizontal */}
               <Card title="% Liquidado por DRS  (Liquidado / Empenhado)" icon={<BarChart3 className="w-4 h-4" />}
-                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Concentração top-20%: {concentracao.toFixed(0)}%</span>}>
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Concentração top-20%: {concentracao.toFixed(0)}%</span>}
+                info={"Tabela-heatmap mostrando o percentual de liquidação de cada DRS, do maior para o menor.\n\nFórmula: % Liquidado = Liquidado / Empenhado × 100\n\nSemáforo de cores:\n\u2022 Verde (≥ 80%): execução ótima\n\u2022 Amarelo (50–79%): atenção\n\u2022 Vermelho (< 50%): crítico\n\nConcentração top-20% = share das DRS com maior % Liquidado sobre o total empenhado."}> 
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead><tr>
@@ -2722,7 +2770,8 @@ export default function App() {
 
               {/* DRS empenhado vs gap (não liquidado) — stacked */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Empenhado vs Pago por DRS  (Gap em vermelho)" icon={<MapPin className="w-4 h-4" />}>
+                <Card title="Empenhado vs Pago por DRS  (Gap em vermelho)" icon={<MapPin className="w-4 h-4" />}
+                  info={"Barras empilhadas (stacked) comparando Empenhado com Pago Total por DRS.\n\nPago Total (verde) = pago + pago_anos_anteriores.\nNão Pago (vermelho) = Gap = Empenhado − Pago Total.\n\nVisualição: quanto cada DRS ainda tem de recurso empenhado que não foi pago. Ordenado do maior para o menor empenhado."}>
                   <div style={{ height: 320 }}>
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart data={drsExecData.sort((a,b)=>b.empenhado-a.empenhado)} layout="vertical"
@@ -2742,7 +2791,8 @@ export default function App() {
 
                 {/* Top 10 municípios com share */}
                 <Card title="Top 10 Municípios por Empenhado" icon={<Building2 className="w-4 h-4" />}
-                  badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porMunic.length} municípios</span>}>
+                  badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porMunic.length} municípios</span>}
+                  info={"Ranking dos 10 municípios com maior Empenhado no período, com barra de progresso indicando a participação percentual no total.\n\nShare = Empenhado do município / Empenhado total × 100.\n% Pago = Pago Total / Empenhado × 100.\n\nDados: campo municipio, RPC lc131_dashboard."}> 
                   <div className="flex flex-col gap-1.5 mt-1">
                     {municTop10.map((m, i) => {
                       const share = totalMunic > 0 ? (m.empenhado / totalMunic) * 100 : 0;
@@ -2811,7 +2861,8 @@ export default function App() {
                   )}
                   {data.porRegiaoSa.length > 0 && (
                     <Card title="Regiões de Saúde — Empenhado / Pago" icon={<MapPin className="w-4 h-4" />}
-                      badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}>
+                      badge={<span className="text-[10px] font-bold text-[#D64550] bg-red-50 px-1.5 py-0.5 rounded">{data.porRegiaoSa.length}</span>}
+                      info={"Barras agrupadas por Região de Saúde mostrando Empenhado vs Pago Total.\n\nPago Total = pago + pago_anos_anteriores (restos a pagar).\n\nDados: campo regiao_sa, RPC lc131_dashboard."}> 
                       <HGroupedBarChart data={data.porRegiaoSa as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2}
                         height={Math.max(200, data.porRegiaoSa.length * 40)} />
                     </Card>
@@ -2821,7 +2872,8 @@ export default function App() {
 
               {/* Ranking DRS completo com semáforo */}
               <Card title="Ranking Completo de DRS" noPad icon={<BarChart3 className="w-4 h-4" />}
-                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porDrs.length} DRS</span>}>
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porDrs.length} DRS</span>}
+                info={"Tabela detalhada com todas as DRS ordenadas por Empenhado (maior para menor).\n\nGap = Empenhado − Pago Total (recurso ainda não pago).\n% Exec. = Pago Total / Empenhado × 100.\nParticipação = Empenhado da DRS / Empenhado total geral × 100.\n\nCores do semáforo: verde ≥ 80%, amarelo 50–79%, vermelho < 50%."}> 
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
@@ -2936,7 +2988,8 @@ export default function App() {
 
               {/* Funil de execução Emp → Liq → Pago */}
               <Card title="Funil de Execução Orçamentária" icon={<TrendingUp className="w-4 h-4" />}
-                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Valores globais do filtro</span>}>
+                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Valores globais do filtro</span>}
+                info={"Visualização em funil dos 3 estágios da despesa pública (Lei nº 4.320/64).\n\nBarra de Empenhado = 100% (base de referência).\nBarra de Liquidado = Liquidado / Empenhado × 100.\nBarra de Pago Total = Pago Total / Empenhado × 100.\nPago Total = pago + pago_anos_anteriores.\nGap final = Empenhado − Pago Total (recurso empenhado mas ainda não pago)."}> 
                 <div className="flex flex-col gap-2 mt-1">
                   {kpis && (() => {
                     const stages = [
@@ -2985,7 +3038,8 @@ export default function App() {
                 const fedExec = fed.empenhado > 0 ? fed.pago_total / fed.empenhado * 100 : 0;
                 return (
                   <Card title="Origem dos Recursos — ESTADUAL vs FEDERAL" icon={<Database className="w-4 h-4" />}
-                    badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">Distribuição por fonte simplificada</span>}>
+                    badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">Distribuição por fonte simplificada</span>}
+                    info={"Comparação das despesas entre recursos do Tesouro Estadual e recursos Federais.\n\nSTADUAL = fontes começando com \"01\" ou contendo \"Tesouro\".\nFEDERAL = fontes contendo \"Federal\", \"SUS\" ou códigos específicos.\n\nExibe Empenhado, Liquidado e Pago Total de cada origem.\n% exec. = Pago Total / Empenhado × 100.\nDados: campo codigo_nome_fonte_recurso simplificado."}> 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
                       {/* ESTADUAL */}
                       <div className="bg-gradient-to-br from-[#EEF4FF] to-[#E3EDFF] border border-[#C7DAFF] rounded-xl p-4">
@@ -3058,7 +3112,8 @@ export default function App() {
               {/* Grupos + Elementos grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Grupo SIMPLIFICADO (Custeio/Investimento/Pessoal) + detalhado */}
-                <Card title="Grupos de Despesa — Custeio · Investimento · Pessoal" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Grupos de Despesa — Custeio · Investimento · Pessoal" icon={<Layers className="w-4 h-4" />}
+                  info={"Análise da execução orçamentária por grupo agregado de despesa.\n\nCusteio = grupos 2 (Juros) + 3 (Outras Despesas Correntes).\nInvestimento = grupos 4 (Investimentos) + 5 (Inversões Financeiras).\nPessoal = grupo 1 (Pessoal e Encargos Sociais).\n\nShare = Empenhado do grupo / Empenhado total × 100.\n% Exec. = Pago Total / Empenhado × 100.\n~ESTADUAL / ~FEDERAL = estimativa proporcional com base na distribuição global das fontes."}> 
                   {/* Simplified group summary */}
                   {data.porGrupoSimpl.length > 0 && (() => {
                     const totSimpl = data.porGrupoSimpl.reduce((s, g) => s + g.empenhado, 0);
@@ -3143,7 +3198,8 @@ export default function App() {
                 </Card>
 
                 {/* Elemento — share + execução */}
-                <Card title="Top 10 Elementos — Share + Execução" icon={<Database className="w-4 h-4" />}>
+                <Card title="Top 10 Elementos — Share + Execução" icon={<Database className="w-4 h-4" />}
+                  info={"Tabela dos 10 maiores elementos de despesa por Empenhado.\n\nShare = Empenhado do elemento / Empenhado total × 100.\n% Exec. = Liquidado / Empenhado × 100.\nGap = Empenhado − Liquidado (valor empenhado mas ainda não liquidado).\n\nDados: campo codigo_nome_elemento, RPC lc131_dashboard."}> 
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead><tr>
@@ -3177,11 +3233,13 @@ export default function App() {
 
               {/* UO + UG comparativo */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Unidades Orçamentárias — Emp / Liq / Pago (completo)" icon={<Building2 className="w-4 h-4" />}>
+                <Card title="Unidades Orçamentárias — Emp / Liq / Pago (completo)" icon={<Building2 className="w-4 h-4" />}
+                  info={"Barras agrupadas com todas as Unidades Orçamentárias (UO) e os 3 estágios da despesa.\n\nEmpenhado = total comprometido.\nLiquidado = valor verificado como entregue.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_uo, RPC lc131_dashboard."}> 
                   <HGroupedBarChart data={data.porUo as unknown as Record<string,unknown>[]} yKey="uo" series={S3}
                     height={Math.max(220, data.porUo.length * 45)} />
                 </Card>
-                <Card title="Projetos / Atividades — Emp / Pago (completo)" icon={<Briefcase className="w-4 h-4" />}>
+                <Card title="Projetos / Atividades — Emp / Pago (completo)" icon={<Briefcase className="w-4 h-4" />}
+                  info={"Barras agrupadas com todos os projetos/atividades orçamentárias e 2 estágios da despesa.\n\nEmpenhado = total comprometido.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_projeto_atividade, RPC lc131_dashboard. Exibidos até 15 projetos."}> 
                   <HGroupedBarChart data={data.porProjeto.slice(0,15) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2}
                     height={Math.max(220, Math.min(data.porProjeto.length, 15) * 45)} />
                 </Card>
@@ -3189,7 +3247,8 @@ export default function App() {
 
               {/* Tipo de Despesa + Rótulo */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}>
+                <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}
+                  info={"Tabela detalhada de execução por tipo de despesa programática (ex: ATENÇÃO BÁSICA, ALTA COMPLEXIDADE, MÉDIA COMPLEXIDADE, etc.).\n\nEmpenhado total por tipo.\n~ESTADUAL / ~FEDERAL = estimativa proporcional com base na distribuição global das fontes.\n% Pago = Pago Total / Empenhado × 100.\n\nDados: campo tipo_despesa, RPC lc131_dashboard."}> 
                   {data.porTipoDespesa.length > 0 ? (() => {
                     const totEmp = data.porTipoDespesa.reduce((s, r) => s + r.empenhado, 0);
                     const estTotal = data.porFonteSimpl.find(f => f.fonte_simpl === 'ESTADUAL')?.empenhado ?? 0;
@@ -3244,7 +3303,8 @@ export default function App() {
                 </Card>
 
                 {/* Rótulo LC 131 */}
-                <Card title="Rótulo LC 131 — Execução detalhada" icon={<Layers className="w-4 h-4" />}>
+                <Card title="Rótulo LC 131 — Execução detalhada" icon={<Layers className="w-4 h-4" />}
+                  info={"Barras horizontais com execução (Empenhado vs Pago Total) por Rótulo.\n\nRótulo é o campo rotulo da tabela lc131_despesas, preenchido automaticamente com o nome simplificado do projeto/atividade.\nPago Total = pago + pago_anos_anteriores.\n% Exec = Pago Total / Empenhado × 100.\n\nDados: campo rotulo, RPC lc131_dashboard."}> 
                   {data.porRotulo.length > 0 ? (
                     <div className="flex flex-col gap-2.5">
                       {data.porRotulo.map((t, i) => {
@@ -3278,7 +3338,8 @@ export default function App() {
               </div>
 
               {/* Tabela full de elementos */}
-              <Card title="Tabela Completa — Elementos de Despesa" noPad icon={<Table2 className="w-4 h-4" />}>
+              <Card title="Tabela Completa — Elementos de Despesa" noPad icon={<Table2 className="w-4 h-4" />}
+                info={"Tabela analítica com todos os elementos de despesa presentes no filtro selecionado, ordenados por Empenhado (maior para menor).\n\nEmpenhado = total comprometido por empenho.\nLiquidado = valor verificado como entregue.\nPago = valor pago no ano de referência.\nPago Total = pago + pago_anos_anteriores (restos a pagar).\n% Liq = Liquidado / Empenhado × 100.\n% Pago = Pago Total / Empenhado × 100."}> 
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
@@ -3830,7 +3891,75 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
               <h2 className="text-lg font-bold text-[#1B1B1B] mb-1 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-[#118DFF]" /> Legenda — Conceitos e Definições
               </h2>
-              <p className="text-[13px] text-[#666]">Glossário dos termos utilizados no painel de controle de despesas.</p>
+              <p className="text-[13px] text-[#666]">Glossário dos termos e conceitos utilizados no painel de controle de despesas.</p>
+            </div>
+
+            {/* ── Execução da Despesa Pública ── */}
+            <div className="rounded-xl border-2 border-[#118DFF] overflow-hidden shadow-sm">
+              {/* Header azul */}
+              <div className="bg-[#118DFF] px-5 py-4">
+                <h3 className="text-white font-bold text-[15px] mb-0.5">O QUE SIGNIFICA EXECUTAR A DESPESA PÚBLICA?</h3>
+                <p className="text-blue-100 text-[12px]">Baseado na Lei nº 4.320/64 · Portal da Transparência do Governo Federal</p>
+              </div>
+
+              {/* Texto explicativo */}
+              <div className="bg-white px-5 py-4 text-[13px] text-[#444] leading-relaxed space-y-3">
+                <p>Significa realizar as despesas previstas no orçamento público, seguindo os <strong>três estágios presentes na Lei nº 4.320/64</strong>: empenho, liquidação e pagamento.</p>
+                <p><strong className="text-[#118DFF]">O empenho</strong> é a etapa em que o governo reserva o dinheiro que será pago quando o bem for entregue ou o serviço concluído. Isso ajuda o governo a organizar os gastos pelas diferentes áreas, evitando que se gaste mais do que foi planejado.</p>
+                <p><strong className="text-[#1AAB40]">A liquidação</strong> é quando se verifica que o governo recebeu aquilo que comprou. Ou seja, quando se confere que o bem foi entregue corretamente ou que a etapa da obra foi concluída como acordado.</p>
+                <p><strong className="text-[#E66C37]">O pagamento</strong> ocorre quando, estando tudo certo com as fases anteriores, o governo repassa o valor ao vendedor ou prestador de serviço contratado.</p>
+                <div className="pt-1">
+                  <a href="https://portaldatransparencia.gov.br/entenda-a-gestao-publica/execucao-despesa-publica"
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[#118DFF] hover:underline text-[12px] font-semibold">
+                    <ExternalLink className="w-3.5 h-3.5" /> Saiba mais no Portal da Transparência
+                  </a>
+                </div>
+              </div>
+
+              {/* Infográfico dos 3 estágios */}
+              <div className="grid grid-cols-3 divide-x divide-[#E5E5E5] bg-[#F8FBFF]">
+                {[
+                  {
+                    num: '1', label: 'Empenho', color: '#118DFF', bg: '#EEF6FF',
+                    desc: 'Fase em que é criada a obrigação de pagamento da despesa pelo governo. O recurso orçamentário é reservado.',
+                  },
+                  {
+                    num: '2', label: 'Liquidação', color: '#1AAB40', bg: '#EDFBF2',
+                    desc: 'Etapa em que é cobrada a prestação de serviços, a entrega de bens ou a realização de obras. Envolve todos os atos de verificação e conferência.',
+                  },
+                  {
+                    num: '3', label: 'Pagamento', color: '#E66C37', bg: '#FFF5EE',
+                    desc: 'Em que se entrega o dinheiro ao credor, após autoridade competente determinar que a despesa liquidada seja paga.',
+                  },
+                ].map((s, i) => (
+                  <div key={i} className="p-4 flex flex-col items-center text-center gap-2" style={{ background: s.bg }}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md" style={{ background: s.color }}>
+                      {s.num}
+                    </div>
+                    <p className="font-bold text-[13px]" style={{ color: s.color }}>{s.label}</p>
+                    <p className="text-[11px] text-[#555] leading-relaxed">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* YouTube embed */}
+              <div className="bg-[#1a1a1a] px-5 py-4">
+                <p className="text-white text-[12px] font-semibold mb-3 flex items-center gap-2">
+                  <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">▶ YouTube</span>
+                  Assista: Execução da Despesa Pública explicada em vídeo
+                </p>
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    src="https://www.youtube.com/embed/ZcqgaEjJ7Aw"
+                    title="Execução da Despesa Pública — Empenho, Liquidação e Pagamento"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Fluxo Orçamentário */}
