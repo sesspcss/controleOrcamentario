@@ -72,10 +72,10 @@ const S3 = [
   { key: 'liquidado',  name: 'Liquidado',  color: '#1AAB40' },
   { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
 ];
-// Series padrão para gráficos com 2 grandezas (emp + liq)
+// Series padrão para gráficos com 2 grandezas (emp + pago_total)
 const S2 = [
-  { key: 'empenhado', name: 'Empenhado', color: '#118DFF' },
-  { key: 'liquidado', name: 'Liquidado', color: '#1AAB40' },
+  { key: 'empenhado',  name: 'Empenhado',  color: '#118DFF' },
+  { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
 ];
 
 // --- Types ----------------------------------------------------------------------
@@ -89,9 +89,9 @@ interface GrupoRow { grupo_despesa: string; empenhado: number; liquidado: number
 interface GrupoSimplRow { grupo_simpl: string; empenhado: number; liquidado: number; pago_total: number }
 interface FonteSimplRow { fonte_simpl: string; empenhado: number; liquidado: number; pago_total: number }
 interface MunicRow { municipio: string; empenhado: number; pago_total: number }
-interface FonteRow { fonte_recurso: string; empenhado: number; liquidado: number; pago_total: number }
-interface ElementoRow { elemento: string; empenhado: number; liquidado: number; pago_total: number }
-interface RegiaoAdRow { regiao_ad: string; empenhado: number; liquidado: number; pago_total: number }
+interface FonteRow { fonte_recurso: string; empenhado: number; pago_total: number }
+interface ElementoRow { elemento: string; empenhado: number; pago_total: number }
+interface RegiaoAdRow { regiao_ad: string; empenhado: number; pago_total: number }
 interface UoRow { uo: string; empenhado: number; liquidado: number; pago_total: number }
 interface RrasRow { rras: string; empenhado: number; liquidado: number; pago_total: number }
 interface TipoDespesaRow { tipo_despesa: string; empenhado: number; liquidado: number; pago_total: number }
@@ -99,7 +99,7 @@ interface RotuloRow { rotulo: string; empenhado: number; pago_total: number }
 interface FavorecidoRow { favorecido: string; empenhado: number; pago_total: number; contratos: number }
 interface ProjetoRow { projeto: string; empenhado: number; pago_total: number; registros: number }
 interface UgRow { ug: string; empenhado: number; pago_total: number }
-interface RegiaoSaRow { regiao_sa: string; empenhado: number; liquidado: number; pago_total: number }
+interface RegiaoSaRow { regiao_sa: string; empenhado: number; pago_total: number }
 
 interface CachedData {
   kpis: KPIs;
@@ -1444,7 +1444,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                   <div className="space-y-4">
                     {municDetail.projetos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Briefcase className="w-3 h-3" /> Projetos</p>
-                      {municDetail.projetos.map((p, i) => <DetailItem key={i} label={p.projeto} value={fmt(p.empenhado, 'currency')} />)}
+                      {municDetail.projetos.map((p, i) => <DetailItem key={i} label={stripNumPrefix(p.projeto)} value={fmt(p.empenhado, 'currency')} />)}
                     </div>)}
                     {municDetail.favorecidos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> Favorecidos</p>
@@ -1460,7 +1460,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                     </div>)}
                     {municDetail.grupos.length > 0 && (<div>
                       <p className="text-[10px] text-[#888] uppercase font-bold mb-1.5 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Grupos</p>
-                      {municDetail.grupos.map((g, i) => <DetailItem key={i} label={g.grupo} value={fmt(g.empenhado, 'currency')} />)}
+                      {municDetail.grupos.map((g, i) => <DetailItem key={i} label={stripNumPrefix(g.grupo)} value={fmt(g.empenhado, 'currency')} />)}
                     </div>)}
                   </div>
                 ) : null}
@@ -2017,9 +2017,9 @@ export default function App() {
         porGrupo: ((d.por_grupo as Record<string,unknown>[] ?? [])).map(r => ({ grupo_despesa: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porDrs: (() => { const raw = ((d.por_drs as Record<string,unknown>[] ?? [])).map(r => ({ drs: normalizeDrs(String(r.drs)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.drs); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.drs, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porMunic: ((d.por_municipio as Record<string,unknown>[] ?? [])).map(r => ({ municipio: String(r.municipio), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porElemento: ((d.por_elemento as Record<string,unknown>[] ?? [])).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porRegiaoAd: ((d.por_regiao_ad as Record<string,unknown>[] ?? [])).map(r => ({ regiao_ad: String(r.regiao_ad), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porElemento: ((d.por_elemento as Record<string,unknown>[] ?? [])).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porRegiaoAd: ((d.por_regiao_ad as Record<string,unknown>[] ?? [])).map(r => ({ regiao_ad: String(r.regiao_ad), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porUo: ((d.por_uo as Record<string,unknown>[] ?? [])).map(r => ({ uo: String(r.uo), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porRras: (() => { const raw = ((d.por_rras as Record<string,unknown>[] ?? [])).map(r => ({ rras: normalizeRras(String(r.rras)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.rras); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.rras, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porTipoDespesa: ((d.por_tipo_despesa as Record<string,unknown>[] ?? [])).map(r => ({ tipo_despesa: String(r.tipo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
@@ -2027,7 +2027,7 @@ export default function App() {
         porFavorecido: ((d.por_favorecido as Record<string,unknown>[] ?? [])).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0), contratos: Number(r.contratos ?? 0) })),
         porProjeto: ((d.por_projeto as Record<string,unknown>[] ?? [])).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0) })),
         porUg: ((d.por_ug as Record<string,unknown>[] ?? [])).map(r => ({ ug: String(r.ug), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porRegiaoSa: ((d.por_regiao_sa as Record<string,unknown>[] ?? [])).map(r => ({ regiao_sa: String(r.regiao_sa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porRegiaoSa: ((d.por_regiao_sa as Record<string,unknown>[] ?? [])).map(r => ({ regiao_sa: String(r.regiao_sa), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
       };
       cacheRef.current.set(cacheKey, parsed);
       if (ano === 'todos' && Object.keys(activeFilters).length === 0) setAvailableAnos(parsed.porAno.map(r => r.ano));
@@ -2200,7 +2200,10 @@ export default function App() {
     const nf = { ...filters };
     if (val.length > 0) nf[key] = val; else delete nf[key];
     setFilters(nf);
-    await loadDistincts(nf, anoSel);
+    // Exclude the key being edited so that filter's own options remain unfiltered (enables multi-select)
+    const nfWithoutKey = { ...nf };
+    delete nfWithoutKey[key];
+    await loadDistincts(nfWithoutKey, anoSel);
   };
   const clearFilters = async () => { setFilters({}); await loadDistincts({}, anoSel); };
   const activeFilterCount = Object.values(filters).filter(v => Array.isArray(v) && v.length > 0).length;
@@ -3493,6 +3496,79 @@ export default function App() {
             }
           };
 
+          // ── PDF export (browser print) ─────────────────────────────────
+          const downloadPivotPdf = () => {
+            const dimLabels = pivotDims.map(k => MULTI_PIVOT_DIMS.find(d => d.key === k)?.label ?? k).join(' / ');
+            const valLabel  = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
+            const filterDesc = Object.entries(filters)
+              .filter(([, v]) => Array.isArray(v) && (v as string[]).length > 0)
+              .map(([k, v]) => {
+                const meta = FILTER_META.find(f => f.key === k);
+                return `${meta?.label ?? k}: ${(v as string[]).map(stripNumPrefix).join(', ')}`;
+              }).join(' | ');
+
+            const headerCols = [dimLabels, ...(pivotAnos as number[]).map(String), 'Total Geral'];
+            const headerRow  = headerCols.map((h, i) => `<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('');
+
+            const dataRows = flatRows.map((row, ri) => {
+              const indent = '\u00a0'.repeat(row.level * 4);
+              const label  = indent + (stripNumPrefix(row.label) || '(Vazio)');
+              const bg = row.isLeaf
+                ? (ri % 2 === 0 ? '#fff' : '#f9fafb')
+                : ['#dbeafe','#eff6ff','#f0f9ff','#f0fdf4'][Math.min(row.level, 3)];
+              const fw = row.isLeaf ? 400 : [700,600,600,500][Math.min(row.level, 3)];
+              const yearCells = (pivotAnos as number[]).map(ano =>
+                `<td style="text-align:right">${(row.byYear as Record<number,number>)[ano] ? fmt((row.byYear as Record<number,number>)[ano], 'currency') : '\u2014'}</td>`
+              ).join('');
+              return `<tr style="background:${bg};font-weight:${fw}">
+                <td style="text-align:left;padding-left:${8 + row.level*16}px">${label}</td>${yearCells}
+                <td style="text-align:right;font-weight:700">${fmt(row.total, 'currency')}</td></tr>`;
+            }).join('');
+
+            const grandRow = `<tr style="background:#1a2234;color:#fbbf24;font-weight:700">
+              <td style="text-align:left">TOTAL GERAL</td>
+              ${(pivotAnos as number[]).map(ano => `<td style="text-align:right">${fmt((grandByYear as Record<number,number>)[ano] ?? 0, 'currency')}</td>`).join('')}
+              <td style="text-align:right">${fmt(grandTotal, 'currency')}</td></tr>`;
+
+            const origin = window.location.origin;
+            const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>Tabela Din\u00e2mica \u2014 ${valLabel}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:9px;margin:0;padding:16px;color:#333}
+  .hdr{display:flex;align-items:center;gap:12px;margin-bottom:14px;border-bottom:2px solid #1a2234;padding-bottom:10px}
+  .hdr img{height:44px;object-fit:contain}
+  .hdr-t h1{margin:0;font-size:15px;color:#1a2234}
+  .hdr-t p{margin:3px 0 0;font-size:9px;color:#666}
+  .meta{font-size:8px;color:#888;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:9px}
+  th{background:#1a2234;color:#fff;padding:5px 8px;border:1px solid #334;white-space:nowrap}
+  td{padding:3px 8px;border:1px solid #e5e5e5;white-space:nowrap}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head><body>
+<div class="hdr">
+  <img src="${origin}/img/Bras\u00e3o.png" alt="Bras\u00e3o"/>
+  <img src="${origin}/img/logo.png" alt="Logo"/>
+  <div class="hdr-t">
+    <h1>Controle Or\u00e7ament\u00e1rio \u2014 Tabela Din\u00e2mica</h1>
+    <p>M\u00e9trica: ${valLabel} \u2022 Dimens\u00f5es: ${dimLabels}</p>
+  </div>
+</div>
+${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
+<p class="meta">Gerado em: ${new Date().toLocaleString('pt-BR')} &nbsp;|&nbsp; ${flatRows.length} linhas vis\u00edveis</p>
+<table>
+  <thead><tr>${headerRow}</tr></thead>
+  <tbody>${dataRows}${grandRow}</tbody>
+</table>
+</body></html>`;
+
+            const win = window.open('', '_blank');
+            if (!win) { alert('Permita pop-ups neste site para gerar o PDF'); return; }
+            win.document.open(); win.document.write(html); win.document.close();
+            win.addEventListener('load', () => { win.focus(); win.print(); });
+          };
+
           return (
             <>
               {/* ── Control panel ─────────────────────────────────────── */}
@@ -3536,6 +3612,13 @@ export default function App() {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition-all shadow-sm shrink-0">
                     {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
                     Exportar XLSX
+                  </button>
+
+                  {/* Export PDF */}
+                  <button onClick={downloadPivotPdf} disabled={!pivotMultiRaw.length}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#D64550] text-white text-[11px] font-bold rounded-lg hover:bg-[#b5373f] disabled:opacity-40 transition-all shadow-sm shrink-0">
+                    <Download className="w-3.5 h-3.5" />
+                    Exportar PDF
                   </button>
                 </div>
 
