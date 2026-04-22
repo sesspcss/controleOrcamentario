@@ -441,6 +441,91 @@ const PIVOT_DIMS: { key: string; label: string }[] = [
   { key: 'tipo_despesa',  label: 'Tipo de Despesa'  },
 ];
 
+// Multi-level pivot dimensions (lc131_pivot_multi RPC)
+const MULTI_PIVOT_DIMS: { key: string; label: string }[] = [
+  { key: 'municipio',     label: 'Município'                 },
+  { key: 'drs',           label: 'DRS'                       },
+  { key: 'rras',          label: 'RRAS'                      },
+  { key: 'regiao_ad',     label: 'Região Admin.'             },
+  { key: 'regiao_sa',     label: 'Região de Saúde'           },
+  { key: 'fonte_simpl',   label: 'Fonte (ESTADUAL/FEDERAL)'  },
+  { key: 'grupo_simpl',   label: 'Grupo (Custeio/Invest.)'   },
+  { key: 'tipo_despesa',  label: 'Tipo de Despesa'           },
+  { key: 'rotulo',        label: 'Rótulo'                    },
+  { key: 'grupo_despesa', label: 'Grupo de Despesa (cód.)'   },
+  { key: 'elemento',      label: 'Elemento'                  },
+];
+
+// ── Multi-level pivot tree types and helpers ──────────────────────────────
+
+type MultiPivotRow = {
+  d1: string; d2: string|null; d3: string|null; d4: string|null;
+  ano_referencia: number; empenhado: number; liquidado: number; pago_total: number;
+};
+
+type PivotTreeNode = {
+  key: string; label: string; level: number; isLeaf: boolean;
+  byYear: Record<number, number>; total: number; children: PivotTreeNode[];
+};
+
+type FlatPivotRow = {
+  key: string; label: string; level: number; isLeaf: boolean;
+  hasChildren: boolean; byYear: Record<number, number>; total: number;
+};
+
+function buildPivotTree(
+  rows: MultiPivotRow[], numDims: number,
+  valueKey: 'pago_total' | 'empenhado' | 'liquidado',
+  level = 0, parentKey = '',
+): PivotTreeNode[] {
+  if (level >= numDims || !rows.length) return [];
+  const dk = (['d1','d2','d3','d4'] as const)[level];
+  const map = new Map<string, { rows: MultiPivotRow[]; byYear: Record<number,number>; total: number }>();
+  for (const row of rows) {
+    const label = String(row[dk] ?? '(Vazio)');
+    if (!map.has(label)) map.set(label, { rows: [], byYear: {}, total: 0 });
+    const n = map.get(label)!;
+    n.rows.push(row);
+    const v = Number(row[valueKey] ?? 0);
+    n.byYear[row.ano_referencia] = (n.byYear[row.ano_referencia] ?? 0) + v;
+    n.total += v;
+  }
+  const isLeaf = level === numDims - 1;
+  return Array.from(map.entries())
+    .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+    .map(([label, d]) => {
+      const key = parentKey ? `${parentKey}\x00${label}` : label;
+      return {
+        key, label, level, isLeaf,
+        byYear: d.byYear, total: d.total,
+        children: isLeaf ? [] : buildPivotTree(d.rows, numDims, valueKey, level + 1, key),
+      };
+    });
+}
+
+function flattenVisiblePivot(
+  nodes: PivotTreeNode[], expanded: Set<string>, result: FlatPivotRow[] = [],
+): FlatPivotRow[] {
+  for (const node of nodes) {
+    result.push({
+      key: node.key, label: node.label, level: node.level,
+      isLeaf: node.isLeaf, hasChildren: node.children.length > 0,
+      byYear: node.byYear, total: node.total,
+    });
+    if (!node.isLeaf && expanded.has(node.key) && node.children.length > 0) {
+      flattenVisiblePivot(node.children, expanded, result);
+    }
+  }
+  return result;
+}
+
+function collectAllPivotKeys(nodes: PivotTreeNode[], result: string[] = []): string[] {
+  for (const n of nodes) {
+    if (n.children.length > 0) { result.push(n.key); collectAllPivotKeys(n.children, result); }
+  }
+  return result;
+}
+
 // Filters shown in the pivot's own filter panel (subset of FILTER_META)
 const PIVOT_FILTER_KEYS = new Set(['p_drs','p_rras','p_regiao_ad','p_regiao_sa','p_municipio','p_grupo_despesa','p_tipo_despesa','p_rotulo','p_elemento']);
 
@@ -1880,18 +1965,14 @@ export default function App() {
   const [xlsxLoading, setXlsxLoading]     = useState(false);
   const DETAIL_PAGE_SIZE = 200;
 
-  // -- Pivot tab --
-  type PivotRawRow = { dim1: string; subdim: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
-  const [pivotRaw, setPivotRaw]             = useState<PivotRawRow[]>([]);
+  // -- Pivot tab (multi-level, Excel-style) --
+  const [pivotDims, setPivotDims]           = useState<string[]>(['municipio','fonte_simpl','grupo_simpl','rotulo']);
+  const [pivotMultiRaw, setPivotMultiRaw]   = useState<MultiPivotRow[]>([]);
   const [pivotLoading, setPivotLoading]     = useState(false);
   const [pivotError, setPivotError]         = useState<string|null>(null);
   const [pivotExpanded, setPivotExpanded]   = useState<Set<string>>(new Set());
   const [pivotValueKey, setPivotValueKey]   = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
   const [pivotXlsxLoading, setPivotXlsxLoading] = useState(false);
-  const [pivotRowDim, setPivotRowDim]       = useState<string>('municipio');
-  const [pivotSubDim, setPivotSubDim]       = useState<string>('tipo_despesa');
-  const [pivotFilters, setPivotFilters]     = useState<Partial<Record<DetailFilterKey, string[]>>>({});
-  const [pivotFiltersOpen, setPivotFiltersOpen] = useState(false);
 
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
@@ -2062,27 +2143,38 @@ export default function App() {
     return () => clearTimeout(detailDeb.current);
   }, [filters, anoSel, activeTab]);
 
-  // -- Load pivot --
+  // -- Load multi-level pivot (lc131_pivot_multi RPC) --
   const loadPivot = useCallback(async () => {
     setPivotLoading(true); setPivotError(null);
     try {
-      const SKIP_KEYS = new Set(['p_codigo_ug']);
-      const params: Record<string, unknown> = { p_dim: pivotRowDim, p_subdim: pivotSubDim };
+      const dims = [...pivotDims, '', '', '', ''].slice(0, 4);
+      const params: Record<string, unknown> = {
+        p_dim1: dims[0], p_dim2: dims[1], p_dim3: dims[2], p_dim4: dims[3],
+      };
       if (anoSel !== 'todos') params.p_ano = Number(anoSel);
+      // Pass raw filter values (not expanded PostgREST patterns) to the RPC
       Object.entries(filters).forEach(([k, v]) => {
-        if (SKIP_KEYS.has(k)) return;
-        if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
+        if (Array.isArray(v) && v.length > 0) params[k] = v.join('|');
       });
-      // Function returns json (single value) — no 1000-row REST limit
-      const { data, error } = await supabase.rpc('lc131_pivot', params);
+      const { data, error } = await supabase.rpc('lc131_pivot_multi', params);
       if (error) throw new Error(error.message);
-      setPivotRaw(Array.isArray(data) ? data : []);
+      setPivotMultiRaw(Array.isArray(data) ? (data as Record<string,unknown>[]).map(r => ({
+        d1: String(r.d1 ?? ''),
+        d2: r.d2 != null ? String(r.d2) : null,
+        d3: r.d3 != null ? String(r.d3) : null,
+        d4: r.d4 != null ? String(r.d4) : null,
+        ano_referencia: Number(r.ano_referencia),
+        empenhado:  Number(r.empenhado  ?? 0),
+        liquidado:  Number(r.liquidado  ?? 0),
+        pago_total: Number(r.pago_total ?? 0),
+      })) : []);
+      setPivotExpanded(new Set());
     } catch (e: unknown) {
       setPivotError((e as Error).message);
     } finally {
       setPivotLoading(false);
     }
-  }, [filters, anoSel, pivotRowDim, pivotSubDim]);
+  }, [filters, anoSel, pivotDims]);
 
   useEffect(() => {
     if (activeTab !== 'pivot') return;
@@ -3478,68 +3570,73 @@ export default function App() {
 
         {/* ---------- TAB: TABELA DINÂMICA ---------- */}
         {activeTab === 'pivot' && (() => {
-          const rowDimLabel = PIVOT_DIMS.find(d => d.key === pivotRowDim)?.label ?? pivotRowDim;
-          const subDimLabel = PIVOT_DIMS.find(d => d.key === pivotSubDim)?.label ?? pivotSubDim;
+          // ── Derived data ───────────────────────────────────────────────
+          const numDims = pivotDims.length;
+          const pivotAnos = Array.from(new Set(pivotMultiRaw.map(r => r.ano_referencia))).sort((a, b) => a - b);
+          const tree = buildPivotTree(pivotMultiRaw, numDims, pivotValueKey);
+          const flatRows = flattenVisiblePivot(tree, pivotExpanded);
+          const allExpandableKeys = collectAllPivotKeys(tree);
 
-          // Derive years present in the data
-          const pivotAnos = Array.from(new Set(pivotRaw.map(r => r.ano_referencia))).sort((a, b) => a - b);
-
-          // Build hierarchical structure: dim1 → subdims → byYear
-          type PivotGroup = {
-            dim1: string;
-            byYear: Record<number, number>;
-            total: number;
-            subs: { subdim: string; byYear: Record<number, number>; total: number }[];
-          };
-          const groupMap = new Map<string, PivotGroup>();
-          // Normalize fonte_simpl values from DB (Tesouro/Federal/Demais → ESTADUAL/FEDERAL)
-          const normFonte = (s: string) => (s === 'Federal' || s === 'FEDERAL') ? 'FEDERAL' : 'ESTADUAL';
-          for (const row of pivotRaw) {
-            const v = (row[pivotValueKey] as number) ?? 0;
-            const dim1 = pivotRowDim === 'fonte_simpl' ? normFonte(row.dim1) : row.dim1;
-            const subdim = pivotSubDim === 'fonte_simpl' ? normFonte(row.subdim) : row.subdim;
-            if (!groupMap.has(dim1)) {
-              groupMap.set(dim1, { dim1, byYear: {}, total: 0, subs: [] });
-            }
-            const grp = groupMap.get(dim1)!;
-            grp.byYear[row.ano_referencia] = (grp.byYear[row.ano_referencia] ?? 0) + v;
-            grp.total += v;
-            let sub = grp.subs.find(r => r.subdim === subdim);
-            if (!sub) { sub = { subdim, byYear: {}, total: 0 }; grp.subs.push(sub); }
-            sub.byYear[row.ano_referencia] = (sub.byYear[row.ano_referencia] ?? 0) + v;
-            sub.total += v;
-          }
-          const groupRows = Array.from(groupMap.values())
-            .sort((a, b) => a.dim1.localeCompare(b.dim1, 'pt-BR'));
-          groupRows.forEach(g => g.subs.sort((a, b) => b.total - a.total));
-
-          // Grand totals
+          // Grand totals from raw data
           const grandByYear: Record<number, number> = {};
           let grandTotal = 0;
-          for (const g of groupRows) {
-            for (const ano of pivotAnos) { grandByYear[ano] = (grandByYear[ano] ?? 0) + (g.byYear[ano] ?? 0); }
-            grandTotal += g.total;
+          for (const row of pivotMultiRaw) {
+            const v = Number(row[pivotValueKey] ?? 0);
+            grandByYear[row.ano_referencia] = (grandByYear[row.ano_referencia] ?? 0) + v;
+            grandTotal += v;
           }
 
-          // XLSX export
+          // Available dims to add (not already selected)
+          const availableToAdd = MULTI_PIVOT_DIMS.filter(d => !pivotDims.includes(d.key));
+          const COL_W = 155;
+          const INDENT_PX = 20;
+
+          // Level style helpers
+          const levelStyle = (lvl: number, isLeaf: boolean, rowIdx: number) => {
+            if (isLeaf) return {
+              rowBg: rowIdx % 2 === 0 ? '#ffffff' : '#f9fafb',
+              textColor: '#374151', fontWeight: 400, fontSize: '11.5px',
+            };
+            const palettes = [
+              { rowBg: '#dbeafe', textColor: '#1e3a5f', fontWeight: 700, fontSize: '13px' },
+              { rowBg: '#eff6ff', textColor: '#1e40af', fontWeight: 600, fontSize: '12px' },
+              { rowBg: '#f0f9ff', textColor: '#0369a1', fontWeight: 600, fontSize: '11.5px' },
+              { rowBg: '#f0fdf4', textColor: '#14532d', fontWeight: 500, fontSize: '11.5px' },
+            ];
+            return palettes[Math.min(lvl, palettes.length - 1)];
+          };
+
+          const totalTextColor = (lvl: number, isLeaf: boolean) => {
+            if (isLeaf) return '#1f2937';
+            return ['#1d4ed8', '#1d4ed8', '#0369a1', '#14532d'][Math.min(lvl, 3)];
+          };
+
+          // ── XLSX export ────────────────────────────────────────────────
           const downloadPivotXlsx = async () => {
             setPivotXlsxLoading(true);
             try {
               const XLSX = await import('xlsx');
-              const valLabel = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
-              const header = [rowDimLabel, subDimLabel, ...pivotAnos.map(String), 'Total Geral'];
-              const rows: (string | number)[][] = [header];
-              for (const g of groupRows) {
-                rows.push([g.dim1, `TOTAL ${g.dim1}`, ...pivotAnos.map(a => g.byYear[a] ?? 0), g.total]);
-                for (const sub of g.subs) {
-                  rows.push([g.dim1, sub.subdim, ...pivotAnos.map(a => sub.byYear[a] ?? 0), sub.total]);
+              const dimLabels = pivotDims.map(k => MULTI_PIVOT_DIMS.find(d => d.key === k)?.label ?? k);
+              const valLabel  = pivotValueKey === 'pago_total' ? 'Pago Total' : pivotValueKey === 'empenhado' ? 'Empenhado' : 'Liquidado';
+              const header    = [...dimLabels, ...pivotAnos.map(String), 'Total Geral'];
+              const aoa: (string | number)[][] = [header];
+
+              const addNodeRows = (nodes: PivotTreeNode[], depthCols: string[]) => {
+                for (const node of nodes) {
+                  const cols: (string | number)[] = [...depthCols, node.label];
+                  while (cols.length < numDims) cols.push('');
+                  const yearVals = pivotAnos.map(a => node.byYear[a] ?? 0);
+                  aoa.push([...cols, ...yearVals, node.total]);
+                  if (node.children.length) addNodeRows(node.children, [...depthCols, node.label]);
                 }
-              }
-              rows.push(['TOTAL GERAL', '', ...pivotAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
-              const ws = XLSX.utils.aoa_to_sheet(rows);
+              };
+              addNodeRows(tree, []);
+              aoa.push(['TOTAL GERAL', ...Array(numDims - 1).fill(''), ...pivotAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
+
+              const ws = XLSX.utils.aoa_to_sheet(aoa);
               const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, valLabel);
-              XLSX.writeFile(wb, `pivot_${pivotRowDim}_${pivotSubDim}_${pivotValueKey}.xlsx`);
+              XLSX.utils.book_append_sheet(wb, ws, valLabel.substring(0, 31));
+              XLSX.writeFile(wb, `pivot_multi_${valLabel.toLowerCase().replace(/\s/g,'_')}.xlsx`);
             } catch (e: unknown) {
               alert('Erro ao gerar XLSX: ' + (e as Error).message);
             } finally {
@@ -3547,183 +3644,207 @@ export default function App() {
             }
           };
 
-          const COL_W = 180;
-          const pivotFilterCount = 0; // pivot uses global filter bar only
-
           return (
             <>
-              {/* ── Painel de controle unificado ── */}
-              <div className="bg-white border border-[#E5E5E5] rounded-xl shadow-sm overflow-visible">
+              {/* ── Control panel ─────────────────────────────────────── */}
+              <div className="bg-white border border-[#E5E5E5] rounded-xl shadow-sm">
 
-                {/* Linha 1: Métrica | Agrupar | Ações | XLSX | Contador */}
+                {/* Row 1: Metric | Expand/Collapse | Count | Export */}
                 <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b border-[#F0F0F0]">
-
-                  {/* Métrica */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Métrica</span>
-                    <div className="flex items-center gap-1">
-                      {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
-                        <button key={k} onClick={() => setPivotValueKey(k)}
-                          className={cn('px-2.5 py-1 text-[11px] font-bold rounded-md transition-all',
-                            pivotValueKey === k
-                              ? 'bg-[#118DFF] text-white shadow-sm'
-                              : 'bg-[#F3F4F6] text-[#666] hover:bg-[#E5E7EB]')}>
-                          {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Metric */}
+                  <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Métrica</span>
+                  <div className="flex items-center gap-1">
+                    {(['pago_total','empenhado','liquidado'] as const).map(k => (
+                      <button key={k} onClick={() => setPivotValueKey(k)}
+                        className={cn('px-2.5 py-1 text-[11px] font-bold rounded-md transition-all',
+                          pivotValueKey === k ? 'bg-[#118DFF] text-white shadow-sm' : 'bg-[#F3F4F6] text-[#666] hover:bg-[#E5E7EB]')}>
+                        {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
+                      </button>
+                    ))}
                   </div>
 
                   <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
 
-                  {/* Agrupar */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Agrupar</span>
-                    <select
-                      value={pivotRowDim}
-                      onChange={e => {
-                        const nd = e.target.value;
-                        setPivotRowDim(nd);
-                        if (pivotSubDim === nd) setPivotSubDim(nd === 'tipo_despesa' ? 'municipio' : 'tipo_despesa');
-                        setPivotExpanded(new Set());
-                      }}
-                      className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
-                      {PIVOT_DIMS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
-                    </select>
-                    <ChevronRight className="w-3 h-3 text-[#BBB] shrink-0" />
-                    <select
-                      value={pivotSubDim}
-                      onChange={e => setPivotSubDim(e.target.value)}
-                      className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
-                      {PIVOT_DIMS.filter(d => d.key !== pivotRowDim).map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
-
-                  {/* Expandir / Recolher */}
-                  <button onClick={() => setPivotExpanded(new Set(groupRows.map(g => g.dim1)))}
+                  {/* Expand / Collapse */}
+                  <button onClick={() => setPivotExpanded(new Set(allExpandableKeys))}
                     className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
-                    + Todos
+                    + Expandir Tudo
                   </button>
                   <button onClick={() => setPivotExpanded(new Set())}
                     className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
-                    − Todos
+                    − Recolher Tudo
                   </button>
 
                   <div className="flex-1" />
 
-                  {/* Contador */}
+                  {/* Counter */}
                   <span className="text-[11px] text-[#BBB] font-mono shrink-0">
-                    {pivotLoading
-                      ? <Spinner size={3} />
-                      : `${fmt(groupRows.length)} ${rowDimLabel.toLowerCase()}s`}
+                    {pivotLoading ? <Spinner size={3} /> : `${fmt(tree.length)} grupos · ${fmt(pivotMultiRaw.length)} combinações`}
                   </span>
 
-                  {/* Exportar XLSX */}
-                  <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotRaw.length}
+                  {/* Export XLSX */}
+                  <button onClick={downloadPivotXlsx} disabled={pivotXlsxLoading || !pivotMultiRaw.length}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition-all shadow-sm shrink-0">
                     {pivotXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
                     Exportar XLSX
                   </button>
                 </div>
 
+                {/* Row 2: Campos de linha (ordered dim chips) */}
+                <div className="flex items-center gap-2 flex-wrap px-4 py-2.5">
+                  <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Campos:</span>
+
+                  {pivotDims.map((dimKey, i) => {
+                    const dim = MULTI_PIVOT_DIMS.find(d => d.key === dimKey);
+                    const canUp   = i > 0;
+                    const canDown = i < pivotDims.length - 1;
+                    const canRemove = pivotDims.length > 1;
+                    return (
+                      <div key={dimKey}
+                        className="flex items-center gap-1.5 bg-[#EEF4FF] border border-[#C7D8FF] rounded-lg pl-2.5 pr-1.5 py-1">
+                        <span className="text-[11px] font-semibold text-[#1e40af] whitespace-nowrap">{dim?.label ?? dimKey}</span>
+                        <div className="flex flex-col">
+                          <button title="Mover para cima" disabled={!canUp}
+                            onClick={() => { const n=[...pivotDims]; [n[i-1],n[i]]=[n[i],n[i-1]]; setPivotDims(n); setPivotExpanded(new Set()); }}
+                            className="text-[#93c5fd] hover:text-[#1e40af] disabled:opacity-20 leading-none px-0.5 text-[10px] font-bold">▲</button>
+                          <button title="Mover para baixo" disabled={!canDown}
+                            onClick={() => { const n=[...pivotDims]; [n[i+1],n[i]]=[n[i],n[i+1]]; setPivotDims(n); setPivotExpanded(new Set()); }}
+                            className="text-[#93c5fd] hover:text-[#1e40af] disabled:opacity-20 leading-none px-0.5 text-[10px] font-bold">▼</button>
+                        </div>
+                        <button title="Remover campo" disabled={!canRemove}
+                          onClick={() => { setPivotDims(pivotDims.filter((_,j) => j !== i)); setPivotExpanded(new Set()); }}
+                          className="w-4 h-4 flex items-center justify-center rounded-full text-[#93c5fd] hover:text-red-500 hover:bg-red-50 disabled:opacity-20 text-[11px] font-bold transition-colors">✕</button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add dimension */}
+                  {availableToAdd.length > 0 && pivotDims.length < 4 && (
+                    <select
+                      value=""
+                      onChange={e => { if (e.target.value) { setPivotDims([...pivotDims, e.target.value]); setPivotExpanded(new Set()); e.currentTarget.value = ''; } }}
+                      className="text-[11px] border border-dashed border-[#C7D8FF] rounded-lg px-2.5 py-1 bg-white text-[#1e40af] font-semibold focus:outline-none focus:ring-1 focus:ring-[#118DFF] cursor-pointer">
+                      <option value="">+ Adicionar campo…</option>
+                      {availableToAdd.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                    </select>
+                  )}
+
+                  <div className="flex-1" />
+
+                  {/* Refresh */}
+                  <button onClick={loadPivot} disabled={pivotLoading}
+                    className="flex items-center gap-1 px-3 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] disabled:opacity-50 transition-all shrink-0">
+                    {pivotLoading ? <Spinner size={3} /> : <RefreshCw className="w-3 h-3" />} Atualizar
+                  </button>
+                </div>
               </div>
 
+              {/* ── Data table ────────────────────────────────────────── */}
               <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
                 {pivotError ? (
                   <div className="p-5 flex items-start gap-2 text-red-400">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-sm">Erro</p>
-                      <p className="text-xs font-mono mt-0.5">{pivotError.includes('Could not find the function') ? 'Função lc131_pivot não encontrada. Execute scripts/create-pivot-fn.sql no Supabase SQL Editor.' : pivotError}</p>
+                      <p className="font-semibold text-sm">Erro ao carregar a Tabela Dinâmica</p>
+                      <p className="text-xs font-mono mt-0.5 text-[#888]">
+                        {pivotError.includes('Could not find the function') || pivotError.includes('lc131_pivot_multi')
+                          ? 'Função lc131_pivot_multi não encontrada. Execute scripts/create-pivot-multi-fn.sql no Supabase SQL Editor e tente novamente.'
+                          : pivotError}
+                      </p>
                       <button onClick={loadPivot} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
                     </div>
                   </div>
-                ) : pivotLoading && !pivotRaw.length ? (
+                ) : pivotLoading && !pivotMultiRaw.length ? (
                   <div className="py-16 flex items-center justify-center"><Spinner size={8} /></div>
                 ) : (
                   <div className="overflow-auto" style={{ maxHeight: '72vh' }}>
                     <table className="border-collapse w-full" style={{ fontSize: '12px' }}>
                       <thead className="sticky top-0 z-20">
                         <tr style={{ background: '#1a2234' }}>
+                          {/* Sticky label column */}
                           <th className="sticky left-0 z-30 px-4 py-3 text-left font-semibold whitespace-nowrap border-r"
-                            style={{ minWidth: '240px', background: '#1a2234', color: '#94a3b8', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', borderColor: 'rgba(255,255,255,0.08)' }}>
-                            {rowDimLabel} / {subDimLabel}
+                            style={{ minWidth: '280px', background: '#1a2234', color: '#94a3b8', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', borderColor: 'rgba(255,255,255,0.08)' }}>
+                            {pivotDims.map(k => MULTI_PIVOT_DIMS.find(d => d.key === k)?.label ?? k).join(' / ')}
                           </th>
+                          {/* Year columns */}
                           {pivotAnos.map(ano => (
                             <th key={ano} className="px-4 py-3 text-right font-semibold whitespace-nowrap border-r"
-                              style={{ minWidth: `${COL_W}px`, color: '#e2e8f0', fontSize: '13px', letterSpacing: '0.03em', borderColor: 'rgba(255,255,255,0.08)' }}>{ano}</th>
+                              style={{ minWidth: `${COL_W}px`, color: '#e2e8f0', fontSize: '13px', letterSpacing: '0.03em', borderColor: 'rgba(255,255,255,0.08)' }}>
+                              {ano}
+                            </th>
                           ))}
+                          {/* Total column */}
                           <th className="px-4 py-3 text-right font-bold whitespace-nowrap"
-                            style={{ minWidth: `${COL_W}px`, color: '#fbbf24', fontSize: '13px' }}>Total Geral</th>
+                            style={{ minWidth: `${COL_W}px`, color: '#fbbf24', fontSize: '13px' }}>
+                            Total Geral
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {groupRows.map((grp, gi) => {
-                          const isOpen = pivotExpanded.has(grp.dim1);
+                        {flatRows.map((row, ri) => {
+                          const st      = levelStyle(row.level, row.isLeaf, ri);
+                          const indent  = row.level * INDENT_PX;
+                          const isOpen  = !row.isLeaf && pivotExpanded.has(row.key);
+                          const toggleExpand = row.hasChildren ? () => {
+                            setPivotExpanded(prev => {
+                              const next = new Set(prev);
+                              isOpen ? next.delete(row.key) : next.add(row.key);
+                              return next;
+                            });
+                          } : undefined;
+
                           return (
-                            <React.Fragment key={grp.dim1}>
-                              {/* Primary dimension row */}
-                              <tr
-                                className="cursor-pointer select-none"
-                                style={{ background: isOpen ? '#dbeafe' : gi % 2 === 0 ? '#f1f5fd' : '#e8f0fe' }}
-                                onClick={() => setPivotExpanded(prev => {
-                                  const next = new Set(prev);
-                                  isOpen ? next.delete(grp.dim1) : next.add(grp.dim1);
-                                  return next;
-                                })}
-                              >
-                                <td className="sticky left-0 z-10 px-4 py-2.5 font-bold whitespace-nowrap border-r border-b"
-                                  style={{ minWidth: '240px', background: isOpen ? '#dbeafe' : gi % 2 === 0 ? '#f1f5fd' : '#e8f0fe', color: '#1e3a5f', borderColor: '#c7d8f0', fontSize: '12.5px' }}>
-                                  <span className="flex items-center gap-2">
-                                    <span style={{ color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
-                                      {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                    </span>
-                                    {stripNumPrefix(grp.dim1) || grp.dim1 || '(Vazio)'}
+                            <tr key={row.key}
+                              onClick={toggleExpand}
+                              style={{ background: st.rowBg, cursor: row.hasChildren ? 'pointer' : 'default' }}>
+                              {/* Label cell */}
+                              <td className="sticky left-0 z-10 py-2 whitespace-nowrap border-r border-b select-none"
+                                style={{
+                                  background: st.rowBg, color: st.textColor,
+                                  fontWeight: st.fontWeight, fontSize: st.fontSize,
+                                  paddingLeft: `${14 + indent}px`, paddingRight: '12px',
+                                  borderColor: '#e5eaf2', minWidth: '280px',
+                                }}>
+                                <span className="flex items-center gap-1.5">
+                                  {row.hasChildren ? (
+                                    isOpen
+                                      ? <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                                      : <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                                  ) : (
+                                    <span style={{ width: '3px', height: '14px', borderRadius: '2px', background: '#93c5fd', flexShrink: 0, display: 'inline-block', marginRight: '2px' }} />
+                                  )}
+                                  <span className="truncate" style={{ maxWidth: '500px' }} title={row.label}>
+                                    {stripNumPrefix(row.label) || '(Vazio)'}
                                   </span>
+                                </span>
+                              </td>
+                              {/* Year cells */}
+                              {pivotAnos.map(ano => (
+                                <td key={ano} className="px-4 py-2 text-right font-mono whitespace-nowrap border-r border-b"
+                                  style={{
+                                    color: row.isLeaf ? '#4b5563' : st.textColor,
+                                    fontWeight: row.level < 2 ? 600 : 400,
+                                    borderColor: '#e5eaf2', letterSpacing: '-0.01em',
+                                  }}>
+                                  {row.byYear[ano]
+                                    ? fmt(row.byYear[ano], 'currency')
+                                    : <span style={{ color: '#d1d5db' }}>—</span>}
                                 </td>
-                                {pivotAnos.map(ano => (
-                                  <td key={ano} className="px-4 py-2.5 text-right font-mono font-semibold whitespace-nowrap border-r border-b"
-                                    style={{ color: '#1e3a5f', borderColor: '#c7d8f0', letterSpacing: '-0.01em' }}>
-                                    {grp.byYear[ano] ? fmt(grp.byYear[ano], 'currency') : <span style={{ color: '#c0cfe8' }}>—</span>}
-                                  </td>
-                                ))}
-                                <td className="px-4 py-2.5 text-right font-mono font-bold whitespace-nowrap border-b"
-                                  style={{ color: '#1d4ed8', borderColor: '#c7d8f0' }}>
-                                  {fmt(grp.total, 'currency')}
-                                </td>
-                              </tr>
-                              {/* Sub-dimension rows */}
-                              {isOpen && grp.subs.map((sub, si) => (
-                                <tr key={sub.subdim} style={{ background: si % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
-                                  <td className="sticky left-0 z-10 px-4 py-2 whitespace-nowrap border-r border-b"
-                                    style={{ minWidth: '240px', background: si % 2 === 0 ? '#ffffff' : '#f9fafb', color: '#374151', borderColor: '#e5eaf2', fontSize: '12px' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '24px' }}>
-                                      <span style={{ width: '3px', height: '14px', borderRadius: '2px', background: '#93c5fd', flexShrink: 0 }} />
-                                      {stripNumPrefix(sub.subdim) || sub.subdim || '(Vazio)'}
-                                    </span>
-                                  </td>
-                                  {pivotAnos.map(ano => (
-                                    <td key={ano} className="px-4 py-2 text-right font-mono whitespace-nowrap border-r border-b"
-                                      style={{ color: '#4b5563', borderColor: '#e5eaf2', letterSpacing: '-0.01em' }}>
-                                      {sub.byYear[ano] ? fmt(sub.byYear[ano], 'currency') : <span style={{ color: '#d1d5db' }}>—</span>}
-                                    </td>
-                                  ))}
-                                  <td className="px-4 py-2 text-right font-mono font-semibold whitespace-nowrap border-b"
-                                    style={{ color: '#1f2937', borderColor: '#e5eaf2' }}>
-                                    {fmt(sub.total, 'currency')}
-                                  </td>
-                                </tr>
                               ))}
-                            </React.Fragment>
+                              {/* Total cell */}
+                              <td className="px-4 py-2 text-right font-mono font-semibold whitespace-nowrap border-b"
+                                style={{ color: totalTextColor(row.level, row.isLeaf), borderColor: '#e5eaf2' }}>
+                                {fmt(row.total, 'currency')}
+                              </td>
+                            </tr>
                           );
                         })}
+
                         {/* Grand total row */}
-                        {groupRows.length > 0 && (
+                        {flatRows.length > 0 && (
                           <tr style={{ background: '#1a2234', borderTop: '2px solid #334155' }}>
                             <td className="sticky left-0 z-10 px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap"
-                              style={{ minWidth: '240px', background: '#1a2234', color: '#94a3b8', fontSize: '11px' }}>
+                              style={{ minWidth: '280px', background: '#1a2234', color: '#94a3b8', fontSize: '11px' }}>
                               Total Geral
                             </td>
                             {pivotAnos.map(ano => (
@@ -3738,10 +3859,20 @@ export default function App() {
                             </td>
                           </tr>
                         )}
-                        {!pivotLoading && !pivotRaw.length && (
-                          <tr><td colSpan={pivotAnos.length + 2} className="py-16 text-center" style={{ color: '#9ca3af' }}>
-                            <Database className="w-8 h-8 mx-auto mb-2 opacity-25" /><p style={{ fontSize: '13px' }}>Nenhum dado encontrado</p>
-                          </td></tr>
+
+                        {/* Empty state */}
+                        {!pivotLoading && !pivotMultiRaw.length && (
+                          <tr>
+                            <td colSpan={pivotAnos.length + 2} className="py-16 text-center" style={{ color: '#9ca3af' }}>
+                              <Database className="w-8 h-8 mx-auto mb-2 opacity-25" />
+                              <p style={{ fontSize: '13px', fontWeight: 500 }}>Nenhum dado encontrado</p>
+                              <p style={{ fontSize: '11px', marginTop: '4px' }}>
+                                Verifique os filtros ou execute{' '}
+                                <code className="bg-gray-100 px-1 rounded">scripts/create-pivot-multi-fn.sql</code>
+                                {' '}no Supabase SQL Editor
+                              </p>
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -3751,6 +3882,8 @@ export default function App() {
             </>
           );
         })()}
+
+
 
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
