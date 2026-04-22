@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen, ExternalLink,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen, ExternalLink, Info,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -603,17 +603,19 @@ function Card({ title, children, badge, noPad, icon, info }: {
               onClick={() => setShowInfo(v => !v)}
               title="Como este gráfico é calculado"
               className={cn(
-                'w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors',
-                showInfo ? 'bg-[#118DFF] text-white' : 'bg-[#F0F0F0] text-[#888] hover:bg-[#118DFF] hover:text-white'
+                'w-6 h-6 rounded-full flex items-center justify-center transition-colors',
+                showInfo ? 'text-[#118DFF]' : 'text-[#B0B0B0] hover:text-[#118DFF]'
               )}>
-              ⓘ
+              <Info className="w-4 h-4" />
             </button>
             {showInfo && (
-              <div className="absolute right-0 top-7 z-50 w-72 bg-white border border-[#E5E5E5] rounded-xl shadow-2xl p-3.5 text-[11px] text-[#444] leading-relaxed">
-                <div className="flex items-center gap-1.5 mb-2 border-b border-[#F0F0F0] pb-2">
+              <div className="absolute right-0 top-8 z-[200] w-80 bg-white border border-[#E0E0E0] rounded-xl shadow-2xl text-[11px] text-[#444] leading-relaxed overflow-hidden"
+                style={{ maxHeight: '70vh' }}>
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#F5F9FF] border-b border-[#E0E0E0]">
+                  <Info className="w-3.5 h-3.5 text-[#118DFF] shrink-0" />
                   <span className="text-[#118DFF] font-bold text-[12px]">Como este gráfico é calculado</span>
                 </div>
-                <div className="whitespace-pre-wrap">{info}</div>
+                <div className="px-4 py-3 overflow-y-auto whitespace-pre-wrap" style={{ maxHeight: 'calc(70vh - 40px)' }}>{info}</div>
               </div>
             )}
           </div>
@@ -2564,12 +2566,12 @@ export default function App() {
             {/* DRS + Municípios resumo */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 DRS  - Empenhado" icon={<MapPin className="w-4 h-4" />}
+                <Card title="Top 5 DRS" icon={<MapPin className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">{data.porDrs.length}</span>}
                   info={"Ranking das 5 Diretorias Regionais de Saúde (DRS) com maior Empenhado, com barras agrupadas mostrando os 3 estágios.\n\nEmpenhado = total comprometido por empenho no período.\nLiquidado = valor cujo serviço/bem foi verificado como entregue.\nPago Total = pago no ano + pago_anos_anteriores (restos a pagar).\n\nDados: RPC lc131_dashboard, campo por_drs. Os dados são ordenados do maior para o menor empenhado."}>
                   <HGroupedBarChart data={data.porDrs.slice(0,5) as unknown as Record<string,unknown>[]} yKey="drs" series={S3} height={220} />
                 </Card>
-                <Card title="Top 5 Municípios - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                <Card title="Top 5 Municípios" icon={<Building2 className="w-4 h-4" />}
                   badge={<span className="text-[10px] font-bold text-[#1AAB40] bg-green-50 px-1.5 py-0.5 rounded">{data.porMunic.length}</span>}
                   info={"Ranking dos 5 municípios com maior valor empenhado no período selecionado.\n\nFórmula: soma do campo empenhado agrupado por municipio.\n\nCada barra representa o total empenhado do município, com cores diferentes para facilitar a distinção. Dados: RPC lc131_dashboard, campo por_munic."}>
                   <div className="h-[220px]">
@@ -2592,7 +2594,7 @@ export default function App() {
             {/* Grupo detalhado + Fonte detalhada */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Grupos Detalhados  - Emp. vs Liq. vs Pago" icon={<BarChart3 className="w-4 h-4" />}
+                <Card title="Top 5 Grupos Detalhados" icon={<BarChart3 className="w-4 h-4" />}
                   info={"Ranking dos 5 grupos orçamentários com maior Empenhado, com barras agrupadas para os 3 estágios da despesa.\n\nGrupos: 1-Pessoal, 2-Juros, 3-Outras Despesas Correntes, 4-Investimentos, 5-Inversões Financeiras.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_grupo, RPC lc131_dashboard."}>
                   <HGroupedBarChart
                     data={data.porGrupo.slice(0,5) as unknown as Record<string,unknown>[]}
@@ -2601,7 +2603,7 @@ export default function App() {
                     height={220}
                   />
                 </Card>
-                <Card title="Top 5 Fontes Detalhadas  - Empenhado" icon={<Database className="w-4 h-4" />}
+                <Card title="Top 5 Fontes de Recursos" icon={<Database className="w-4 h-4" />}
                   info={"Ranking das 5 fontes de recurso com maior Empenhado.\n\nEmpenhado = total comprometido pela fonte de financiamento.\nPago Total = pago no ano + pago_anos_anteriores (restos a pagar).\n\nDados: campo codigo_nome_fonte_recurso, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porFonte.slice(0,5) as unknown as Record<string,unknown>[]} yKey="fonte_recurso" series={S2} height={200} />
                 </Card>
@@ -2611,11 +2613,11 @@ export default function App() {
             {/* Elemento + UO */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Elementos  - Empenhado" icon={<Database className="w-4 h-4" />}
+                <Card title="Top 5 Elementos" icon={<Database className="w-4 h-4" />}
                   info={"Ranking dos 5 elementos de despesa com maior Empenhado. O elemento especifica a natureza do gasto (ex: Outros Serviços de Terceiros, Material de Consumo).\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_elemento, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porElemento.slice(0,5) as unknown as Record<string,unknown>[]} yKey="elemento" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 UO  - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                <Card title="Top 5 Unidades Orçamentárias" icon={<Building2 className="w-4 h-4" />}
                   info={"Ranking das 5 Unidades Orçamentárias (UO) com maior Empenhado. A UO é a divisão administrativa responsável pela dotação orçamentária.\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_uo, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porUo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="uo" series={S3} height={220} />
                 </Card>
@@ -2625,11 +2627,11 @@ export default function App() {
             {/* RRAS + Região Administrativa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 RRAS  - Empenhado" icon={<Layers className="w-4 h-4" />}
+                <Card title="Top 5 RRAS" icon={<Layers className="w-4 h-4" />}
                   info={"Ranking das 5 Redes Regionais de Atenção à Saúde (RRAS 01–17) com maior Empenhado.\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo rras, populado via tabela tab_municipios, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porRras.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rras" series={S3} height={220} />
                 </Card>
-                <Card title="Top 5 Região Administrativa  - Empenhado" icon={<Globe className="w-4 h-4" />}
+                <Card title="Top 5 Regiões Administrativas" icon={<Globe className="w-4 h-4" />}
                   info={"Ranking das 5 Regiões Administrativas do Estado de SP com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo regiao_ad, RPC lc131_dashboard, campo por_regiao_ad."}>
                   <HGroupedBarChart data={data.porRegiaoAd.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_ad" series={S2} height={200} />
                 </Card>
@@ -2639,11 +2641,11 @@ export default function App() {
             {/* Região de Saúde + Tipo Despesa */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Região de Saúde  - Empenhado" icon={<MapPin className="w-4 h-4" />}
+                <Card title="Top 5 Regiões de Saúde" icon={<MapPin className="w-4 h-4" />}
                   info={"Ranking das 5 Regiões de Saúde do Estado de SP com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo regiao_sa, RPC lc131_dashboard, campo por_regiao_sa."}>
                   <HGroupedBarChart data={data.porRegiaoSa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="regiao_sa" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Tipo de Despesa  - Empenhado" icon={<BarChart3 className="w-4 h-4" />}
+                <Card title="Top 5 Tipos de Despesa" icon={<BarChart3 className="w-4 h-4" />}
                   info={"Ranking dos 5 tipos de despesa programática com maior Empenhado (ex: ATENÇÃO BÁSICA, ALTA COMPLEXIDADE, MÉDIA COMPLEXIDADE).\n\nBarras: Empenhado / Liquidado / Pago Total.\nPago Total = pago + pago_anos_anteriores.\n\nDados: campo tipo_despesa, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porTipoDespesa.slice(0,5) as unknown as Record<string,unknown>[]} yKey="tipo_despesa" series={S3} height={220} />
                 </Card>
@@ -2653,11 +2655,11 @@ export default function App() {
             {/* UG */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 UG  - Empenhado" icon={<Building2 className="w-4 h-4" />}
+                <Card title="Top 5 Unidades Gestoras" icon={<Building2 className="w-4 h-4" />}
                   info={"Ranking das 5 Unidades Gestoras (UG) com maior Empenhado. A UG é a unidade que executa efetivamente o orçamento da UO.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_ug, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porUg.slice(0,5) as unknown as Record<string,unknown>[]} yKey="ug" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Projetos  - Empenhado" icon={<Layers className="w-4 h-4" />}
+                <Card title="Top 5 Projetos" icon={<Layers className="w-4 h-4" />}
                   info={"Ranking dos 5 projetos/atividades orçamentárias com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_projeto_atividade, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porProjeto.slice(0,5) as unknown as Record<string,unknown>[]} yKey="projeto" series={S2} height={200} />
                 </Card>
@@ -2667,11 +2669,11 @@ export default function App() {
             {/* Favorecido + Projeto */}
             {data && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card title="Top 5 Favorecidos  - Empenhado" icon={<Users className="w-4 h-4" />}
+                <Card title="Top 5 Favorecidos" icon={<Users className="w-4 h-4" />}
                   info={"Ranking dos 5 beneficiários/fornecedores com maior Empenhado no período.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nDados: campo codigo_nome_favorecido, RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porFavorecido.slice(0,5) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2} height={200} />
                 </Card>
-                <Card title="Top 5 Rótulos — Empenhado" icon={<Layers className="w-4 h-4" />}
+                <Card title="Top 5 Rótulos" icon={<Layers className="w-4 h-4" />}
                   info={"Ranking dos 5 rótulos (nome simplificado do projeto/atividade) com maior Empenhado.\n\nEmpenhado vs Pago Total = pago + pago_anos_anteriores.\n\nRótulo é o campo rotulo da tabela lc131_despesas, preenchido automaticamente a partir de codigo_nome_projeto_atividade quando não informado no arquivo de origem.\nDados: RPC lc131_dashboard."}>
                   <HGroupedBarChart data={data.porRotulo.slice(0,5) as unknown as Record<string,unknown>[]} yKey="rotulo" series={S2} height={200} />
                 </Card>
@@ -2790,7 +2792,7 @@ export default function App() {
                 </Card>
 
                 {/* Top 10 municípios com share */}
-                <Card title="Top 10 Municípios por Empenhado" icon={<Building2 className="w-4 h-4" />}
+                <Card title="Top 10 Municípios" icon={<Building2 className="w-4 h-4" />}
                   badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{data.porMunic.length} municípios</span>}
                   info={"Ranking dos 10 municípios com maior Empenhado no período, com barra de progresso indicando a participação percentual no total.\n\nShare = Empenhado do município / Empenhado total × 100.\n% Pago = Pago Total / Empenhado × 100.\n\nDados: campo municipio, RPC lc131_dashboard."}> 
                   <div className="flex flex-col gap-1.5 mt-1">
