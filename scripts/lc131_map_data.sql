@@ -17,6 +17,7 @@ BEGIN
     SELECT municipio, drs, rras,
       COALESCE(empenhado, 0) AS empenhado,
       COALESCE(liquidado, 0) AS liquidado,
+      COALESCE(pago, 0) AS pago,
       COALESCE(pago, 0) + COALESCE(pago_anos_anteriores, 0) AS pago_total
     FROM lc131_despesas
     WHERE (p_ano IS NULL OR ano_referencia = p_ano)
@@ -26,6 +27,7 @@ BEGIN
       SELECT json_build_object(
         'empenhado',  SUM(empenhado),
         'liquidado',  SUM(liquidado),
+        'pago',       SUM(pago),
         'pago_total', SUM(pago_total),
         'registros',  COUNT(*),
         'municipios', COUNT(DISTINCT NULLIF(municipio, '')),

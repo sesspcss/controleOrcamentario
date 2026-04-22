@@ -1109,10 +1109,17 @@ function InteractiveMap({ anoSel, onNavigate }: {
             const params: Record<string, unknown> = {};
             if (anoSel !== 'todos') params.p_ano = Number(anoSel);
             let d: Record<string, unknown>;
-            const { data: mapRpc, error: mapErr } = await supabase.rpc('lc131_map_data', params);
+            // Fetch map data + dashboard in parallel (dashboard needed for pago kpi)
+            const [{ data: mapRpc, error: mapErr }, { data: dashRpc2 }] = await Promise.all([
+              supabase.rpc('lc131_map_data', params),
+              supabase.rpc('lc131_dashboard', params),
+            ]);
+            const dashPago = Number((dashRpc2 as Record<string, unknown>)?.kpis != null
+              ? ((dashRpc2 as Record<string, unknown>).kpis as Record<string, number>).pago ?? 0
+              : 0);
             if (mapErr) {
-              const { data: dashRpc, error: dashErr } = await supabase.rpc('lc131_dashboard', params);
-              if (dashErr) throw new Error(dashErr.message);
+              const dashRpc = dashRpc2;
+              if (!dashRpc) throw new Error(mapErr.message);
               d = dashRpc as Record<string, unknown>;
               const dk = d.kpis as Record<string, number> ?? {};
               d = {
@@ -1124,7 +1131,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
             const k = d.kpis as Record<string, number>;
             const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
             const result = {
-              kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? 0), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
+              kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? dashPago), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
               drsList: mergedDrs,
               allMunics: ((d.municipios as Record<string, unknown>[]) ?? []).map(r => ({
                 municipio: String(r.municipio ?? ''), drs: normalizeDrs(String(r.drs ?? '')),
