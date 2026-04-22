@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback, memo, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { supabase } from './supabase';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -583,13 +584,25 @@ function Card({ title, children, badge, noPad, icon, info }: {
   title: string; children: React.ReactNode; badge?: React.ReactNode; noPad?: boolean; icon?: React.ReactNode; info?: string;
 }) {
   const [showInfo, setShowInfo] = React.useState(false);
-  const infoRef = React.useRef<HTMLDivElement>(null);
+  const [popPos, setPopPos] = React.useState({ top: 0, right: 0 });
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+  const popRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!showInfo) return;
-    const h = (e: MouseEvent) => { if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false); };
+    const h = (e: MouseEvent) => {
+      if (btnRef.current?.contains(e.target as Node)) return;
+      if (popRef.current && !popRef.current.contains(e.target as Node)) setShowInfo(false);
+    };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [showInfo]);
+  const handleToggle = () => {
+    if (!showInfo && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPopPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+    }
+    setShowInfo(v => !v);
+  };
   return (
     <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
       <div className="px-4 py-2.5 border-b border-[#F0F0F0] flex items-center gap-2">
@@ -597,28 +610,35 @@ function Card({ title, children, badge, noPad, icon, info }: {
         <p className="font-semibold text-[#333] text-[13px] flex-1">{title}</p>
         {badge}
         {info && (
-          <div className="relative shrink-0" ref={infoRef}>
+          <>
             <button
+              ref={btnRef}
               type="button"
-              onClick={() => setShowInfo(v => !v)}
+              onClick={handleToggle}
               title="Como este gráfico é calculado"
               className={cn(
-                'w-6 h-6 rounded-full flex items-center justify-center transition-colors',
+                'w-6 h-6 rounded-full flex items-center justify-center transition-colors shrink-0',
                 showInfo ? 'text-[#118DFF]' : 'text-[#B0B0B0] hover:text-[#118DFF]'
               )}>
               <Info className="w-4 h-4" />
             </button>
-            {showInfo && (
-              <div className="absolute right-0 top-8 z-[200] w-80 bg-white border border-[#E0E0E0] rounded-xl shadow-2xl text-[11px] text-[#444] leading-relaxed overflow-hidden"
-                style={{ maxHeight: '70vh' }}>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#F5F9FF] border-b border-[#E0E0E0]">
+            {showInfo && ReactDOM.createPortal(
+              <div
+                ref={popRef}
+                className="fixed z-[9999] w-80 bg-white border border-[#E0E0E0] rounded-xl shadow-2xl text-[11px] text-[#444] leading-relaxed overflow-hidden"
+                style={{ top: popPos.top, right: popPos.right, maxHeight: '70vh' }}>
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#F5F9FF] border-b border-[#E0E0E0] sticky top-0">
                   <Info className="w-3.5 h-3.5 text-[#118DFF] shrink-0" />
                   <span className="text-[#118DFF] font-bold text-[12px]">Como este gráfico é calculado</span>
+                  <button onClick={() => setShowInfo(false)} className="ml-auto text-[#BBB] hover:text-[#666]">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div className="px-4 py-3 overflow-y-auto whitespace-pre-wrap" style={{ maxHeight: 'calc(70vh - 40px)' }}>{info}</div>
-              </div>
+                <div className="px-4 py-3 overflow-y-auto whitespace-pre-wrap" style={{ maxHeight: 'calc(70vh - 44px)' }}>{info}</div>
+              </div>,
+              document.body
             )}
-          </div>
+          </>
         )}
       </div>
       {noPad ? children : <div className="p-4">{children}</div>}
