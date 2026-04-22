@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -80,7 +80,7 @@ const S2 = [
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot' | 'legenda';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -424,6 +424,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
   { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
+  { id: 'legenda',       label: 'Legenda',          icon: <BookOpen className="w-3.5 h-3.5" /> },
 ];
 
 // Pivot grouping dimensions — maps UI key → p_dim/p_subdim parameter values for lc131_pivot RPC
@@ -1172,20 +1173,21 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const code = String(feature?.properties?.codarea ?? '');
         const mName = _codeToName[code] || '';
         const mu = municByName[mName];
-        const color = mu ? execPct(mu.empenhado, mu.pago_total) : rc;
+        const color = mu ? execPct(mu.empenhado, mu.liquidado) : rc;
         return { fillColor: color, fillOpacity: 0.7, color: '#fff', weight: 1.5, opacity: 1 };
       },
       onEachFeature: (feature, layer) => {
         const code = String(feature?.properties?.codarea ?? '');
         const mName = _codeToName[code] || '';
         const mu = municByName[mName];
-        const pct = mu && mu.empenhado > 0 ? ((mu.pago_total / mu.empenhado) * 100).toFixed(1) : '0';
+        const pct = mu && mu.empenhado > 0 ? ((mu.liquidado / mu.empenhado) * 100).toFixed(1) : '0';
         layer.bindTooltip(
           `<div style="min-width:200px"><strong style="font-size:13px">${mName}</strong><br/><div style="margin-top:4px;display:grid;grid-template-columns:1fr auto;gap:3px 12px">
             <span style="color:#2563eb">Empenhado:</span><strong>${mu ? fmt(mu.empenhado, 'currency') : ' -'}</strong>
             <span style="color:#16a34a">Liquidado:</span><strong>${mu ? fmt(mu.liquidado, 'currency') : ' -'}</strong>
             <span style="color:#ea580c">Pago Total:</span><strong>${mu ? fmt(mu.pago_total, 'currency') : ' -'}</strong>
-            <span style="color:#555">Execução:</span><strong>${pct}%</strong></div></div>`,
+            <span style="color:#555">% Liquidado:</span><strong>${pct}%</strong></div></div>`,
+
           { className: 'map-tooltip-dark', direction: 'top' }
         );
         layer.on({
@@ -1219,7 +1221,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       const c = findRegionCoord(reg.name);
       if (!c) return;
       const radius = Math.max(14, Math.sqrt(reg.empenhado / maxEmp) * 48);
-      const color = execPct(reg.empenhado, reg.pago_total);
+      const color = execPct(reg.empenhado, reg.liquidado);
       L.circleMarker([c.lat, c.lng], { radius, fillColor: color, color: '#fff', weight: 2, opacity: 0.9, fillOpacity: 0.7 })
         .bindTooltip(`<strong>${reg.name}</strong><br/>Emp: ${fmt(reg.empenhado, 'currency')}`, { className: 'map-tooltip-dark', direction: 'top' })
         .on('click', () => drillIntoRegion(reg.name))
@@ -1396,14 +1398,14 @@ function InteractiveMap({ anoSel, onNavigate }: {
                 <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'currency')} color="#89CFF0" />
                 <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'currency')} color="#90EE90" />
                 <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'currency')} color="#FFB347" />
-                <MiniKpi label="% Execução" value={(activeMunic.empenhado > 0 ? (activeMunic.pago_total / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.pago_total)} />
+                <MiniKpi label="% Liquidado" value={(activeMunic.empenhado > 0 ? (activeMunic.liquidado / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.liquidado)} />
               </div>
             ) : currentRegion ? (
               <div className="grid grid-cols-2 gap-2">
                 <MiniKpi label="Empenhado" value={fmt(currentRegion.empenhado, 'currency')} color="#89CFF0" />
                 <MiniKpi label="Liquidado" value={fmt(currentRegion.liquidado, 'currency')} color="#90EE90" />
                 <MiniKpi label="Pago Total" value={fmt(currentRegion.pago_total, 'currency')} color="#FFB347" />
-                <MiniKpi label="% Execução" value={(currentRegion.empenhado > 0 ? (currentRegion.pago_total / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.pago_total)} />
+                <MiniKpi label="% Liquidado" value={(currentRegion.empenhado > 0 ? (currentRegion.liquidado / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.liquidado)} />
               </div>
             ) : null}
 
@@ -1420,7 +1422,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                       <button key={i} onClick={() => selectMunicipality(m)}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#333] transition text-left group relative overflow-hidden">
                         <div className="absolute inset-y-0 left-0 bg-[#118DFF]/10 rounded-lg" style={{ width: barW + '%' }} />
-                        <span className="relative w-2 h-2 rounded-full shrink-0" style={{ background: execPct(m.empenhado, m.pago_total) }} />
+                        <span className="relative w-2 h-2 rounded-full shrink-0" style={{ background: execPct(m.empenhado, m.liquidado) }} />
                         <span className="relative text-white text-[11px] truncate flex-1">{m.municipio}</span>
                         <span className="relative text-[#89CFF0] text-[11px] font-mono font-bold shrink-0">{fmt(m.empenhado, 'currency')}</span>
                       </button>
@@ -1482,7 +1484,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       {/* Legend */}
       {!loading && (
         <div className="absolute bottom-6 right-4 z-[1000] bg-[#1B1B1B]/90 backdrop-blur rounded-xl px-4 py-3 shadow-xl border border-[#333]">
-          <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">% Execução (Pago/Emp)</p>
+          <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">% Liquidado (Liq/Emp)</p>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#1AAB40]" /><span className="text-[11px] text-[#CCC]">≥ 80%</span></div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D9B300]" /><span className="text-[11px] text-[#CCC]">50–80%</span></div>
@@ -1965,6 +1967,8 @@ export default function App() {
   const [xlsxLoading, setXlsxLoading]     = useState(false);
   const DETAIL_PAGE_SIZE = 200;
 
+  const [lastImportAt, setLastImportAt]   = useState<Date | null>(null);
+
   // -- Pivot tab (multi-level, Excel-style) --
   const [pivotDims, setPivotDims]           = useState<string[]>(['municipio','fonte_simpl','grupo_simpl','rotulo']);
   const [pivotMultiRaw, setPivotMultiRaw]   = useState<MultiPivotRow[]>([]);
@@ -1973,6 +1977,7 @@ export default function App() {
   const [pivotExpanded, setPivotExpanded]   = useState<Set<string>>(new Set());
   const [pivotValueKey, setPivotValueKey]   = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
   const [pivotXlsxLoading, setPivotXlsxLoading] = useState(false);
+  const pivotDragIdx = useRef<number | null>(null);
 
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
@@ -2027,6 +2032,7 @@ export default function App() {
       cacheRef.current.set(cacheKey, parsed);
       if (ano === 'todos' && Object.keys(activeFilters).length === 0) setAvailableAnos(parsed.porAno.map(r => r.ano));
       setData(parsed);
+      setLastImportAt(new Date());
     } catch (e: unknown) { setError((e as Error).message); }
     finally { initialLoaded.current = true; setLoading(false); setDashboardLoading(false); }
   }, []);
@@ -2069,7 +2075,11 @@ export default function App() {
     try {
       const params: Record<string, unknown> = {};
       if (ano !== 'todos') params.p_ano = Number(ano);
-      Object.entries(cf).forEach(([k, v]) => { if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|'); });
+      // Pass normalized values directly to lc131_distincts (it does its own ILIKE filtering)
+      // NOT expandFilterValues — that would break cascade by expanding to raw DB variants
+      Object.entries(cf).forEach(([k, v]) => {
+        if (Array.isArray(v) && v.length > 0) params[k] = v.join('|');
+      });
 
       let nextDistincts = EMPTY_DISTINCTS;
       const { data: rpc, error: rpcErr } = await rpcWithRetry('lc131_distincts', params);
@@ -2078,7 +2088,7 @@ export default function App() {
       if (!hasAnyDistinctOptions(nextDistincts) || (nextDistincts.distinct_tipo?.length ?? 0) === 0) {
         let query = supabase.from('lc131_despesas')
           .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
-          .limit(5000);
+          .limit(20000);
         if (ano !== 'todos') query = query.eq('ano_referencia', Number(ano));
         query = applyFiltersToQuery(query, cf, '');
 
@@ -2254,8 +2264,8 @@ export default function App() {
   };
 
   const kpis = data?.kpis;
-  const pctLiq = kpis && kpis.empenhado > 0 ? (kpis.liquidado / kpis.empenhado) * 100 : 0;
-  const pctPago = kpis && kpis.empenhado > 0 ? (kpis.pago_total / kpis.empenhado) * 100 : 0;
+  const pctLiq  = kpis && kpis.empenhado  > 0 ? (kpis.liquidado / kpis.empenhado)  * 100 : 0;
+  const pctPago = kpis && kpis.liquidado  > 0 ? (kpis.pago       / kpis.liquidado)  * 100 : 0;
 
   // -- Setup missing --
   if (viewMissing) return (
@@ -2283,6 +2293,11 @@ export default function App() {
             <img src="/img/logo1.png" alt="Logo CSS" className="h-[84px] w-auto" />
             <span className="font-bold text-[13px] tracking-tight">Controle de Despesas</span>
             <span className="text-[12px] text-[#888] hidden sm:inline">Coordenadoria de Gestão Orçamentária e Financeira</span>
+            {lastImportAt && (
+              <span className="hidden md:inline text-[10px] text-[#AAA] border-l border-[#444] pl-2.5 ml-1">
+                Atualizado em {lastImportAt.toLocaleDateString('pt-BR')} às {lastImportAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {activeTab !== 'mapa' && (
@@ -2405,9 +2420,9 @@ export default function App() {
                 ? [...Array(6)].map((_, i) => <div key={i} className="bg-white rounded-lg border border-[#E5E5E5] h-20 animate-pulse" />)
                 : kpis && <>
                   <KpiCard label="Empenhado"    value={fmt(kpis.empenhado, 'currency')} icon={<DollarSign className="w-4 h-4" />} color="#118DFF" sub={fmt(kpis.total) + ' registros'} />
-                  <KpiCard label="Liquidado"    value={fmt(kpis.liquidado, 'currency')} icon={<CheckCircle2 className="w-4 h-4" />} color="#1AAB40" sub={pctLiq.toFixed(1) + '% do empenhado'} />
-                  <KpiCard label="Pago Total"   value={fmt(kpis.pago_total, 'currency')} icon={<TrendingUp className="w-4 h-4" />} color="#E66C37" sub={pctPago.toFixed(1) + '% do empenhado'} />
-                  <KpiCard label="% Execução"   value={pctPago.toFixed(1) + '%'} icon={<BarChart3 className="w-4 h-4" />} color="#6B007B" sub="pago / empenhado" />
+                  <KpiCard label="Liquidado"    value={fmt(kpis.liquidado, 'currency')} icon={<CheckCircle2 className="w-4 h-4" />} color="#1AAB40" sub={'% Liquidado: ' + pctLiq.toFixed(1) + '%'} />
+                  <KpiCard label="Pago"         value={fmt(kpis.pago, 'currency')} icon={<TrendingUp className="w-4 h-4" />} color="#E66C37" sub={'% Pago: ' + pctPago.toFixed(1) + '%'} />
+                  <KpiCard label="Pago Total"   value={fmt(kpis.pago_total, 'currency')} icon={<BarChart3 className="w-4 h-4" />} color="#6B007B" sub="pago + anos anteriores" />
                   <KpiCard label="Municípios"   value={fmt(kpis.municipios)} icon={<MapPin className="w-4 h-4" />} color="#197278" sub={(data?.porDrs.length ?? 0) + ' DRS'} />
                   <KpiCard label="Registros"    value={fmt(kpis.total)} icon={<Database className="w-4 h-4" />} color="#744EC2" sub={availableAnos.length + ' anos'} />
                 </>}
@@ -2620,15 +2635,15 @@ export default function App() {
         {activeTab === 'regional' && data && (() => {
           const totalEmpDrs = data.porDrs.reduce((s, r) => s + r.empenhado, 0);
           const avgExecDrs = data.porDrs.length > 0
-            ? data.porDrs.reduce((s, r) => s + (r.empenhado > 0 ? r.pago_total / r.empenhado : 0), 0) / data.porDrs.length * 100
+            ? data.porDrs.reduce((s, r) => s + (r.empenhado > 0 ? r.liquidado / r.empenhado : 0), 0) / data.porDrs.length * 100
             : 0;
           const topDrs = [...data.porDrs].sort((a, b) => b.empenhado - a.empenhado)[0];
-          const worstExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (a.pago_total / a.empenhado) - (b.pago_total / b.empenhado))[0];
-          const bestExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (b.pago_total / b.empenhado) - (a.pago_total / a.empenhado))[0];
+          const worstExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (a.liquidado / a.empenhado) - (b.liquidado / b.empenhado))[0];
+          const bestExecDrs = [...data.porDrs].filter(r => r.empenhado > 0).sort((a, b) => (b.liquidado / b.empenhado) - (a.liquidado / a.empenhado))[0];
           const drsExecData = data.porDrs.map(r => ({
             ...r,
-            pct_exec: r.empenhado > 0 ? Math.round(r.pago_total / r.empenhado * 100) : 0,
-            gap: r.empenhado - r.pago_total,
+            pct_exec: r.empenhado > 0 ? Math.round(r.liquidado / r.empenhado * 100) : 0,
+            gap: r.empenhado - r.liquidado,
           }));
           const municTop10 = data.porMunic.slice(0, 10);
           const totalMunic = data.porMunic.reduce((s, r) => s + r.empenhado, 0);
@@ -2648,33 +2663,33 @@ export default function App() {
                   <p className="text-[11px] text-[#666] mt-0.5">{fmt(topDrs?.empenhado ?? 0, 'compact')}</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Execução média DRS</p>
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">% Liquidado médio DRS</p>
                   <p className="font-bold text-[22px] leading-none" style={{ color: avgExecDrs >= 70 ? '#1AAB40' : avgExecDrs >= 40 ? '#D9B300' : '#D64550' }}>{avgExecDrs.toFixed(1)}%</p>
-                  <p className="text-[11px] text-[#999] mt-0.5">pago / empenhado</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">liquidado / empenhado</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Melhor execução</p>
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Melhor % Liquidado</p>
                   <p className="font-bold text-[#1AAB40] text-sm truncate">{bestExecDrs?.drs?.replace(/^DRS \d+ - /, '') ?? '-'}</p>
-                  <p className="text-[11px] text-[#666] mt-0.5">{bestExecDrs ? (bestExecDrs.pago_total / bestExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{bestExecDrs ? (bestExecDrs.liquidado / bestExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Menor execução</p>
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Menor % Liquidado</p>
                   <p className="font-bold text-[#D64550] text-sm truncate">{worstExecDrs?.drs?.replace(/^DRS \d+ - /, '') ?? '-'}</p>
-                  <p className="text-[11px] text-[#666] mt-0.5">{worstExecDrs ? (worstExecDrs.pago_total / worstExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{worstExecDrs ? (worstExecDrs.liquidado / worstExecDrs.empenhado * 100).toFixed(1) : 0}%</p>
                 </div>
               </div>
 
-              {/* Taxa de execução por DRS - heatmap horizontal */}
-              <Card title="Taxa de Execução por DRS  (Pago / Empenhado)" icon={<BarChart3 className="w-4 h-4" />}
+              {/* % Liquidado por DRS - heatmap horizontal */}
+              <Card title="% Liquidado por DRS  (Liquidado / Empenhado)" icon={<BarChart3 className="w-4 h-4" />}
                 badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Concentração top-20%: {concentracao.toFixed(0)}%</span>}>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead><tr>
                       <th className="text-left text-[10px] font-bold text-[#999] uppercase pb-2 pr-3">DRS</th>
                       <th className="text-right text-[10px] font-bold text-[#118DFF] uppercase pb-2 px-3 w-36">Empenhado</th>
-                      <th className="text-right text-[10px] font-bold text-[#E66C37] uppercase pb-2 px-3 w-32">Pago Total</th>
-                      <th className="text-right text-[10px] font-bold text-[#999] uppercase pb-2 px-3 w-20">Exec.</th>
-                      <th className="text-[10px] font-bold text-[#999] uppercase pb-2 pl-3">Barra de Execução</th>
+                      <th className="text-right text-[10px] font-bold text-[#1AAB40] uppercase pb-2 px-3 w-32">Liquidado</th>
+                      <th className="text-right text-[10px] font-bold text-[#999] uppercase pb-2 px-3 w-20">% Liq.</th>
+                      <th className="text-[10px] font-bold text-[#999] uppercase pb-2 pl-3">Barra de % Liquidado</th>
                     </tr></thead>
                     <tbody className="divide-y divide-[#F7F7F7]">
                       {drsExecData.sort((a, b) => b.pct_exec - a.pct_exec).map((row, i) => {
@@ -2684,7 +2699,7 @@ export default function App() {
                           <tr key={i} className="hover:bg-blue-50/20">
                             <td className="py-1.5 pr-3 text-[11px] font-medium text-[#333] whitespace-nowrap">{row.drs.replace(/^DRS \d+ - /, '')}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-[11px] text-[#118DFF]">{fmt(row.empenhado, 'compact')}</td>
-                            <td className="py-1.5 px-3 text-right font-mono text-[11px] text-[#E66C37]">{fmt(row.pago_total, 'compact')}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-[11px] text-[#1AAB40]">{fmt(row.liquidado, 'compact')}</td>
                             <td className="py-1.5 px-3 text-right">
                               <span className="text-[11px] font-bold" style={{ color }}>{row.pct_exec}%</span>
                             </td>
@@ -2703,7 +2718,7 @@ export default function App() {
                 </div>
               </Card>
 
-              {/* DRS empenhado vs gap (não pago) — stacked */}
+              {/* DRS empenhado vs gap (não liquidado) — stacked */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Empenhado vs Pago por DRS  (Gap em vermelho)" icon={<MapPin className="w-4 h-4" />}>
                   <div style={{ height: 320 }}>
@@ -2761,12 +2776,12 @@ export default function App() {
                               <th className="px-3 py-2 text-right font-semibold text-blue-300">Empenhado</th>
                               <th className="px-3 py-2 text-right font-semibold text-green-300">Liquidado</th>
                               <th className="px-3 py-2 text-right font-semibold text-orange-300">Pago Total</th>
-                              <th className="px-3 py-2 text-right font-semibold text-slate-300">Exec.</th>
+                              <th className="px-3 py-2 text-right font-semibold text-slate-300">% Liq.</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#F0F0F0]">
                             {[...data.porRras].sort((a, b) => a.rras.localeCompare(b.rras, 'pt-BR')).map((row, i) => {
-                              const pct = row.empenhado > 0 ? (row.pago_total / row.empenhado * 100) : 0;
+                              const pct = row.empenhado > 0 ? (row.liquidado / row.empenhado * 100) : 0;
                               const color = pct >= 70 ? '#1AAB40' : pct >= 40 ? '#D9B300' : '#D64550';
                               return (
                                 <tr key={i} className="hover:bg-blue-50/30" style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
@@ -2875,19 +2890,19 @@ export default function App() {
           const totalEmpGrupo = data.porGrupo.reduce((s, r) => s + r.empenhado, 0);
           const elemExecData = data.porElemento.map(r => ({
             ...r,
-            pct_exec: r.empenhado > 0 ? Math.round(r.pago_total / r.empenhado * 100) : 0,
-            gap: r.empenhado - r.pago_total,
+            pct_exec: r.empenhado > 0 ? Math.round(r.liquidado / r.empenhado * 100) : 0,
+            gap: r.empenhado - r.liquidado,
             share: totalEmpElem > 0 ? r.empenhado / totalEmpElem * 100 : 0,
           }));
-          // Execução por grupo detalhado
+          // % Liquidado por grupo detalhado
           const grupoExec = data.porGrupo.map(r => ({
             ...r,
-            pct_exec: r.empenhado > 0 ? r.pago_total / r.empenhado * 100 : 0,
+            pct_exec: r.empenhado > 0 ? r.liquidado / r.empenhado * 100 : 0,
             liq_pct: r.empenhado > 0 ? r.liquidado / r.empenhado * 100 : 0,
-            gap: r.empenhado - r.pago_total,
+            gap: r.empenhado - r.liquidado,
           })).sort((a, b) => b.empenhado - a.empenhado);
-          const globalExec = kpis && kpis.empenhado > 0 ? kpis.pago_total / kpis.empenhado * 100 : 0;
-          const globalLiq = kpis && kpis.empenhado > 0 ? kpis.liquidado / kpis.empenhado * 100 : 0;
+          const globalExec = kpis && kpis.empenhado > 0 ? kpis.liquidado / kpis.empenhado * 100 : 0;
+          const globalLiq  = kpis && kpis.empenhado > 0 ? kpis.liquidado / kpis.empenhado * 100 : 0;
           const topElem = elemExecData.sort((a, b) => b.empenhado - a.empenhado)[0];
           const worstElem = elemExecData.filter(r => r.empenhado > 0).sort((a, b) => a.pct_exec - b.pct_exec)[0];
 
@@ -3376,7 +3391,7 @@ export default function App() {
                     {sorted.slice(0, 12).map((r, i) => {
                       const share = totalFav > 0 ? r.empenhado / totalFav * 100 : 0;
                       const cum = paretoData[i].cumPct;
-                      const execPct = r.empenhado > 0 ? r.pago_total / r.empenhado * 100 : 0;
+                      const execPct = r.empenhado > 0 ? r.liquidado / r.empenhado * 100 : 0;
                       const c = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
                       return (
                         <div key={i} className="flex items-center gap-2">
@@ -3696,24 +3711,30 @@ export default function App() {
 
                   {pivotDims.map((dimKey, i) => {
                     const dim = MULTI_PIVOT_DIMS.find(d => d.key === dimKey);
-                    const canUp   = i > 0;
-                    const canDown = i < pivotDims.length - 1;
                     const canRemove = pivotDims.length > 1;
                     return (
                       <div key={dimKey}
-                        className="flex items-center gap-1.5 bg-[#EEF4FF] border border-[#C7D8FF] rounded-lg pl-2.5 pr-1.5 py-1">
+                        draggable
+                        onDragStart={() => { pivotDragIdx.current = i; }}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => {
+                          const from = pivotDragIdx.current;
+                          if (from === null || from === i) return;
+                          const n = [...pivotDims];
+                          const [moved] = n.splice(from, 1);
+                          n.splice(i, 0, moved);
+                          setPivotDims(n);
+                          setPivotExpanded(new Set());
+                          pivotDragIdx.current = null;
+                        }}
+                        onDragEnd={() => { pivotDragIdx.current = null; }}
+                        className="flex items-center gap-1.5 bg-[#EEF4FF] border border-[#C7D8FF] rounded-lg pl-2 pr-1.5 py-1 cursor-grab active:cursor-grabbing select-none">
+                        {/* Drag handle visual */}
+                        <span className="text-[#93c5fd] text-[10px] font-bold tracking-tight" title="Arraste para reordenar">⠿</span>
                         <span className="text-[11px] font-semibold text-[#1e40af] whitespace-nowrap">{dim?.label ?? dimKey}</span>
-                        <div className="flex flex-col">
-                          <button title="Mover para cima" disabled={!canUp}
-                            onClick={() => { const n=[...pivotDims]; [n[i-1],n[i]]=[n[i],n[i-1]]; setPivotDims(n); setPivotExpanded(new Set()); }}
-                            className="text-[#93c5fd] hover:text-[#1e40af] disabled:opacity-20 leading-none px-0.5 text-[10px] font-bold">▲</button>
-                          <button title="Mover para baixo" disabled={!canDown}
-                            onClick={() => { const n=[...pivotDims]; [n[i+1],n[i]]=[n[i],n[i+1]]; setPivotDims(n); setPivotExpanded(new Set()); }}
-                            className="text-[#93c5fd] hover:text-[#1e40af] disabled:opacity-20 leading-none px-0.5 text-[10px] font-bold">▼</button>
-                        </div>
                         <button title="Remover campo" disabled={!canRemove}
                           onClick={() => { setPivotDims(pivotDims.filter((_,j) => j !== i)); setPivotExpanded(new Set()); }}
-                          className="w-4 h-4 flex items-center justify-center rounded-full text-[#93c5fd] hover:text-red-500 hover:bg-red-50 disabled:opacity-20 text-[11px] font-bold transition-colors">✕</button>
+                          className="w-4 h-4 flex items-center justify-center rounded-full text-[#93c5fd] hover:text-red-500 hover:bg-red-50 disabled:opacity-20 text-[11px] font-bold transition-colors cursor-pointer">✕</button>
                       </div>
                     );
                   })}
@@ -3884,6 +3905,89 @@ export default function App() {
         })()}
 
 
+
+        {/* ---------- TAB: LEGENDA ---------- */}
+        {activeTab === 'legenda' && (
+          <div className="max-w-3xl mx-auto py-6 space-y-8">
+            <div>
+              <h2 className="text-lg font-bold text-[#1B1B1B] mb-1 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#118DFF]" /> Legenda — Conceitos e Definições
+              </h2>
+              <p className="text-[13px] text-[#666]">Glossário dos termos utilizados no painel de controle de despesas.</p>
+            </div>
+
+            {/* Fluxo Orçamentário */}
+            <Card title="Fluxo Orçamentário" icon={<TrendingUp className="w-4 h-4" />}>
+              <div className="flex flex-col sm:flex-row items-stretch gap-0 rounded-lg overflow-hidden border border-[#E5E5E5]">
+                {[
+                  { step: '1', label: 'Empenho', color: '#118DFF', desc: 'Reserva de recursos no orçamento. Compromisso formal de pagamento.' },
+                  { step: '2', label: 'Liquidação', color: '#1AAB40', desc: 'Verificação do direito do credor. Confirmação que o bem foi entregue ou o serviço prestado.' },
+                  { step: '3', label: 'Pagamento', color: '#E66C37', desc: 'Transferência efetiva do recurso ao credor. Extinção da obrigação.' },
+                ].map((s, i) => (
+                  <div key={i} className="flex-1 p-4 flex flex-col items-center text-center gap-2" style={{ background: s.color + '12', borderLeft: i > 0 ? `2px solid ${s.color}30` : undefined }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ background: s.color }}>{s.step}</div>
+                    <p className="font-bold text-[#1B1B1B] text-sm">{s.label}</p>
+                    <p className="text-[11px] text-[#666] leading-relaxed">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Glossário */}
+            <Card title="Glossário" icon={<BookOpen className="w-4 h-4" />}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="border-b-2 border-[#E5E5E5]">
+                      <th className="text-left py-2 pr-4 font-bold text-[#333] w-36">Termo</th>
+                      <th className="text-left py-2 font-bold text-[#333]">Definição</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F5F5F5]">
+                    {[
+                      { termo: 'Empenhado',    cor: '#118DFF', def: 'Recurso do orçamento que foi empenhado. Refere-se ao orçamento do ano em questão.' },
+                      { termo: 'Liquidado',    cor: '#1AAB40', def: 'Recurso do orçamento que foi liquidado. Refere-se ao orçamento do ano em questão.' },
+                      { termo: 'Pago',         cor: '#E66C37', def: 'Recurso do orçamento que foi pago. Refere-se ao orçamento do ano em questão.' },
+                      { termo: 'Pago Total',   cor: '#6B007B', def: 'Soma do recurso do orçamento que foi pago no ano em questão e dos recursos de anos anteriores inscritos em restos a pagar.' },
+                      { termo: '% Liquidado',  cor: '#1AAB40', def: 'Recurso Liquidado dividido pelo Recurso Empenhado. Refere-se ao orçamento do ano em questão.' },
+                      { termo: '% Pago',       cor: '#E66C37', def: 'Recurso Pago dividido pelo Recurso Liquidado. Refere-se ao orçamento do ano em questão.' },
+                    ].map((row, i) => (
+                      <tr key={i} className="hover:bg-[#FAFAFA]">
+                        <td className="py-3 pr-4 align-top">
+                          <span className="inline-block px-2 py-0.5 rounded font-bold text-white text-[11px]" style={{ background: row.cor }}>{row.termo}</span>
+                        </td>
+                        <td className="py-3 text-[#444] leading-relaxed">{row.def}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Filtros e Métricas */}
+            <Card title="Métricas e Cores do Mapa" icon={<BarChart3 className="w-4 h-4" />}>
+              <div className="space-y-3 text-[12px] text-[#555]">
+                <p>O mapa e as tabelas regionais utilizam <strong>% Liquidado (Liquidado / Empenhado)</strong> para colorir as áreas:</p>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {[
+                    { label: '≥ 80%', color: '#1AAB40', desc: 'Ótimo' },
+                    { label: '50–79%', color: '#D9B300', desc: 'Atenção' },
+                    { label: '< 50%', color: '#D64550', desc: 'Crítico' },
+                    { label: 'Sem dados', color: '#A6A6A6', desc: '—' },
+                  ].map((c, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded" style={{ background: c.color }} />
+                      <span><strong>{c.label}</strong> — {c.desc}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-[#888]">
+                  Os filtros de ano e região funcionam de forma cascateada: selecionar um RRAS filtra automaticamente os municípios disponíveis.
+                </p>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">

@@ -199,6 +199,33 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_cod_ibge', n);
 
+  -- ── 3c2. RRAS: normaliza números soltos (ex: '6' → 'RRAS 06') ───────────────
+  UPDATE public.lc131_despesas
+  SET rras = CASE
+    WHEN rras = '1'  OR rras = '01'  THEN 'RRAS 01'
+    WHEN rras = '2'  OR rras = '02'  THEN 'RRAS 02'
+    WHEN rras = '3'  OR rras = '03'  THEN 'RRAS 03'
+    WHEN rras = '4'  OR rras = '04'  THEN 'RRAS 04'
+    WHEN rras = '5'  OR rras = '05'  THEN 'RRAS 05'
+    WHEN rras = '6'  OR rras = '06'  THEN 'RRAS 06'
+    WHEN rras = '7'  OR rras = '07'  THEN 'RRAS 07'
+    WHEN rras = '8'  OR rras = '08'  THEN 'RRAS 08'
+    WHEN rras = '9'  OR rras = '09'  THEN 'RRAS 09'
+    WHEN rras = '10' THEN 'RRAS 10'
+    WHEN rras = '11' THEN 'RRAS 11'
+    WHEN rras = '12' THEN 'RRAS 12'
+    WHEN rras = '13' THEN 'RRAS 13'
+    WHEN rras = '14' THEN 'RRAS 14'
+    WHEN rras = '15' THEN 'RRAS 15'
+    WHEN rras = '16' THEN 'RRAS 16'
+    WHEN rras = '17' THEN 'RRAS 17'
+    ELSE rras
+  END
+  WHERE rras ~ '^[0-9]{1,2}$'
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('rras_numbers_normalized', n);
+
   -- ── 3d. RRAS: catch-all — órgãos centrais sem município → RRAS 06 (SP) ───────
   UPDATE public.lc131_despesas
   SET rras = 'RRAS 06'
