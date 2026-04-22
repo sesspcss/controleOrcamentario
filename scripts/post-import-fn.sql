@@ -199,9 +199,9 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_cod_ibge', n);
 
-  -- ── 3d. RRAS: catch-all — órgãos centrais sem município → RRAS 6 (SP) ────────
+  -- ── 3d. RRAS: catch-all — órgãos centrais sem município → RRAS 06 (SP) ───────
   UPDATE public.lc131_despesas
-  SET rras = '6'
+  SET rras = 'RRAS 06'
   WHERE (rras IS NULL OR rras = '')
     AND (municipio IS NULL OR municipio = '')
     AND (nome_municipio IS NULL OR nome_municipio = '')
@@ -209,10 +209,10 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_catch_all', n);
 
-  -- ── 3e. RRAS: catch-all final — qualquer RRAS ainda nulo → RRAS 6 (SP) ──────────
+  -- ── 3e. RRAS: catch-all final — qualquer RRAS ainda nulo → RRAS 06 (SP) ─────────
   -- Cobre BRASÍLIA e outros não reconhecidos.
   UPDATE public.lc131_despesas
-  SET rras = '6'
+  SET rras = 'RRAS 06'
   WHERE (rras IS NULL OR rras = '')
     AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;

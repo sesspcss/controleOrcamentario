@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LC 131 - Dashboard Power BI Style v3
  * Abas, grupo simplificado (Custeio/Investimento/Pessoal),
  * fonte simplificada (Tesouro/Federal/Demais), filtros cascateados.
@@ -64,7 +64,7 @@ const GRUPO_COLORS: Record<string, string> = {
   Custeio: '#118DFF', Investimento: '#E66C37', Pessoal: '#6B007B', Outros: '#A6A6A6',
 };
 const FONTE_COLORS: Record<string, string> = {
-  Tesouro: '#118DFF', Federal: '#12239E', 'Demais Fontes': '#E66C37',
+  ESTADUAL: '#118DFF', FEDERAL: '#12239E',
 };
 // Series padrão para gráficos com 3 grandezas (emp + liq + pago)
 const S3 = [
@@ -80,7 +80,7 @@ const S2 = [
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot' | 'pagamentos';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -379,8 +379,8 @@ function applyFiltersToQuery(
 function buildFonteOrFilter(values: string[]): string {
   const parts: string[] = [];
   for (const v of values) {
-    if (v === 'Tesouro') parts.push('codigo_nome_fonte_recurso.ilike.%tesouro%');
-    if (v === 'Federal') parts.push(
+    if (v === 'ESTADUAL') parts.push('codigo_nome_fonte_recurso.ilike.%tesouro%');
+    if (v === 'FEDERAL') parts.push(
       'codigo_nome_fonte_recurso.ilike.%fed%',
       'codigo_nome_fonte_recurso.ilike.%união%',
       'codigo_nome_fonte_recurso.ilike.%uniao%',
@@ -389,9 +389,6 @@ function buildFonteOrFilter(values: string[]): string {
       'codigo_nome_fonte_recurso.ilike.%transferencia%',
       'codigo_nome_fonte_recurso.ilike.%SUS%',
     );
-    if (v === 'Demais Fontes') parts.push(
-      'and(codigo_nome_fonte_recurso.not.ilike.%tesouro%,codigo_nome_fonte_recurso.not.ilike.%fed%,codigo_nome_fonte_recurso.not.ilike.%união%,codigo_nome_fonte_recurso.not.ilike.%uniao%,codigo_nome_fonte_recurso.not.ilike.%fundo nacional%,codigo_nome_fonte_recurso.not.ilike.%transferência%,codigo_nome_fonte_recurso.not.ilike.%transferencia%,codigo_nome_fonte_recurso.not.ilike.%SUS%)',
-    );
   }
   return parts.join(',');
 }
@@ -399,10 +396,8 @@ function buildFonteOrFilter(values: string[]): string {
 function enrichDetailRow(r: Record<string, unknown>): DetailRow {
   const row = r as unknown as DetailRow;
   const src = String(row.codigo_nome_fonte_recurso ?? '').toLowerCase();
-  row.fonte_simpl = src.includes('tesouro') ? 'Tesouro'
-    : (src.includes('fed') || src.includes('união') || src.includes('uniao') || src.includes('fundo nacional')
-       || src.includes('transferência') || src.includes('transferencia') || src.includes('sus')) ? 'Federal'
-    : 'Demais Fontes';
+  row.fonte_simpl = (src.includes('fed') || src.includes('união') || src.includes('uniao') || src.includes('fundo nacional')
+       || src.includes('transferência') || src.includes('transferencia') || src.includes('sus')) ? 'FEDERAL' : 'ESTADUAL';
   const g = String(row.codigo_nome_grupo ?? '');
   row.grupo_simpl = g.startsWith('1') ? 'Pessoal' : g.startsWith('2') ? 'Dívida' : g.startsWith('3') ? 'Custeio' : g.startsWith('4') ? 'Investimento' : 'Outros';
   // Fallback: unidade uses codigo_nome_uo when not populated from source
@@ -420,7 +415,6 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
   { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
-  { id: 'pagamentos',    label: 'Pagamentos',      icon: <DollarSign className="w-3.5 h-3.5" /> },
 ];
 
 // Pivot grouping dimensions — maps UI key → p_dim/p_subdim parameter values for lc131_pivot RPC
@@ -434,6 +428,7 @@ const PIVOT_DIMS: { key: string; label: string }[] = [
   { key: 'elemento',      label: 'Elemento'         },
   { key: 'rotulo',        label: 'Rótulo'           },
   { key: 'fonte_recurso', label: 'Fonte de Recurso' },
+  { key: 'fonte_simpl',   label: 'Estadual / Federal' },
   { key: 'tipo_despesa',  label: 'Tipo de Despesa'  },
 ];
 
@@ -1167,9 +1162,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
           const acc: Record<string, number> = {};
           for (const r of raw) {
             const s = String(r.fonte ?? r.fonte_recurso ?? '').toLowerCase();
-            const cat = s.includes('tesouro') ? 'Tesouro'
-              : (s.includes('fed') || s.includes('unia') || s.includes('uniao') || s.includes('fundo nacional') || s.includes('transfere') || s.includes('sus')) ? 'Federal'
-              : 'Demais Fontes';
+            const cat = (s.includes('fed') || s.includes('unia') || s.includes('uniao') || s.includes('fundo nacional') || s.includes('transfere') || s.includes('sus')) ? 'FEDERAL' : 'ESTADUAL';
             acc[cat] = (acc[cat] ?? 0) + Number(r.empenhado ?? 0);
           }
           return Object.entries(acc).map(([fonte, empenhado]) => ({ fonte, empenhado })).sort((a, b) => b.empenhado - a.empenhado);
@@ -1891,21 +1884,6 @@ export default function App() {
   const [pivotFilters, setPivotFilters]     = useState<Partial<Record<DetailFilterKey, string[]>>>({});
   const [pivotFiltersOpen, setPivotFiltersOpen] = useState(false);
 
-  // -- Pagamentos tab --
-  type PagRow = { favorecido: string; fonte_simpl: string; tipo_custeio: string; rotulo: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
-  const [pagData, setPagData]               = useState<PagRow[]>([]);
-  const [pagLoading, setPagLoading]         = useState(false);
-  const [pagError, setPagError]             = useState<string|null>(null);
-  const [pagMunicipio, setPagMunicipio]     = useState<string>('');
-  const [pagDrs, setPagDrs]                 = useState<string>('');
-  const [pagAno, setPagAno]                 = useState<number|'todos'>('todos');
-  const [pagMunicList, setPagMunicList]     = useState<string[]>([]);
-  const [pagExpandedFav, setPagExpandedFav] = useState<Set<string>>(new Set());
-  const [pagExpandedFonte, setPagExpandedFonte] = useState<Set<string>>(new Set());
-  const [pagExpandedTipo, setPagExpandedTipo]   = useState<Set<string>>(new Set());
-  const [pagXlsxLoading, setPagXlsxLoading] = useState(false);
-  const [pagValueKey, setPagValueKey]       = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
-
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -1940,7 +1918,7 @@ export default function App() {
         kpis: { empenhado: Number(kr.empenhado ?? 0), liquidado: Number(kr.liquidado ?? 0), pago: Number(kr.pago ?? 0), pago_total: Number(kr.pago_total ?? 0), total: Number(kr.total ?? 0), municipios: Number(kr.municipios ?? 0) },
         porAno: ((d.por_ano as Record<string,unknown>[] ?? [])).map(r => ({ ano: Number(r.ano), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0) })).sort((a, b) => a.ano - b.ano),
         porGrupoSimpl: ((d.por_grupo_simpl as Record<string,unknown>[] ?? [])).map(r => ({ grupo_simpl: String(r.grupo_simpl), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porFonteSimpl: ((d.por_fonte_simpl as Record<string,unknown>[] ?? [])).map(r => ({ fonte_simpl: String(r.fonte_simpl), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porFonteSimpl: (() => { const raw = (d.por_fonte_simpl as Record<string,unknown>[] ?? []).map(r => ({ fonte_simpl: String(r.fonte_simpl), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, {fonte_simpl: string; empenhado: number; liquidado: number; pago_total: number}>(); for (const r of raw) { const cat = (r.fonte_simpl === 'Federal' || r.fonte_simpl === 'FEDERAL') ? 'FEDERAL' : 'ESTADUAL'; const e = m.get(cat); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(cat, { fonte_simpl: cat, empenhado: r.empenhado, liquidado: r.liquidado, pago_total: r.pago_total }); } } return Array.from(m.values()); })(),
         porGrupo: ((d.por_grupo as Record<string,unknown>[] ?? [])).map(r => ({ grupo_despesa: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porDrs: (() => { const raw = ((d.por_drs as Record<string,unknown>[] ?? [])).map(r => ({ drs: normalizeDrs(String(r.drs)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.drs); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.drs, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porMunic: ((d.por_municipio as Record<string,unknown>[] ?? [])).map(r => ({ municipio: String(r.municipio), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
@@ -2102,35 +2080,6 @@ export default function App() {
     loadPivot();
   }, [activeTab, filters, anoSel, loadPivot]);
 
-  // -- Pagamentos loaders --
-  const loadPagMunicList = useCallback(async () => {
-    if (pagMunicList.length > 0) return;
-    const { data } = await supabase.rpc('lc131_municipios_list');
-    if (Array.isArray(data)) setPagMunicList(data as string[]);
-  }, [pagMunicList.length]);
-
-  const loadPagamentos = useCallback(async () => {
-    setPagLoading(true); setPagError(null);
-    try {
-      const params: Record<string, unknown> = {};
-      if (pagMunicipio) params.p_municipio = pagMunicipio;
-      if (pagDrs)       params.p_drs       = pagDrs;
-      if (pagAno !== 'todos') params.p_ano = Number(pagAno);
-      const { data, error } = await supabase.rpc('lc131_pagamentos', params);
-      if (error) throw new Error(error.message);
-      setPagData(Array.isArray(data) ? (data as PagRow[]) : []);
-    } catch (e: unknown) {
-      setPagError((e as Error).message);
-    } finally {
-      setPagLoading(false);
-    }
-  }, [pagMunicipio, pagDrs, pagAno]);
-
-  useEffect(() => {
-    if (activeTab !== 'pagamentos') return;
-    loadPagMunicList();
-    loadPagamentos();
-  }, [activeTab, pagMunicipio, pagDrs, pagAno, loadPagamentos, loadPagMunicList]);
 
   useEffect(() => {
     if (!initialLoaded.current) return;
@@ -2151,7 +2100,6 @@ export default function App() {
     setActiveTab(t);
     if (t === 'dados') { loadDetail(0, tableSearch); if (Object.keys(distincts).length === 0) loadDistincts(filters, anoSel); }
     if (t === 'pivot') loadPivot();
-    if (t === 'pagamentos') { loadPagMunicList(); loadPagamentos(); if (Object.keys(distincts).length === 0) loadDistincts({}, anoSel); }
   };
 
   const exportCSV = () => {
@@ -2236,7 +2184,7 @@ export default function App() {
             <span className="text-[12px] text-[#888] hidden sm:inline">Coordenadoria de Gestão Orçamentária e Financeira</span>
           </div>
           <div className="flex items-center gap-2">
-            {activeTab !== 'mapa' && activeTab !== 'pagamentos' && (
+            {activeTab !== 'mapa' && (
               <button onClick={filtersOpen ? () => setFiltersOpen(false) : () => { setFiltersOpen(true); if (!Object.keys(distincts).length) loadDistincts(filters, anoSel); }}
                 className={cn('flex items-center gap-1 px-2.5 h-7 rounded text-[11px] font-semibold transition',
                   filtersOpen || activeFilterCount > 0 ? 'bg-[#118DFF] text-white' : 'bg-[#333] text-[#CCC] hover:bg-[#444]')}>
@@ -2698,14 +2646,49 @@ export default function App() {
                 </Card>
               </div>
 
-              {/* RRAS + Região de Saúde side by side - full */}
+              {/* RRAS — tabela hierárquica + Região de Saúde */}
               {(data.porRras.length > 0 || data.porRegiaoSa.length > 0) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {data.porRras.length > 0 && (
-                    <Card title="RRAS — Empenhado / Liquidado / Pago" icon={<Layers className="w-4 h-4" />}
-                      badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length}</span>}>
-                      <HGroupedBarChart data={data.porRras as unknown as Record<string,unknown>[]} yKey="rras" series={S3}
-                        height={Math.max(200, data.porRras.length * 40)} />
+                    <Card title="RRAS — Empenhado / Liquidado / Pago Total" icon={<Layers className="w-4 h-4" />}
+                      badge={<span className="text-[10px] font-bold text-[#197278] bg-teal-50 px-1.5 py-0.5 rounded">{data.porRras.length} RRAS</span>}>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-[#1a2234] text-white">
+                              <th className="px-3 py-2 text-left font-semibold tracking-wide">RRAS</th>
+                              <th className="px-3 py-2 text-right font-semibold text-blue-300">Empenhado</th>
+                              <th className="px-3 py-2 text-right font-semibold text-green-300">Liquidado</th>
+                              <th className="px-3 py-2 text-right font-semibold text-orange-300">Pago Total</th>
+                              <th className="px-3 py-2 text-right font-semibold text-slate-300">Exec.</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#F0F0F0]">
+                            {[...data.porRras].sort((a, b) => a.rras.localeCompare(b.rras, 'pt-BR')).map((row, i) => {
+                              const pct = row.empenhado > 0 ? (row.pago_total / row.empenhado * 100) : 0;
+                              const color = pct >= 70 ? '#1AAB40' : pct >= 40 ? '#D9B300' : '#D64550';
+                              return (
+                                <tr key={i} className="hover:bg-blue-50/30" style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
+                                  <td className="px-3 py-2 font-semibold text-[#1e3a5f]">{row.rras}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-[#118DFF]">{fmt(row.empenhado, 'compact')}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-[#1AAB40]">{fmt(row.liquidado, 'compact')}</td>
+                                  <td className="px-3 py-2 text-right font-mono text-[#E66C37]">{fmt(row.pago_total, 'compact')}</td>
+                                  <td className="px-3 py-2 text-right font-bold" style={{ color }}>{pct.toFixed(1)}%</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-[#1a2234] text-white">
+                              <td className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Geral</td>
+                              <td className="px-3 py-2 text-right font-mono font-bold text-blue-300">{fmt(data.porRras.reduce((s,r)=>s+r.empenhado,0),'compact')}</td>
+                              <td className="px-3 py-2 text-right font-mono text-green-300">{fmt(data.porRras.reduce((s,r)=>s+r.liquidado,0),'compact')}</td>
+                              <td className="px-3 py-2 text-right font-mono text-orange-300">{fmt(data.porRras.reduce((s,r)=>s+r.pago_total,0),'compact')}</td>
+                              <td />
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
                     </Card>
                   )}
                   {data.porRegiaoSa.length > 0 && (
@@ -3341,16 +3324,20 @@ export default function App() {
             subs: { subdim: string; byYear: Record<number, number>; total: number }[];
           };
           const groupMap = new Map<string, PivotGroup>();
+          // Normalize fonte_simpl values from DB (Tesouro/Federal/Demais → ESTADUAL/FEDERAL)
+          const normFonte = (s: string) => (s === 'Federal' || s === 'FEDERAL') ? 'FEDERAL' : 'ESTADUAL';
           for (const row of pivotRaw) {
             const v = (row[pivotValueKey] as number) ?? 0;
-            if (!groupMap.has(row.dim1)) {
-              groupMap.set(row.dim1, { dim1: row.dim1, byYear: {}, total: 0, subs: [] });
+            const dim1 = pivotRowDim === 'fonte_simpl' ? normFonte(row.dim1) : row.dim1;
+            const subdim = pivotSubDim === 'fonte_simpl' ? normFonte(row.subdim) : row.subdim;
+            if (!groupMap.has(dim1)) {
+              groupMap.set(dim1, { dim1, byYear: {}, total: 0, subs: [] });
             }
-            const grp = groupMap.get(row.dim1)!;
+            const grp = groupMap.get(dim1)!;
             grp.byYear[row.ano_referencia] = (grp.byYear[row.ano_referencia] ?? 0) + v;
             grp.total += v;
-            let sub = grp.subs.find(r => r.subdim === row.subdim);
-            if (!sub) { sub = { subdim: row.subdim, byYear: {}, total: 0 }; grp.subs.push(sub); }
+            let sub = grp.subs.find(r => r.subdim === subdim);
+            if (!sub) { sub = { subdim, byYear: {}, total: 0 }; grp.subs.push(sub); }
             sub.byYear[row.ano_referencia] = (sub.byYear[row.ano_referencia] ?? 0) + v;
             sub.total += v;
           }
@@ -3592,380 +3579,6 @@ export default function App() {
                     </table>
                   </div>
                 )}
-              </div>
-            </>
-          );
-        })()}
-
-        {/* ---------- TAB: PAGAMENTOS ---------- */}
-        {activeTab === 'pagamentos' && (() => {
-          // Derive years and build pivot structure from pagData
-          const vKey = pagValueKey;
-          const pagAnos = Array.from(new Set(pagData.map(r => r.ano_referencia))).sort();
-
-          // Group: favorecido → fonte_simpl → tipo_custeio → { rotulo, byYear, total }
-          type RotuloEntry = { rotulo: string; byYear: Record<number, number>; total: number };
-          type TipoEntry   = { tipo: string; byYear: Record<number, number>; total: number; rotulos: RotuloEntry[] };
-          type FonteEntry  = { fonte: string; byYear: Record<number, number>; total: number; tipos: TipoEntry[] };
-          type FavEntry    = { fav: string; byYear: Record<number, number>; total: number; fontes: FonteEntry[] };
-
-          const favMap = new Map<string, Map<string, Map<string, Map<string, RotuloEntry>>>>();
-          for (const r of pagData) {
-            if (!favMap.has(r.favorecido)) favMap.set(r.favorecido, new Map());
-            const fonteMap = favMap.get(r.favorecido)!;
-            if (!fonteMap.has(r.fonte_simpl)) fonteMap.set(r.fonte_simpl, new Map());
-            const tipoMap = fonteMap.get(r.fonte_simpl)!;
-            if (!tipoMap.has(r.tipo_custeio)) tipoMap.set(r.tipo_custeio, new Map());
-            const rotMap = tipoMap.get(r.tipo_custeio)!;
-            if (!rotMap.has(r.rotulo)) rotMap.set(r.rotulo, { rotulo: r.rotulo, byYear: {}, total: 0 });
-            const rot = rotMap.get(r.rotulo)!;
-            rot.byYear[r.ano_referencia] = (rot.byYear[r.ano_referencia] ?? 0) + Number(r[vKey]);
-            rot.total += Number(r[vKey]);
-          }
-
-          const favEntries: FavEntry[] = [];
-          let grandTotal = 0;
-          const grandByYear: Record<number, number> = {};
-          favMap.forEach((fonteMap, fav) => {
-            const fe: FavEntry = { fav, byYear: {}, total: 0, fontes: [] };
-            fonteMap.forEach((tipoMap, fonte) => {
-              const fo: FonteEntry = { fonte, byYear: {}, total: 0, tipos: [] };
-              tipoMap.forEach((rotMap, tipo) => {
-                const ti: TipoEntry = { tipo, byYear: {}, total: 0, rotulos: [] };
-                rotMap.forEach(rot => {
-                  ti.rotulos.push(rot);
-                  rot.rotulo; // just ref
-                  for (const [y, v] of Object.entries(rot.byYear)) {
-                    ti.byYear[Number(y)] = (ti.byYear[Number(y)] ?? 0) + v;
-                  }
-                  ti.total += rot.total;
-                });
-                ti.rotulos.sort((a, b) => a.rotulo.localeCompare(b.rotulo));
-                fo.tipos.push(ti);
-                for (const [y, v] of Object.entries(ti.byYear)) {
-                  fo.byYear[Number(y)] = (fo.byYear[Number(y)] ?? 0) + v;
-                }
-                fo.total += ti.total;
-              });
-              fo.tipos.sort((a, b) => a.tipo.localeCompare(b.tipo));
-              fe.fontes.push(fo);
-              for (const [y, v] of Object.entries(fo.byYear)) {
-                fe.byYear[Number(y)] = (fe.byYear[Number(y)] ?? 0) + v;
-              }
-              fe.total += fo.total;
-            });
-            fe.fontes.sort((a, b) => a.fonte.localeCompare(b.fonte));
-            favEntries.push(fe);
-            for (const [y, v] of Object.entries(fe.byYear)) {
-              grandByYear[Number(y)] = (grandByYear[Number(y)] ?? 0) + v;
-            }
-            grandTotal += fe.total;
-          });
-          favEntries.sort((a, b) => a.fav.localeCompare(b.fav));
-
-          // Unique DRS list (from distincts or from data)
-          const drsList = distincts['p_drs'] ?? [];
-
-          const updatedDate = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('. ', '').replace('.', '');
-
-          const downloadPagXlsx = async () => {
-            setPagXlsxLoading(true);
-            try {
-              const XLSX = await import('xlsx');
-              const wb = XLSX.utils.book_new();
-              const metricLabel = vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO';
-              const titulo = pagMunicipio ? `PAGAMENTOS - ${pagMunicipio}` : 'PAGAMENTOS - TODOS OS MUNICÍPIOS';
-
-              const rows: (string | number)[][] = [];
-              rows.push(['COORDENADORIA DE GESTÃO ORÇAMENTÁRIA E FINANCEIRA']);
-              rows.push([titulo]);
-              rows.push([`Atualizado ${updatedDate}  |  Soma de ${metricLabel}`]);
-              rows.push([]);
-              rows.push(['Rótulos de Linha', ...pagAnos.map(String), 'Total Geral']);
-
-              for (const fe of favEntries) {
-                rows.push([fe.fav, ...pagAnos.map(a => fe.byYear[a] ?? 0), fe.total]);
-                for (const fo of fe.fontes) {
-                  rows.push(['  ' + fo.fonte, ...pagAnos.map(a => fo.byYear[a] ?? 0), fo.total]);
-                  for (const ti of fo.tipos) {
-                    rows.push(['    ' + ti.tipo, ...pagAnos.map(a => ti.byYear[a] ?? 0), ti.total]);
-                    for (const rot of ti.rotulos) {
-                      rows.push(['      ' + rot.rotulo, ...pagAnos.map(a => rot.byYear[a] ?? 0), rot.total]);
-                    }
-                  }
-                }
-              }
-              rows.push(['Total Geral', ...pagAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
-
-              const ws = XLSX.utils.aoa_to_sheet(rows);
-              ws['!cols'] = [{ wch: 70 }, ...pagAnos.map(() => ({ wch: 20 })), { wch: 20 }];
-              XLSX.utils.book_append_sheet(wb, ws, 'Pagamentos');
-              const fileName = `pagamentos_${(pagMunicipio || 'todos').replace(/\s+/g, '_')}_${pagAno !== 'todos' ? pagAno : 'todos'}.xlsx`;
-              XLSX.writeFile(wb, fileName);
-            } catch (e: unknown) {
-              alert('Erro ao gerar XLSX: ' + (e as Error).message);
-            } finally {
-              setPagXlsxLoading(false);
-            }
-          };
-
-          const printPdf = () => {
-            window.print();
-          };
-
-          const COL_W = 160;
-          const numCols = pagAnos.length + 2; // label + years + total
-
-          return (
-            <>
-              {/* Print CSS */}
-              <style>{`
-                @media print {
-                  body > *:not(#pag-print-root) { display: none !important; }
-                  #pag-print-root { display: block !important; }
-                  .no-print { display: none !important; }
-                  #pag-table-wrap { overflow: visible !important; max-height: none !important; }
-                }
-              `}</style>
-
-              <div id="pag-print-root">
-                {/* Print-only header */}
-                <div className="hidden print:flex items-center justify-between border-b-2 border-[#CC0000] pb-3 mb-4">
-                  <div>
-                    <p className="text-[11px] font-semibold text-[#555] uppercase tracking-wider">Coordenadoria de Gestão Orçamentária e Financeira</p>
-                    <p className="text-[22px] font-extrabold tracking-tight" style={{ color: '#CC0000' }}>PAGAMENTOS</p>
-                    <p className="text-[10px] text-[#888] mt-0.5">
-                      {pagMunicipio ? `Município: ${pagMunicipio}` : 'Todos os Municípios'}
-                      {pagDrs ? ` · ${pagDrs}` : ''}
-                      {` · Atualizado ${updatedDate}`}
-                    </p>
-                  </div>
-                  <img src="/img/logo1.png" alt="Logo SES/SP" style={{ height: '64px' }} />
-                </div>
-
-                {/* ── Barra de controles (no-print) ── */}
-                <div className="no-print flex items-center gap-2 flex-wrap mb-2 bg-white border border-[#D0D0D0] rounded px-3 py-2">
-                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">Município</span>
-                  <select value={pagMunicipio} onChange={e => { setPagMunicipio(e.target.value); setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
-                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white min-w-[160px]">
-                    <option value="">Todos</option>
-                    {pagMunicList.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <span className="text-[#CCC] mx-1">|</span>
-                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">DRS</span>
-                  <select value={pagDrs} onChange={e => setPagDrs(e.target.value)}
-                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white min-w-[130px]">
-                    <option value="">Todos os DRS</option>
-                    {drsList.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <span className="text-[#CCC] mx-1">|</span>
-                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">Ano</span>
-                  <select value={String(pagAno)} onChange={e => { const v = e.target.value; setPagAno(v === 'todos' ? 'todos' : Number(v)); }}
-                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white">
-                    <option value="todos">Todos os Anos</option>
-                    {availableAnos.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <span className="text-[#CCC] mx-1">|</span>
-                  {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
-                    <button key={k} onClick={() => setPagValueKey(k)}
-                      className={cn('px-2 py-1 text-[11px] font-semibold rounded border transition-all',
-                        pagValueKey === k ? 'bg-[#1F4E79] text-white border-[#1F4E79]' : 'bg-white text-[#555] border-[#D0D0D0] hover:bg-[#F0F0F0]')}>
-                      {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
-                    </button>
-                  ))}
-                  <div className="flex-1" />
-                  <button onClick={() => {
-                    const allFav = new Set(favEntries.map(f => f.fav));
-                    const allFonte = new Set(favEntries.flatMap(f => f.fontes.map(fo => `${f.fav}__${fo.fonte}`)));
-                    const allTipo = new Set(favEntries.flatMap(f => f.fontes.flatMap(fo => fo.tipos.map(ti => `${f.fav}__${fo.fonte}__${ti.tipo}`))));
-                    setPagExpandedFav(allFav); setPagExpandedFonte(allFonte); setPagExpandedTipo(allTipo);
-                  }} className="px-2 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded border border-[#D0D0D0] hover:bg-[#E5E7EB] shrink-0">
-                    + Todos
-                  </button>
-                  <button onClick={() => { setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
-                    className="px-2 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded border border-[#D0D0D0] hover:bg-[#E5E7EB] shrink-0">
-                    − Todos
-                  </button>
-                  <button onClick={downloadPagXlsx} disabled={pagXlsxLoading || !pagData.length}
-                    className="flex items-center gap-1 px-3 py-1 bg-[#217346] text-white text-[11px] font-bold rounded border border-[#1a5c38] hover:bg-[#1a5c38] disabled:opacity-40 shrink-0">
-                    {pagXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
-                    XLSX
-                  </button>
-                  <button onClick={printPdf} disabled={!pagData.length}
-                    className="flex items-center gap-1 px-3 py-1 bg-[#CC0000] text-white text-[11px] font-bold rounded border border-[#a30000] hover:bg-[#a30000] disabled:opacity-40 shrink-0">
-                    <FileText className="w-3.5 h-3.5" />
-                    PDF
-                  </button>
-                </div>
-
-                {/* ── Tabela ── */}
-                {pagError && (
-                  <div className="bg-red-50 border border-red-200 rounded p-3 mb-2">
-                    <p className="text-xs font-bold text-red-700">{pagError.includes('Could not find the function') ? 'Função lc131_pagamentos não encontrada. Execute scripts/pagamentos-fn.sql no Supabase SQL Editor.' : pagError}</p>
-                    <button onClick={loadPagamentos} className="mt-1 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
-                  </div>
-                )}
-
-                {/* ── Tabela estilo Excel ── */}
-                <div style={{ background: '#FFFFFF', border: '1px solid #7F9DB9', fontFamily: 'Calibri, Arial, sans-serif' }}>
-                  {/* Sub-cabeçalho: município + data */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #7F9DB9', background: '#DEEAF1', padding: '5px 10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                      MUNICÍPIO&nbsp;&nbsp;
-                      <span style={{ fontWeight: 'normal' }}>{pagMunicipio || 'Todos os Municípios'}</span>
-                      {pagDrs ? <span style={{ fontWeight: 'normal' }}>&nbsp;&nbsp;·&nbsp;&nbsp;{pagDrs}</span> : null}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#666' }}>Atualizado {updatedDate}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #7F9DB9', background: '#DEEAF1', padding: '3px 10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                      Soma de {vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO'}
-                    </span>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Rótulos de Coluna ▼</span>
-                  </div>
-                  {pagLoading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-                      <Spinner size={5} /><span style={{ marginLeft: '12px', color: '#888', fontSize: '13px' }}>Carregando pagamentos…</span>
-                    </div>
-                  ) : (
-                    <div id="pag-table-wrap" style={{ maxHeight: '65vh', overflowY: 'auto', overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: `${340 + pagAnos.length * 150}px` }}>
-                        <thead>
-                          <tr style={{ background: '#B8CCE4', position: 'sticky', top: 0, zIndex: 10 }}>
-                            <th style={{ textAlign: 'left', padding: '5px 10px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '340px', position: 'sticky', left: 0, background: '#B8CCE4', zIndex: 20 }}>
-                              Rótulos de Linha ▼
-                            </th>
-                            {pagAnos.map(ano => (
-                              <th key={ano} style={{ textAlign: 'right', padding: '5px 14px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '150px', whiteSpace: 'nowrap' }}>
-                                {ano}
-                              </th>
-                            ))}
-                            <th style={{ textAlign: 'right', padding: '5px 14px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '150px', whiteSpace: 'nowrap' }}>
-                              Total Geral
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {favEntries.map(fe => {
-                            const favKey = fe.fav;
-                            const isFavExp = pagExpandedFav.has(favKey);
-                            return (
-                              <React.Fragment key={favKey}>
-                                {/* Nível 1 — Favorecido */}
-                                <tr onClick={() => { const ns = new Set(pagExpandedFav); if (isFavExp) ns.delete(favKey); else ns.add(favKey); setPagExpandedFav(ns); }}
-                                  style={{ cursor: 'pointer', background: '#FFFFFF' }}>
-                                  <td style={{ padding: '3px 10px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
-                                    <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isFavExp ? '⊟' : '⊕'}</span>
-                                    {fe.fav}
-                                  </td>
-                                  {pagAnos.map(ano => (
-                                    <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                      {fe.byYear[ano] ? fe.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                                    </td>
-                                  ))}
-                                  <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                    {fe.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </td>
-                                </tr>
-
-                                {/* Nível 2 — Fonte (ESTADUAL/FEDERAL) */}
-                                {isFavExp && fe.fontes.map(fo => {
-                                  const fonteKey = `${favKey}__${fo.fonte}`;
-                                  const isFonteExp = pagExpandedFonte.has(fonteKey);
-                                  return (
-                                    <React.Fragment key={fonteKey}>
-                                      <tr onClick={() => { const ns = new Set(pagExpandedFonte); if (isFonteExp) ns.delete(fonteKey); else ns.add(fonteKey); setPagExpandedFonte(ns); }}
-                                        style={{ cursor: 'pointer', background: '#FFFFFF' }}>
-                                        <td style={{ padding: '3px 10px 3px 28px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
-                                          <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isFonteExp ? '⊟' : '⊕'}</span>
-                                          {fo.fonte}
-                                        </td>
-                                        {pagAnos.map(ano => (
-                                          <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                            {fo.byYear[ano] ? fo.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                                          </td>
-                                        ))}
-                                        <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                          {fo.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                      </tr>
-
-                                      {/* Nível 3 — Tipo (CUSTEIO/INVESTIMENTO) */}
-                                      {isFonteExp && fo.tipos.map(ti => {
-                                        const tipoKey = `${fonteKey}__${ti.tipo}`;
-                                        const isTipoExp = pagExpandedTipo.has(tipoKey);
-                                        return (
-                                          <React.Fragment key={tipoKey}>
-                                            <tr onClick={() => { const ns = new Set(pagExpandedTipo); if (isTipoExp) ns.delete(tipoKey); else ns.add(tipoKey); setPagExpandedTipo(ns); }}
-                                              style={{ cursor: 'pointer', background: '#FFFFFF' }}>
-                                              <td style={{ padding: '3px 10px 3px 50px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
-                                                <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isTipoExp ? '⊟' : '⊕'}</span>
-                                                {ti.tipo}
-                                              </td>
-                                              {pagAnos.map(ano => (
-                                                <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                                  {ti.byYear[ano] ? ti.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                                                </td>
-                                              ))}
-                                              <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                                {ti.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </td>
-                                            </tr>
-
-                                            {/* Nível 4 — Rótulo */}
-                                            {isTipoExp && ti.rotulos.map(rot => (
-                                              <tr key={rot.rotulo} style={{ background: '#FFFFFF' }}>
-                                                <td style={{ padding: '3px 10px 3px 72px', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#C00000' }}>
-                                                  {rot.rotulo}
-                                                </td>
-                                                {pagAnos.map(ano => (
-                                                  <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#C00000' }}>
-                                                    {rot.byYear[ano] ? rot.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                                                  </td>
-                                                ))}
-                                                <td style={{ padding: '3px 14px', textAlign: 'right', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#C00000' }}>
-                                                  {rot.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </td>
-                                              </tr>
-                                            ))}
-                                          </React.Fragment>
-                                        );
-                                      })}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-
-                          {/* Total Geral */}
-                          {favEntries.length > 0 && (
-                            <tr style={{ background: '#DEEAF1', borderTop: '2px solid #7F9DB9' }}>
-                              <td style={{ padding: '5px 10px', fontWeight: 'bold', border: '1px solid #7F9DB9', position: 'sticky', left: 0, background: '#DEEAF1', zIndex: 5, color: '#1F3864' }}>
-                                Total Geral
-                              </td>
-                              {pagAnos.map(ano => (
-                                <td key={ano} style={{ padding: '5px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #7F9DB9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                  {(grandByYear[ano] ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
-                              ))}
-                              <td style={{ padding: '5px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #7F9DB9', whiteSpace: 'nowrap', color: '#1F3864' }}>
-                                {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          )}
-
-                          {!pagLoading && !pagData.length && (
-                            <tr><td colSpan={pagAnos.length + 2} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-                              <p style={{ fontSize: '13px' }}>Nenhum dado encontrado</p>
-                              {!pagMunicipio && <p style={{ fontSize: '11px', marginTop: '4px', color: '#bbb' }}>Selecione um município para ver os pagamentos.</p>}
-                            </td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
               </div>
             </>
           );
