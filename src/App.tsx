@@ -310,7 +310,10 @@ function buildDistinctState(d?: Record<string, unknown>): Record<string, string[
     distinct_grupo: uniqueSorted(d?.distinct_grupo as string[] ?? []),
     distinct_tipo: uniqueSorted(d?.distinct_tipo as string[] ?? []),
     distinct_rotulo: uniqueSorted(d?.distinct_rotulo as string[] ?? []),
-    distinct_fonte: uniqueSorted(d?.distinct_fonte as string[] ?? []),
+    distinct_fonte: Array.from(new Set((d?.distinct_fonte as string[] ?? []).map(v => {
+      const u = String(v).toUpperCase().trim();
+      return (u.includes('FEDERAL') || u.includes('FED') || u.includes('FUNDO NACIONAL') || u.includes('TRANSFE') || u.includes('SUS')) ? 'FEDERAL' : 'ESTADUAL';
+    }))).sort(),
     distinct_codigo_ug: uniqueSorted(d?.distinct_codigo_ug as string[] ?? []),
     distinct_uo: uniqueSorted(d?.distinct_uo as string[] ?? []),
     distinct_elemento: uniqueSorted(d?.distinct_elemento as string[] ?? []),
@@ -328,7 +331,10 @@ function buildDistinctStateFromRows(rows: Record<string, unknown>[]): Record<str
     distinct_grupo: uniqueSorted(rows.map(r => r.codigo_nome_grupo ?? r.grupo_despesa)),
     distinct_tipo: uniqueSorted(rows.map(r => r.tipo_despesa)),
     distinct_rotulo: uniqueSorted(rows.map(r => r.rotulo)),
-    distinct_fonte: uniqueSorted(rows.map(r => r.codigo_nome_fonte_recurso ?? r.fonte_recurso)),
+    distinct_fonte: Array.from(new Set(rows.map(r => {
+      const s = String(r.codigo_nome_fonte_recurso ?? r.fonte_recurso ?? '').toLowerCase();
+      return (s.includes('fed') || s.includes('fundo nacional') || s.includes('transfe') || s.includes('sus') || s.includes('uniao') || s.includes('união')) ? 'FEDERAL' : 'ESTADUAL';
+    }))).sort(),
     distinct_codigo_ug: uniqueSorted(rows.map(r => r.codigo_ug)),
     distinct_uo: uniqueSorted(rows.map(r => r.codigo_nome_uo ?? r.uo)),
     distinct_elemento: uniqueSorted(rows.map(r => r.codigo_nome_elemento ?? r.elemento)),
@@ -379,7 +385,10 @@ function applyFiltersToQuery(
 function buildFonteOrFilter(values: string[]): string {
   const parts: string[] = [];
   for (const v of values) {
-    if (v === 'ESTADUAL') parts.push('codigo_nome_fonte_recurso.ilike.%tesouro%');
+    if (v === 'ESTADUAL') parts.push(
+      'codigo_nome_fonte_recurso.ilike.%tesouro%',
+      'and(codigo_nome_fonte_recurso.not.ilike.%fed%,codigo_nome_fonte_recurso.not.ilike.%fundo nacional%,codigo_nome_fonte_recurso.not.ilike.%transfer%,codigo_nome_fonte_recurso.not.ilike.%uniao%,codigo_nome_fonte_recurso.not.ilike.%uni%C3%A3o%,codigo_nome_fonte_recurso.not.ilike.%sus%)',
+    );
     if (v === 'FEDERAL') parts.push(
       'codigo_nome_fonte_recurso.ilike.%fed%',
       'codigo_nome_fonte_recurso.ilike.%união%',
@@ -2854,18 +2863,157 @@ export default function App() {
                 </div>
               </Card>
 
+              {/* ── ESTADUAL vs FEDERAL ── */}
+              {data.porFonteSimpl.length > 0 && (() => {
+                const totalEmp = data.porFonteSimpl.reduce((s, f) => s + f.empenhado, 0);
+                const totalLiq = data.porFonteSimpl.reduce((s, f) => s + f.liquidado, 0);
+                const totalPago = data.porFonteSimpl.reduce((s, f) => s + f.pago_total, 0);
+                const est = data.porFonteSimpl.find(f => f.fonte_simpl === 'ESTADUAL') ?? { empenhado: 0, liquidado: 0, pago_total: 0 };
+                const fed = data.porFonteSimpl.find(f => f.fonte_simpl === 'FEDERAL') ?? { empenhado: 0, liquidado: 0, pago_total: 0 };
+                const estPct = totalEmp > 0 ? est.empenhado / totalEmp * 100 : 0;
+                const fedPct = totalEmp > 0 ? fed.empenhado / totalEmp * 100 : 0;
+                const estExec = est.empenhado > 0 ? est.pago_total / est.empenhado * 100 : 0;
+                const fedExec = fed.empenhado > 0 ? fed.pago_total / fed.empenhado * 100 : 0;
+                return (
+                  <Card title="Origem dos Recursos — ESTADUAL vs FEDERAL" icon={<Database className="w-4 h-4" />}
+                    badge={<span className="text-[10px] font-bold text-[#118DFF] bg-blue-50 px-1.5 py-0.5 rounded">Distribuição por fonte simplificada</span>}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
+                      {/* ESTADUAL */}
+                      <div className="bg-gradient-to-br from-[#EEF4FF] to-[#E3EDFF] border border-[#C7DAFF] rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-3 h-3 rounded-full bg-[#118DFF] shrink-0" />
+                          <span className="text-[12px] font-bold text-[#1e3a5f] tracking-wide">ESTADUAL</span>
+                          <span className="ml-auto text-[11px] font-bold text-[#118DFF] bg-white/70 px-1.5 py-0.5 rounded">{estPct.toFixed(1)}%</span>
+                        </div>
+                        <p className="text-[18px] font-bold text-[#118DFF] leading-tight">{fmt(est.empenhado, 'compact')}</p>
+                        <p className="text-[10px] text-[#4a7fc1] mt-0.5">Empenhado</p>
+                        <div className="mt-2.5 grid grid-cols-2 gap-2 text-[10px]">
+                          <div><p className="text-[#777]">Liquidado</p><p className="font-semibold text-[#1AAB40]">{fmt(est.liquidado, 'compact')}</p></div>
+                          <div><p className="text-[#777]">Pago Total</p><p className="font-semibold text-[#E66C37]">{fmt(est.pago_total, 'compact')}</p></div>
+                        </div>
+                        <div className="mt-2.5">
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-[#777]">Execução</span>
+                            <span className="font-bold" style={{ color: estExec >= 70 ? '#1AAB40' : estExec >= 40 ? '#D9B300' : '#D64550' }}>{estExec.toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#118DFF]" style={{ width: Math.min(estExec, 100) + '%' }} />
+                          </div>
+                        </div>
+                      </div>
+                      {/* FEDERAL */}
+                      <div className="bg-gradient-to-br from-[#EEF0FF] to-[#E5E8FF] border border-[#C0C7F5] rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-3 h-3 rounded-full bg-[#12239E] shrink-0" />
+                          <span className="text-[12px] font-bold text-[#1e1e6f] tracking-wide">FEDERAL</span>
+                          <span className="ml-auto text-[11px] font-bold text-[#12239E] bg-white/70 px-1.5 py-0.5 rounded">{fedPct.toFixed(1)}%</span>
+                        </div>
+                        <p className="text-[18px] font-bold text-[#12239E] leading-tight">{fmt(fed.empenhado, 'compact')}</p>
+                        <p className="text-[10px] text-[#5a5ab5] mt-0.5">Empenhado</p>
+                        <div className="mt-2.5 grid grid-cols-2 gap-2 text-[10px]">
+                          <div><p className="text-[#777]">Liquidado</p><p className="font-semibold text-[#1AAB40]">{fmt(fed.liquidado, 'compact')}</p></div>
+                          <div><p className="text-[#777]">Pago Total</p><p className="font-semibold text-[#E66C37]">{fmt(fed.pago_total, 'compact')}</p></div>
+                        </div>
+                        <div className="mt-2.5">
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-[#777]">Execução</span>
+                            <span className="font-bold" style={{ color: fedExec >= 70 ? '#1AAB40' : fedExec >= 40 ? '#D9B300' : '#D64550' }}>{fedExec.toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#12239E]" style={{ width: Math.min(fedExec, 100) + '%' }} />
+                          </div>
+                        </div>
+                      </div>
+                      {/* Barra comparativa */}
+                      <div className="flex flex-col justify-center gap-3">
+                        <p className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider">Distribuição Empenhado</p>
+                        <div className="h-10 rounded-lg overflow-hidden flex">
+                          <div className="h-full bg-[#118DFF] flex items-center justify-center" style={{ width: estPct + '%' }}>
+                            {estPct > 10 && <span className="text-[10px] font-bold text-white">{estPct.toFixed(0)}%</span>}
+                          </div>
+                          <div className="h-full bg-[#12239E] flex items-center justify-center" style={{ width: fedPct + '%' }}>
+                            {fedPct > 10 && <span className="text-[10px] font-bold text-white">{fedPct.toFixed(0)}%</span>}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
+                          <div><p className="text-[#AAA]">Total Emp.</p><p className="font-bold text-[#333]">{fmt(totalEmp, 'compact')}</p></div>
+                          <div><p className="text-[#AAA]">Total Liq.</p><p className="font-bold text-[#1AAB40]">{fmt(totalLiq, 'compact')}</p></div>
+                          <div><p className="text-[#AAA]">Total Pago</p><p className="font-bold text-[#E66C37]">{fmt(totalPago, 'compact')}</p></div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })()}
+
               {/* Grupos + Elementos grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {/* Grupo detalhado com barra de execução */}
-                <Card title="Grupos de Despesa — Análise de Execução" icon={<Layers className="w-4 h-4" />}>
-                  <div className="flex flex-col gap-2 mt-1">
+                {/* Grupo SIMPLIFICADO (Custeio/Investimento/Pessoal) + detalhado */}
+                <Card title="Grupos de Despesa — Custeio · Investimento · Pessoal" icon={<Layers className="w-4 h-4" />}>
+                  {/* Simplified group summary */}
+                  {data.porGrupoSimpl.length > 0 && (() => {
+                    const totSimpl = data.porGrupoSimpl.reduce((s, g) => s + g.empenhado, 0);
+                    const estTotal = data.porFonteSimpl.find(f => f.fonte_simpl === 'ESTADUAL')?.empenhado ?? 0;
+                    const fedTotal = data.porFonteSimpl.find(f => f.fonte_simpl === 'FEDERAL')?.empenhado ?? 0;
+                    const globalTotal = estTotal + fedTotal || 1;
+                    return (
+                      <>
+                        <div className="mb-3">
+                          {[...data.porGrupoSimpl].sort((a, b) => b.empenhado - a.empenhado).map((g, i) => {
+                            const color = GRUPO_COLORS[g.grupo_simpl] || '#A6A6A6';
+                            const shareW = totSimpl > 0 ? g.empenhado / totSimpl * 100 : 0;
+                            const pctExec = g.empenhado > 0 ? g.pago_total / g.empenhado * 100 : 0;
+                            const execColor = pctExec >= 80 ? '#1AAB40' : pctExec >= 50 ? '#D9B300' : '#D64550';
+                            const estAmt = g.empenhado * (estTotal / globalTotal);
+                            const fedAmt = g.empenhado * (fedTotal / globalTotal);
+                            return (
+                              <div key={i} className="rounded-lg p-3 border mb-2" style={{ background: color + '10', borderColor: color + '30' }}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
+                                    <span className="text-[12px] font-bold" style={{ color }}>{g.grupo_simpl.toUpperCase()}</span>
+                                  </div>
+                                  <span className="text-[11px] font-bold" style={{ color: execColor }}>{pctExec.toFixed(1)}% exec.</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-[10px] mb-2">
+                                  <div>
+                                    <p className="text-[#888]">Empenhado</p>
+                                    <p className="font-bold text-[#118DFF]">{fmt(g.empenhado, 'compact')}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[#888]">~ESTADUAL</p>
+                                    <p className="font-bold text-[#3b82f6]">{fmt(estAmt, 'compact')}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[#888]">~FEDERAL</p>
+                                    <p className="font-bold text-[#6366f1]">{fmt(fedAmt, 'compact')}</p>
+                                  </div>
+                                </div>
+                                <div className="relative h-2 bg-[#E5E5E5] rounded-full overflow-hidden">
+                                  <div className="absolute h-full rounded-full" style={{ width: shareW + '%', background: color, opacity: 0.7 }} />
+                                  <div className="absolute h-full rounded-full" style={{ width: Math.min(pctExec, shareW) + '%', background: color }} />
+                                </div>
+                                <div className="flex justify-between text-[9px] text-[#AAA] mt-0.5">
+                                  <span>Share: {shareW.toFixed(1)}%</span>
+                                  <span>Pago: {fmt(g.pago_total, 'compact')}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Detail grupos below */}
+                        <p className="text-[9px] font-bold text-[#AAA] uppercase tracking-wider mb-1.5">Detalhamento por Grupo Orçamentário</p>
+                      </>
+                    );
+                  })()}
+                  <div className="flex flex-col gap-1.5">
                     {grupoExec.map((g, i) => {
                       const color = g.pct_exec >= 80 ? '#1AAB40' : g.pct_exec >= 50 ? '#D9B300' : '#D64550';
                       const shareW = totalEmpGrupo > 0 ? (g.empenhado / totalEmpGrupo) * 100 : 0;
                       return (
-                        <div key={i} className="bg-[#FAFAFA] rounded-lg p-2.5 border border-[#F0F0F0]">
-                          <div className="flex items-start justify-between mb-1.5">
-                            <span className="text-[11px] font-semibold text-[#333] flex-1 pr-2">{stripNumPrefix(g.grupo_despesa)}</span>
+                        <div key={i} className="bg-[#FAFAFA] rounded-lg p-2 border border-[#F0F0F0]">
+                          <div className="flex items-start justify-between mb-1">
+                            <span className="text-[10px] font-semibold text-[#333] flex-1 pr-2">{stripNumPrefix(g.grupo_despesa)}</span>
                             <span className="text-[11px] font-bold shrink-0" style={{ color }}>{g.pct_exec.toFixed(1)}%</span>
                           </div>
                           <div className="flex gap-2 items-center text-[10px] text-[#999] mb-1.5">
@@ -2933,37 +3081,57 @@ export default function App() {
               {/* Tipo de Despesa + Rótulo */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card title="Tipo de Despesa — Execução detalhada" icon={<Briefcase className="w-4 h-4" />}>
-                  {data.porTipoDespesa.length > 0 ? (
-                    <div className="flex flex-col gap-2.5">
-                      {data.porTipoDespesa.map((t, i) => {
-                        const tot = data.porTipoDespesa.reduce((s, r) => s + r.empenhado, 0);
-                        const pctShare = tot > 0 ? t.empenhado / tot * 100 : 0;
-                        const pctExec = t.empenhado > 0 ? t.pago_total / t.empenhado * 100 : 0;
-                        const pctLiq2 = t.empenhado > 0 ? t.liquidado / t.empenhado * 100 : 0;
-                        const c = pctExec >= 80 ? '#1AAB40' : pctExec >= 50 ? '#D9B300' : '#D64550';
-                        return (
-                          <div key={i} className="p-2.5 bg-[#FAFAFA] rounded-lg border border-[#F0F0F0]">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CHART_COLORS[(i+4) % CHART_COLORS.length] }} />
-                                <span className="text-[11px] font-semibold text-[#333]">{stripNumPrefix(t.tipo_despesa)}</span>
-                              </div>
-                              <span className="text-[10px] font-bold" style={{ color: c }}>{pctExec.toFixed(1)}%</span>
-                            </div>
-                            <div className="flex gap-3 text-[10px] text-[#999] mb-1.5">
-                              <span className="text-[#118DFF]">{fmt(t.empenhado, 'compact')}</span>
-                              <span>Liq: <b className="text-[#1AAB40]">{pctLiq2.toFixed(0)}%</b></span>
-                              <span>Share: <b>{pctShare.toFixed(1)}%</b></span>
-                            </div>
-                            <div className="relative h-2 bg-[#EBEBEB] rounded overflow-hidden">
-                              <div className="absolute h-full bg-blue-200 rounded" style={{ width: pctShare + '%' }} />
-                              <div className="absolute h-full rounded" style={{ width: pctExec + '%', background: c, opacity: 0.8 }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
+                  {data.porTipoDespesa.length > 0 ? (() => {
+                    const totEmp = data.porTipoDespesa.reduce((s, r) => s + r.empenhado, 0);
+                    const estTotal = data.porFonteSimpl.find(f => f.fonte_simpl === 'ESTADUAL')?.empenhado ?? 0;
+                    const fedTotal = data.porFonteSimpl.find(f => f.fonte_simpl === 'FEDERAL')?.empenhado ?? 0;
+                    const globalTotal = estTotal + fedTotal || 1;
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-[#1a2234] text-white">
+                              <th className="px-3 py-2 text-left font-semibold">Tipo de Despesa</th>
+                              <th className="px-3 py-2 text-right font-semibold text-blue-300">Empenhado</th>
+                              <th className="px-3 py-2 text-right font-semibold" style={{ color: '#60a5fa' }}>~ESTADUAL</th>
+                              <th className="px-3 py-2 text-right font-semibold" style={{ color: '#a5b4fc' }}>~FEDERAL</th>
+                              <th className="px-3 py-2 text-right font-semibold text-orange-300">Exec%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...data.porTipoDespesa].sort((a, b) => b.empenhado - a.empenhado).map((t, i) => {
+                              const pctExec = t.empenhado > 0 ? t.pago_total / t.empenhado * 100 : 0;
+                              const color = pctExec >= 80 ? '#1AAB40' : pctExec >= 50 ? '#D9B300' : '#D64550';
+                              const pctShare = totEmp > 0 ? t.empenhado / totEmp * 100 : 0;
+                              // Approximate ESTADUAL/FEDERAL from global ratio
+                              const estAmt = t.empenhado * (estTotal / globalTotal);
+                              const fedAmt = t.empenhado * (fedTotal / globalTotal);
+                              return (
+                                <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }} className="hover:bg-blue-50/30">
+                                  <td className="px-3 py-2.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: CHART_COLORS[(i+4) % CHART_COLORS.length] }} />
+                                      <span className="font-semibold text-[#333]">{stripNumPrefix(t.tipo_despesa)}</span>
+                                    </div>
+                                    <div className="mt-1 relative h-1.5 bg-[#EBEBEB] rounded overflow-hidden w-full">
+                                      <div className="absolute h-full bg-blue-200 rounded" style={{ width: pctShare + '%' }} />
+                                      <div className="absolute h-full rounded" style={{ width: pctExec + '%', background: color, opacity: 0.8 }} />
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right font-mono font-semibold text-[#118DFF]">{fmt(t.empenhado, 'compact')}</td>
+                                  <td className="px-3 py-2.5 text-right font-mono text-[#3b82f6]">~{fmt(estAmt, 'compact')}</td>
+                                  <td className="px-3 py-2.5 text-right font-mono text-[#6366f1]">~{fmt(fedAmt, 'compact')}</td>
+                                  <td className="px-3 py-2.5 text-right">
+                                    <span className="font-bold" style={{ color }}>{pctExec.toFixed(1)}%</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })() : <div className="text-center text-[#CCC] py-6"><Database className="w-6 h-6 mx-auto" /></div>}
                 </Card>
 
                 {/* Rótulo LC 131 */}
