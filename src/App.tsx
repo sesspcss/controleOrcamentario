@@ -874,7 +874,7 @@ function DonutLegend({ data, nameKey, colors }: { data: Record<string, unknown>[
 // --- Interactive Map ---
 interface MapMunic { municipio: string; drs: string; empenhado: number; liquidado: number; pago_total: number; registros: number }
 interface MapRegion { name: string; empenhado: number; liquidado: number; pago_total: number; municipios: number; registros: number }
-interface MapKpis { empenhado: number; liquidado: number; pago_total: number; registros: number; municipios: number; drs_count: number }
+interface MapKpis { empenhado: number; liquidado: number; pago: number; pago_total: number; registros: number; municipios: number; drs_count: number }
 
 // Canonical DRS names (17 regions) — normalizes all variants
 const DRS_CANONICAL: Record<number, string> = {
@@ -1116,7 +1116,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
               d = dashRpc as Record<string, unknown>;
               const dk = d.kpis as Record<string, number> ?? {};
               d = {
-                kpis: { empenhado: dk.empenhado, liquidado: dk.liquidado, pago_total: dk.pago_total, registros: dk.total, municipios: dk.municipios, drs_count: ((d.por_drs as unknown[]) ?? []).length },
+                kpis: { empenhado: dk.empenhado, liquidado: dk.liquidado, pago: dk.pago ?? 0, pago_total: dk.pago_total, registros: dk.total, municipios: dk.municipios, drs_count: ((d.por_drs as unknown[]) ?? []).length },
                 por_drs: d.por_drs,
                 municipios: ((d.por_municipio as Record<string, unknown>[] ?? [])).map(r => ({ ...r, drs: '', liquidado: 0, registros: 0 })),
               };
@@ -1124,7 +1124,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
             const k = d.kpis as Record<string, number>;
             const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
             const result = {
-              kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
+              kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? 0), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
               drsList: mergedDrs,
               allMunics: ((d.municipios as Record<string, unknown>[]) ?? []).map(r => ({
                 municipio: String(r.municipio ?? ''), drs: normalizeDrs(String(r.drs ?? '')),
@@ -1407,6 +1407,11 @@ function InteractiveMap({ anoSel, onNavigate }: {
           <div className="text-center">
             <p className="text-[9px] text-[#888] uppercase font-bold">Liquidado</p>
             <p className="text-lg font-bold text-[#90EE90]">{fmt(kpis.liquidado, 'currency')}</p>
+          </div>
+          <div className="w-px h-8 bg-[#333]" />
+          <div className="text-center">
+            <p className="text-[9px] text-[#888] uppercase font-bold">Pago</p>
+            <p className="text-lg font-bold text-[#FFD580]">{fmt(kpis.pago, 'currency')}</p>
           </div>
           <div className="w-px h-8 bg-[#333]" />
           <div className="text-center">
@@ -2966,8 +2971,9 @@ export default function App() {
           const totalEmpGrupo = data.porGrupo.reduce((s, r) => s + r.empenhado, 0);
           const elemExecData = data.porElemento.map(r => ({
             ...r,
-            pct_exec: r.empenhado > 0 ? Math.round(r.liquidado / r.empenhado * 100) : 0,
-            gap: r.empenhado - r.liquidado,
+            liquidado: 0,
+            pct_exec: r.empenhado > 0 ? Math.round(Number(r.pago_total ?? 0) / r.empenhado * 100) : 0,
+            gap: r.empenhado - Number(r.pago_total ?? 0),
             share: totalEmpElem > 0 ? r.empenhado / totalEmpElem * 100 : 0,
           }));
           // % Liquidado por grupo detalhado
@@ -2987,14 +2993,14 @@ export default function App() {
               {/* KPIs despesas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Taxa Liquidação</p>
+                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Taxa Liquid.</p>
                   <p className="text-[22px] font-bold leading-none" style={{ color: globalLiq >= 70 ? '#1AAB40' : globalLiq >= 40 ? '#D9B300' : '#D64550' }}>{globalLiq.toFixed(1)}%</p>
                   <p className="text-[11px] text-[#999] mt-0.5">liquidado / empenhado</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
                   <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Taxa Execução</p>
                   <p className="text-[22px] font-bold leading-none" style={{ color: globalExec >= 70 ? '#1AAB40' : globalExec >= 40 ? '#D9B300' : '#D64550' }}>{globalExec.toFixed(1)}%</p>
-                  <p className="text-[11px] text-[#999] mt-0.5">pago / empenhado</p>
+                  <p className="text-[11px] text-[#999] mt-0.5">liquidado / empenhado</p>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
                   <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Maior elemento</p>
@@ -3004,7 +3010,7 @@ export default function App() {
                 <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
                   <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Elemento c/ menor exec.</p>
                   <p className="text-[12px] font-bold text-[#D64550] truncate">{stripNumPrefix(worstElem?.elemento ?? '-')}</p>
-                  <p className="text-[11px] text-[#666] mt-0.5">{worstElem ? worstElem.pct_exec + '% execução' : '-'}</p>
+                  <p className="text-[11px] text-[#666] mt-0.5">{worstElem ? (isNaN(worstElem.pct_exec) ? '-' : worstElem.pct_exec + '% exec.') : '-'}</p>
                 </div>
               </div>
 
