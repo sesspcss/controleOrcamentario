@@ -77,36 +77,37 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_normalized', n);
 
-  -- ── 2. Popula DRS nulo usando tab_municipios (lookup rápido, sem CTE full-scan) ──
-  -- tab_municipios tem índice em municipio → muito mais rápido que CTE sobre lc131_despesas
+  -- ── 2. Popula DRS nulo usando tab_municipios via campo municipio (normalizado) ──
   UPDATE public.lc131_despesas a
   SET drs = m.drs
   FROM public.tab_municipios m
-  WHERE a.municipio = m.municipio
+  WHERE public.norm_munic(a.municipio) = m.municipio
     AND m.drs IS NOT NULL AND m.drs <> ''
     AND (a.drs IS NULL OR a.drs = '')
+    AND a.municipio IS NOT NULL AND a.municipio <> ''
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_filled', n);
 
-  -- ── 3. Popula RRAS nulo usando tab_municipios (mesmo raciocínio) ──────────
+  -- ── 3. Popula RRAS nulo usando tab_municipios via campo municipio ──────────
   UPDATE public.lc131_despesas a
   SET rras = m.rras
   FROM public.tab_municipios m
-  WHERE a.municipio = m.municipio
+  WHERE public.norm_munic(a.municipio) = m.municipio
     AND m.rras IS NOT NULL AND m.rras <> ''
     AND (a.rras IS NULL OR a.rras = '')
+    AND a.municipio IS NOT NULL AND a.municipio <> ''
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_filled', n);
 
-  -- ── 2b. DRS: fallback por nome_municipio (ILIKE, sem normalização exata) ────────
+  -- ── 2b. DRS: fallback por nome_municipio (com norm_munic para remover acentos) ───
   UPDATE public.lc131_despesas a
   SET drs = m.drs
   FROM public.tab_municipios m
   WHERE (a.drs IS NULL OR a.drs = '')
     AND a.nome_municipio IS NOT NULL AND a.nome_municipio <> ''
-    AND upper(trim(a.nome_municipio)) = upper(m.municipio)
+    AND public.norm_munic(a.nome_municipio) = m.municipio
     AND m.drs IS NOT NULL AND m.drs <> ''
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
@@ -171,7 +172,7 @@ BEGIN
   FROM public.tab_municipios m
   WHERE (a.rras IS NULL OR a.rras = '')
     AND a.nome_municipio IS NOT NULL AND a.nome_municipio <> ''
-    AND upper(trim(a.nome_municipio)) = upper(m.municipio)
+    AND public.norm_munic(a.nome_municipio) = m.municipio
     AND m.rras IS NOT NULL AND m.rras <> ''
     AND (p_ano IS NULL OR a.ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;

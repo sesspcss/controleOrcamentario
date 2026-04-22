@@ -80,7 +80,7 @@ const S2 = [
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot' | 'pagamentos';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -419,7 +419,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'despesas',      label: 'Despesas',       icon: <Briefcase className="w-3.5 h-3.5" /> },
   { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
-  { id: 'pivot',         label: 'Pagamentos',     icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
+  { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
+  { id: 'pagamentos',    label: 'Pagamentos',      icon: <DollarSign className="w-3.5 h-3.5" /> },
 ];
 
 // Pivot grouping dimensions — maps UI key → p_dim/p_subdim parameter values for lc131_pivot RPC
@@ -1890,6 +1891,21 @@ export default function App() {
   const [pivotFilters, setPivotFilters]     = useState<Partial<Record<DetailFilterKey, string[]>>>({});
   const [pivotFiltersOpen, setPivotFiltersOpen] = useState(false);
 
+  // -- Pagamentos tab --
+  type PagRow = { favorecido: string; fonte_simpl: string; tipo_custeio: string; rotulo: string; ano_referencia: number; pago_total: number; empenhado: number; liquidado: number };
+  const [pagData, setPagData]               = useState<PagRow[]>([]);
+  const [pagLoading, setPagLoading]         = useState(false);
+  const [pagError, setPagError]             = useState<string|null>(null);
+  const [pagMunicipio, setPagMunicipio]     = useState<string>('');
+  const [pagDrs, setPagDrs]                 = useState<string>('');
+  const [pagAno, setPagAno]                 = useState<number|'todos'>('todos');
+  const [pagMunicList, setPagMunicList]     = useState<string[]>([]);
+  const [pagExpandedFav, setPagExpandedFav] = useState<Set<string>>(new Set());
+  const [pagExpandedFonte, setPagExpandedFonte] = useState<Set<string>>(new Set());
+  const [pagExpandedTipo, setPagExpandedTipo]   = useState<Set<string>>(new Set());
+  const [pagXlsxLoading, setPagXlsxLoading] = useState(false);
+  const [pagValueKey, setPagValueKey]       = useState<'pago_total'|'empenhado'|'liquidado'>('pago_total');
+
   // -- Retry helper for RPC calls (handles upstream timeouts) --
   const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -2086,6 +2102,36 @@ export default function App() {
     loadPivot();
   }, [activeTab, filters, anoSel, loadPivot]);
 
+  // -- Pagamentos loaders --
+  const loadPagMunicList = useCallback(async () => {
+    if (pagMunicList.length > 0) return;
+    const { data } = await supabase.rpc('lc131_municipios_list');
+    if (Array.isArray(data)) setPagMunicList(data as string[]);
+  }, [pagMunicList.length]);
+
+  const loadPagamentos = useCallback(async () => {
+    setPagLoading(true); setPagError(null);
+    try {
+      const params: Record<string, unknown> = {};
+      if (pagMunicipio) params.p_municipio = pagMunicipio;
+      if (pagDrs)       params.p_drs       = pagDrs;
+      if (pagAno !== 'todos') params.p_ano = Number(pagAno);
+      const { data, error } = await supabase.rpc('lc131_pagamentos', params);
+      if (error) throw new Error(error.message);
+      setPagData(Array.isArray(data) ? (data as PagRow[]) : []);
+    } catch (e: unknown) {
+      setPagError((e as Error).message);
+    } finally {
+      setPagLoading(false);
+    }
+  }, [pagMunicipio, pagDrs, pagAno]);
+
+  useEffect(() => {
+    if (activeTab !== 'pagamentos') return;
+    loadPagMunicList();
+    loadPagamentos();
+  }, [activeTab, pagMunicipio, pagDrs, pagAno, loadPagamentos, loadPagMunicList]);
+
   useEffect(() => {
     if (!initialLoaded.current) return;
     loadDistincts(filters, anoSel);
@@ -2105,6 +2151,7 @@ export default function App() {
     setActiveTab(t);
     if (t === 'dados') { loadDetail(0, tableSearch); if (Object.keys(distincts).length === 0) loadDistincts(filters, anoSel); }
     if (t === 'pivot') loadPivot();
+    if (t === 'pagamentos') { loadPagMunicList(); loadPagamentos(); if (Object.keys(distincts).length === 0) loadDistincts({}, anoSel); }
   };
 
   const exportCSV = () => {
@@ -2189,7 +2236,7 @@ export default function App() {
             <span className="text-[12px] text-[#888] hidden sm:inline">Coordenadoria de Gestão Orçamentária e Financeira</span>
           </div>
           <div className="flex items-center gap-2">
-            {activeTab !== 'mapa' && (
+            {activeTab !== 'mapa' && activeTab !== 'pagamentos' && (
               <button onClick={filtersOpen ? () => setFiltersOpen(false) : () => { setFiltersOpen(true); if (!Object.keys(distincts).length) loadDistincts(filters, anoSel); }}
                 className={cn('flex items-center gap-1 px-2.5 h-7 rounded text-[11px] font-semibold transition',
                   filtersOpen || activeFilterCount > 0 ? 'bg-[#118DFF] text-white' : 'bg-[#333] text-[#CCC] hover:bg-[#444]')}>
@@ -3545,6 +3592,470 @@ export default function App() {
                     </table>
                   </div>
                 )}
+              </div>
+            </>
+          );
+        })()}
+
+        {/* ---------- TAB: PAGAMENTOS ---------- */}
+        {activeTab === 'pagamentos' && (() => {
+          // Derive years and build pivot structure from pagData
+          const vKey = pagValueKey;
+          const pagAnos = Array.from(new Set(pagData.map(r => r.ano_referencia))).sort();
+
+          // Group: favorecido → fonte_simpl → tipo_custeio → { rotulo, byYear, total }
+          type RotuloEntry = { rotulo: string; byYear: Record<number, number>; total: number };
+          type TipoEntry   = { tipo: string; byYear: Record<number, number>; total: number; rotulos: RotuloEntry[] };
+          type FonteEntry  = { fonte: string; byYear: Record<number, number>; total: number; tipos: TipoEntry[] };
+          type FavEntry    = { fav: string; byYear: Record<number, number>; total: number; fontes: FonteEntry[] };
+
+          const favMap = new Map<string, Map<string, Map<string, Map<string, RotuloEntry>>>>();
+          for (const r of pagData) {
+            if (!favMap.has(r.favorecido)) favMap.set(r.favorecido, new Map());
+            const fonteMap = favMap.get(r.favorecido)!;
+            if (!fonteMap.has(r.fonte_simpl)) fonteMap.set(r.fonte_simpl, new Map());
+            const tipoMap = fonteMap.get(r.fonte_simpl)!;
+            if (!tipoMap.has(r.tipo_custeio)) tipoMap.set(r.tipo_custeio, new Map());
+            const rotMap = tipoMap.get(r.tipo_custeio)!;
+            if (!rotMap.has(r.rotulo)) rotMap.set(r.rotulo, { rotulo: r.rotulo, byYear: {}, total: 0 });
+            const rot = rotMap.get(r.rotulo)!;
+            rot.byYear[r.ano_referencia] = (rot.byYear[r.ano_referencia] ?? 0) + Number(r[vKey]);
+            rot.total += Number(r[vKey]);
+          }
+
+          const favEntries: FavEntry[] = [];
+          let grandTotal = 0;
+          const grandByYear: Record<number, number> = {};
+          favMap.forEach((fonteMap, fav) => {
+            const fe: FavEntry = { fav, byYear: {}, total: 0, fontes: [] };
+            fonteMap.forEach((tipoMap, fonte) => {
+              const fo: FonteEntry = { fonte, byYear: {}, total: 0, tipos: [] };
+              tipoMap.forEach((rotMap, tipo) => {
+                const ti: TipoEntry = { tipo, byYear: {}, total: 0, rotulos: [] };
+                rotMap.forEach(rot => {
+                  ti.rotulos.push(rot);
+                  rot.rotulo; // just ref
+                  for (const [y, v] of Object.entries(rot.byYear)) {
+                    ti.byYear[Number(y)] = (ti.byYear[Number(y)] ?? 0) + v;
+                  }
+                  ti.total += rot.total;
+                });
+                ti.rotulos.sort((a, b) => a.rotulo.localeCompare(b.rotulo));
+                fo.tipos.push(ti);
+                for (const [y, v] of Object.entries(ti.byYear)) {
+                  fo.byYear[Number(y)] = (fo.byYear[Number(y)] ?? 0) + v;
+                }
+                fo.total += ti.total;
+              });
+              fo.tipos.sort((a, b) => a.tipo.localeCompare(b.tipo));
+              fe.fontes.push(fo);
+              for (const [y, v] of Object.entries(fo.byYear)) {
+                fe.byYear[Number(y)] = (fe.byYear[Number(y)] ?? 0) + v;
+              }
+              fe.total += fo.total;
+            });
+            fe.fontes.sort((a, b) => a.fonte.localeCompare(b.fonte));
+            favEntries.push(fe);
+            for (const [y, v] of Object.entries(fe.byYear)) {
+              grandByYear[Number(y)] = (grandByYear[Number(y)] ?? 0) + v;
+            }
+            grandTotal += fe.total;
+          });
+          favEntries.sort((a, b) => a.fav.localeCompare(b.fav));
+
+          // Unique DRS list (from distincts or from data)
+          const drsList = distincts['p_drs'] ?? [];
+
+          const updatedDate = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('. ', '').replace('.', '');
+
+          const downloadPagXlsx = async () => {
+            setPagXlsxLoading(true);
+            try {
+              const XLSX = await import('xlsx');
+              const wb = XLSX.utils.book_new();
+              const metricLabel = vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO';
+              const titulo = pagMunicipio ? `PAGAMENTOS - ${pagMunicipio}` : 'PAGAMENTOS - TODOS OS MUNICÍPIOS';
+
+              const rows: (string | number)[][] = [];
+              rows.push(['COORDENADORIA DE GESTÃO ORÇAMENTÁRIA E FINANCEIRA']);
+              rows.push([titulo]);
+              rows.push([`Atualizado ${updatedDate}  |  Soma de ${metricLabel}`]);
+              rows.push([]);
+              rows.push(['Rótulos de Linha', ...pagAnos.map(String), 'Total Geral']);
+
+              for (const fe of favEntries) {
+                rows.push([fe.fav, ...pagAnos.map(a => fe.byYear[a] ?? 0), fe.total]);
+                for (const fo of fe.fontes) {
+                  rows.push(['  ' + fo.fonte, ...pagAnos.map(a => fo.byYear[a] ?? 0), fo.total]);
+                  for (const ti of fo.tipos) {
+                    rows.push(['    ' + ti.tipo, ...pagAnos.map(a => ti.byYear[a] ?? 0), ti.total]);
+                    for (const rot of ti.rotulos) {
+                      rows.push(['      ' + rot.rotulo, ...pagAnos.map(a => rot.byYear[a] ?? 0), rot.total]);
+                    }
+                  }
+                }
+              }
+              rows.push(['Total Geral', ...pagAnos.map(a => grandByYear[a] ?? 0), grandTotal]);
+
+              const ws = XLSX.utils.aoa_to_sheet(rows);
+              ws['!cols'] = [{ wch: 70 }, ...pagAnos.map(() => ({ wch: 20 })), { wch: 20 }];
+              XLSX.utils.book_append_sheet(wb, ws, 'Pagamentos');
+              const fileName = `pagamentos_${(pagMunicipio || 'todos').replace(/\s+/g, '_')}_${pagAno !== 'todos' ? pagAno : 'todos'}.xlsx`;
+              XLSX.writeFile(wb, fileName);
+            } catch (e: unknown) {
+              alert('Erro ao gerar XLSX: ' + (e as Error).message);
+            } finally {
+              setPagXlsxLoading(false);
+            }
+          };
+
+          const printPdf = () => {
+            window.print();
+          };
+
+          const COL_W = 160;
+          const numCols = pagAnos.length + 2; // label + years + total
+
+          return (
+            <>
+              {/* ── Cabeçalho para impressão / PDF ── */}
+              <style>{`
+                @media print {
+                  body > *:not(#pag-print-root) { display: none !important; }
+                  #pag-print-root { display: block !important; }
+                  .no-print { display: none !important; }
+                  .print-break { page-break-before: always; }
+                  #pag-table-wrap { overflow: visible !important; max-height: none !important; }
+                }
+              `}</style>
+
+              <div id="pag-print-root">
+                {/* Print-only header */}
+                <div className="hidden print:flex items-center justify-between border-b-2 border-[#CC0000] pb-3 mb-4">
+                  <div>
+                    <p className="text-[11px] font-semibold text-[#555] uppercase tracking-wider">Coordenadoria de Gestão Orçamentária e Financeira</p>
+                    <p className="text-[22px] font-extrabold tracking-tight" style={{ color: '#CC0000' }}>PAGAMENTOS</p>
+                    <p className="text-[10px] text-[#888] mt-0.5">
+                      {pagMunicipio ? `Município: ${pagMunicipio}` : 'Todos os Municípios'}
+                      {pagDrs ? ` · ${pagDrs}` : ''}
+                      {` · Atualizado ${updatedDate}`}
+                    </p>
+                  </div>
+                  <img src="/img/logo1.png" alt="Logo SES/SP" style={{ height: '64px' }} />
+                </div>
+
+                {/* ── Painel de controle ── */}
+                <div className="no-print bg-white border border-[#E5E5E5] rounded-xl shadow-sm mb-3">
+                  {/* Header visual */}
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-[#F0F0F0]" style={{ background: 'linear-gradient(135deg,#fafafa,#f0f4ff)' }}>
+                    <div className="flex items-center gap-3">
+                      <img src="/img/logo1.png" alt="Logo" className="h-10 w-auto" />
+                      <div>
+                        <p className="text-[10px] font-semibold text-[#777] uppercase tracking-widest">Coordenadoria de Gestão Orçamentária e Financeira</p>
+                        <p className="text-[18px] font-extrabold tracking-tight leading-tight" style={{ color: '#CC0000' }}>PAGAMENTOS</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-[#AAA]">Soma de {vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO'}</p>
+                      <p className="text-[10px] text-[#AAA]">Atualizado {updatedDate}</p>
+                    </div>
+                  </div>
+
+                  {/* Filtros e ações */}
+                  <div className="flex items-center gap-3 flex-wrap px-4 py-2.5">
+                    {/* Município */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Município</span>
+                      <select value={pagMunicipio} onChange={e => { setPagMunicipio(e.target.value); setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
+                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer min-w-[180px]">
+                        <option value="">Todos os Municípios</option>
+                        {pagMunicList.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                    {/* DRS */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">DRS</span>
+                      <select value={pagDrs} onChange={e => { setPagDrs(e.target.value); }}
+                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer min-w-[140px]">
+                        <option value="">Todos os DRS</option>
+                        {drsList.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                    {/* Ano */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Ano</span>
+                      <select value={String(pagAno)} onChange={e => { const v = e.target.value; setPagAno(v === 'todos' ? 'todos' : Number(v)); }}
+                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer">
+                        <option value="todos">Todos os Anos</option>
+                        {availableAnos.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                    {/* Métrica */}
+                    <div className="flex items-center gap-1">
+                      {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
+                        <button key={k} onClick={() => setPagValueKey(k)}
+                          className={cn('px-2.5 py-1 text-[11px] font-bold rounded-md transition-all',
+                            pagValueKey === k ? 'bg-[#CC0000] text-white shadow-sm' : 'bg-[#F3F4F6] text-[#666] hover:bg-[#E5E7EB]')}>
+                          {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex-1" />
+
+                    {/* Expandir/recolher */}
+                    <button onClick={() => {
+                      const allFav = new Set(favEntries.map(f => f.fav));
+                      const allFonte = new Set(favEntries.flatMap(f => f.fontes.map(fo => `${f.fav}__${fo.fonte}`)));
+                      const allTipo = new Set(favEntries.flatMap(f => f.fontes.flatMap(fo => fo.tipos.map(ti => `${f.fav}__${fo.fonte}__${ti.tipo}`))));
+                      setPagExpandedFav(allFav); setPagExpandedFonte(allFonte); setPagExpandedTipo(allTipo);
+                    }} className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
+                      + Todos
+                    </button>
+                    <button onClick={() => { setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
+                      − Todos
+                    </button>
+
+                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
+
+                    {/* Contador */}
+                    <span className="text-[11px] text-[#BBB] font-mono shrink-0">
+                      {pagLoading ? <Spinner size={3} /> : `${favEntries.length} favorecido(s)`}
+                    </span>
+
+                    {/* Exportar XLSX */}
+                    <button onClick={downloadPagXlsx} disabled={pagXlsxLoading || !pagData.length}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition-all shadow-sm shrink-0">
+                      {pagXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
+                      XLSX
+                    </button>
+
+                    {/* Exportar PDF */}
+                    <button onClick={printPdf} disabled={!pagData.length}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#CC0000] text-white text-[11px] font-bold rounded-lg hover:bg-[#a30000] disabled:opacity-40 transition-all shadow-sm shrink-0">
+                      <FileText className="w-3.5 h-3.5" />
+                      PDF
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── Tabela ── */}
+                {pagError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-3">
+                    <p className="text-xs font-bold text-red-700 mb-1">Erro ao carregar pagamentos</p>
+                    <p className="text-xs font-mono text-red-500">{pagError.includes('Could not find the function') ? 'Função lc131_pagamentos não encontrada. Execute scripts/pagamentos-fn.sql no Supabase SQL Editor.' : pagError}</p>
+                    <button onClick={loadPagamentos} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
+                  </div>
+                )}
+
+                <div className="bg-white border border-[#E5E5E5] rounded-xl shadow-sm overflow-hidden">
+                  {pagLoading ? (
+                    <div className="flex items-center justify-center py-20"><Spinner size={6} /><span className="ml-3 text-sm text-[#888]">Carregando pagamentos…</span></div>
+                  ) : (
+                    <div id="pag-table-wrap" className="overflow-auto" style={{ maxHeight: '68vh' }}>
+                      <table className="w-full border-collapse text-[12px]" style={{ minWidth: `${240 + numCols * COL_W}px` }}>
+                        <thead>
+                          {/* Sub-header: "Rótulos de Coluna" */}
+                          <tr style={{ background: '#f8f9fa' }}>
+                            <th className="sticky left-0 z-20 px-4 py-2 text-left font-bold text-[10px] uppercase tracking-wider border-b border-r"
+                              style={{ minWidth: '300px', background: '#f8f9fa', borderColor: '#e5eaf2', color: '#6b7280' }}>
+                              Rótulos de Linha ▼
+                            </th>
+                            <th colSpan={pagAnos.length} className="px-4 py-2 text-center font-bold text-[10px] uppercase tracking-wider border-b border-r"
+                              style={{ borderColor: '#e5eaf2', color: '#6b7280' }}>
+                              Rótulos de Coluna ▼
+                            </th>
+                            <th className="px-4 py-2 text-right font-bold text-[10px] uppercase tracking-wider border-b"
+                              style={{ borderColor: '#e5eaf2', color: '#6b7280' }}>
+                            </th>
+                          </tr>
+                          {/* Year headers */}
+                          <tr style={{ background: '#1a2234' }}>
+                            <th className="sticky left-0 z-20 px-4 py-2.5 text-left font-bold text-[11px] border-b border-r"
+                              style={{ minWidth: '300px', background: '#1a2234', borderColor: 'rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                              Favorecido / Origem / Tipo / Rótulo
+                            </th>
+                            {pagAnos.map(ano => (
+                              <th key={ano} className="px-4 py-2.5 text-right font-bold text-[11px] border-b border-r whitespace-nowrap"
+                                style={{ minWidth: `${COL_W}px`, borderColor: 'rgba(255,255,255,0.1)', color: '#93c5fd' }}>
+                                {ano}
+                              </th>
+                            ))}
+                            <th className="px-4 py-2.5 text-right font-bold text-[11px] border-b whitespace-nowrap"
+                              style={{ minWidth: `${COL_W}px`, borderColor: 'rgba(255,255,255,0.1)', color: '#fbbf24' }}>
+                              Total Geral
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {favEntries.map((fe, fi) => {
+                            const favKey = fe.fav;
+                            const isFavExp = pagExpandedFav.has(favKey);
+                            return (
+                              <React.Fragment key={favKey}>
+                                {/* Level 1: Favorecido */}
+                                <tr className="cursor-pointer"
+                                  style={{ background: fi % 2 === 0 ? '#eef2fb' : '#f5f7ff', borderTop: '1px solid #d1d9f0' }}
+                                  onClick={() => {
+                                    const ns = new Set(pagExpandedFav);
+                                    if (isFavExp) ns.delete(favKey); else ns.add(favKey);
+                                    setPagExpandedFav(ns);
+                                  }}>
+                                  <td className="sticky left-0 z-10 px-3 py-2 font-bold border-r"
+                                    style={{ background: fi % 2 === 0 ? '#eef2fb' : '#f5f7ff', borderColor: '#d1d9f0', color: '#1a2234', fontSize: '11px' }}>
+                                    <span className="mr-1.5 inline-block w-3 text-center text-[#888]">{isFavExp ? '▾' : '▸'}</span>
+                                    <span className="font-mono text-[10px] text-[#6b7280] mr-1">{fe.fav.split('-')[0]?.trim() ?? ''}</span>
+                                    {fe.fav.includes('-') ? fe.fav.substring(fe.fav.indexOf('-') + 1).trim() : fe.fav}
+                                  </td>
+                                  {pagAnos.map(ano => (
+                                    <td key={ano} className="px-4 py-2 text-right font-mono border-r border-b whitespace-nowrap font-semibold"
+                                      style={{ borderColor: '#d1d9f0', color: '#1a2234' }}>
+                                      {fe.byYear[ano] ? fmt(fe.byYear[ano], 'currency') : <span style={{ color: '#d1d5db' }}>—</span>}
+                                    </td>
+                                  ))}
+                                  <td className="px-4 py-2 text-right font-mono border-b whitespace-nowrap font-bold"
+                                    style={{ borderColor: '#d1d9f0', color: '#1a2234' }}>
+                                    {fmt(fe.total, 'currency')}
+                                  </td>
+                                </tr>
+
+                                {/* Level 2: Fonte (ESTADUAL/FEDERAL) */}
+                                {isFavExp && fe.fontes.map(fo => {
+                                  const fonteKey = `${favKey}__${fo.fonte}`;
+                                  const isFonteExp = pagExpandedFonte.has(fonteKey);
+                                  return (
+                                    <React.Fragment key={fonteKey}>
+                                      <tr className="cursor-pointer"
+                                        style={{ background: '#ffffff', borderTop: '1px solid #e5eaf2' }}
+                                        onClick={() => {
+                                          const ns = new Set(pagExpandedFonte);
+                                          if (isFonteExp) ns.delete(fonteKey); else ns.add(fonteKey);
+                                          setPagExpandedFonte(ns);
+                                        }}>
+                                        <td className="sticky left-0 z-10 px-3 py-1.5 font-bold border-r"
+                                          style={{ background: '#ffffff', borderColor: '#e5eaf2', color: '#374151', fontSize: '11px', paddingLeft: '28px' }}>
+                                          <span className="mr-1.5 inline-block w-3 text-center text-[#999]">{isFonteExp ? '▾' : '▸'}</span>
+                                          <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1',
+                                            fo.fonte === 'ESTADUAL' ? 'bg-blue-100 text-blue-700' : fo.fonte === 'FEDERAL' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}>
+                                            {fo.fonte}
+                                          </span>
+                                        </td>
+                                        {pagAnos.map(ano => (
+                                          <td key={ano} className="px-4 py-1.5 text-right font-mono border-r border-b whitespace-nowrap font-semibold"
+                                            style={{ borderColor: '#e5eaf2', color: '#374151' }}>
+                                            {fo.byYear[ano] ? fmt(fo.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                          </td>
+                                        ))}
+                                        <td className="px-4 py-1.5 text-right font-mono border-b whitespace-nowrap font-bold"
+                                          style={{ borderColor: '#e5eaf2', color: '#374151' }}>
+                                          {fmt(fo.total, 'currency')}
+                                        </td>
+                                      </tr>
+
+                                      {/* Level 3: Tipo (CUSTEIO/INVESTIMENTO) */}
+                                      {isFonteExp && fo.tipos.map(ti => {
+                                        const tipoKey = `${fonteKey}__${ti.tipo}`;
+                                        const isTipoExp = pagExpandedTipo.has(tipoKey);
+                                        return (
+                                          <React.Fragment key={tipoKey}>
+                                            <tr className="cursor-pointer"
+                                              style={{ background: '#fafbff', borderTop: '1px solid #eef2ff' }}
+                                              onClick={() => {
+                                                const ns = new Set(pagExpandedTipo);
+                                                if (isTipoExp) ns.delete(tipoKey); else ns.add(tipoKey);
+                                                setPagExpandedTipo(ns);
+                                              }}>
+                                              <td className="sticky left-0 z-10 px-3 py-1.5 font-semibold border-r"
+                                                style={{ background: '#fafbff', borderColor: '#eef2ff', color: '#4b5563', fontSize: '11px', paddingLeft: '48px' }}>
+                                                <span className="mr-1.5 inline-block w-3 text-center text-[#bbb]">{isTipoExp ? '▾' : '▸'}</span>
+                                                <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1',
+                                                  ti.tipo === 'CUSTEIO' ? 'bg-orange-100 text-orange-700' : ti.tipo === 'INVESTIMENTO' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500')}>
+                                                  {ti.tipo}
+                                                </span>
+                                              </td>
+                                              {pagAnos.map(ano => (
+                                                <td key={ano} className="px-4 py-1.5 text-right font-mono border-r border-b whitespace-nowrap"
+                                                  style={{ borderColor: '#eef2ff', color: '#4b5563' }}>
+                                                  {ti.byYear[ano] ? fmt(ti.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                                </td>
+                                              ))}
+                                              <td className="px-4 py-1.5 text-right font-mono border-b whitespace-nowrap font-semibold"
+                                                style={{ borderColor: '#eef2ff', color: '#4b5563' }}>
+                                                {fmt(ti.total, 'currency')}
+                                              </td>
+                                            </tr>
+
+                                            {/* Level 4: Rótulo (leaf) */}
+                                            {isTipoExp && ti.rotulos.map(rot => (
+                                              <tr key={rot.rotulo} style={{ background: '#fdfdff', borderTop: '1px solid #f1f5f9' }}>
+                                                <td className="sticky left-0 z-10 px-3 py-1 border-r"
+                                                  style={{ background: '#fdfdff', borderColor: '#f1f5f9', color: '#6b7280', fontSize: '11px', paddingLeft: '72px' }}>
+                                                  {rot.rotulo}
+                                                </td>
+                                                {pagAnos.map(ano => (
+                                                  <td key={ano} className="px-4 py-1 text-right font-mono border-r border-b whitespace-nowrap"
+                                                    style={{ borderColor: '#f1f5f9', color: '#6b7280' }}>
+                                                    {rot.byYear[ano] ? fmt(rot.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                                  </td>
+                                                ))}
+                                                <td className="px-4 py-1 text-right font-mono border-b whitespace-nowrap"
+                                                  style={{ borderColor: '#f1f5f9', color: '#6b7280' }}>
+                                                  {fmt(rot.total, 'currency')}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </React.Fragment>
+                                        );
+                                      })}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          })}
+
+                          {/* Grand total */}
+                          {favEntries.length > 0 && (
+                            <tr style={{ background: '#1a2234', borderTop: '2px solid #334155' }}>
+                              <td className="sticky left-0 z-10 px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap"
+                                style={{ minWidth: '300px', background: '#1a2234', color: '#94a3b8', fontSize: '11px' }}>
+                                Total Geral
+                              </td>
+                              {pagAnos.map(ano => (
+                                <td key={ano} className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap border-r"
+                                  style={{ color: '#93c5fd', borderColor: 'rgba(255,255,255,0.08)' }}>
+                                  {fmt(grandByYear[ano] ?? 0, 'currency')}
+                                </td>
+                              ))}
+                              <td className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap"
+                                style={{ color: '#fbbf24' }}>
+                                {fmt(grandTotal, 'currency')}
+                              </td>
+                            </tr>
+                          )}
+
+                          {!pagLoading && !pagData.length && (
+                            <tr><td colSpan={numCols} className="py-16 text-center" style={{ color: '#9ca3af' }}>
+                              <Database className="w-8 h-8 mx-auto mb-2 opacity-25" />
+                              <p style={{ fontSize: '13px' }}>Nenhum dado encontrado</p>
+                              {!pagMunicipio && <p style={{ fontSize: '11px', marginTop: '4px', color: '#bbb' }}>Selecione um município ou aguarde o carregamento.</p>}
+                            </td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           );
