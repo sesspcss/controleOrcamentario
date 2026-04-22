@@ -72,15 +72,15 @@ const S3 = [
   { key: 'liquidado',  name: 'Liquidado',  color: '#1AAB40' },
   { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
 ];
-// Series padrão para gráficos com 2 grandezas (emp + pago)
+// Series padrão para gráficos com 2 grandezas (emp + liq)
 const S2 = [
-  { key: 'empenhado',  name: 'Empenhado',  color: '#118DFF' },
-  { key: 'pago_total', name: 'Pago Total', color: '#E66C37' },
+  { key: 'empenhado', name: 'Empenhado', color: '#118DFF' },
+  { key: 'liquidado', name: 'Liquidado', color: '#1AAB40' },
 ];
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'fornecedores' | 'dados' | 'pivot' | 'legenda';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'dados' | 'pivot' | 'legenda';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -89,9 +89,9 @@ interface GrupoRow { grupo_despesa: string; empenhado: number; liquidado: number
 interface GrupoSimplRow { grupo_simpl: string; empenhado: number; liquidado: number; pago_total: number }
 interface FonteSimplRow { fonte_simpl: string; empenhado: number; liquidado: number; pago_total: number }
 interface MunicRow { municipio: string; empenhado: number; pago_total: number }
-interface FonteRow { fonte_recurso: string; empenhado: number; pago_total: number }
-interface ElementoRow { elemento: string; empenhado: number; pago_total: number }
-interface RegiaoAdRow { regiao_ad: string; empenhado: number; pago_total: number }
+interface FonteRow { fonte_recurso: string; empenhado: number; liquidado: number; pago_total: number }
+interface ElementoRow { elemento: string; empenhado: number; liquidado: number; pago_total: number }
+interface RegiaoAdRow { regiao_ad: string; empenhado: number; liquidado: number; pago_total: number }
 interface UoRow { uo: string; empenhado: number; liquidado: number; pago_total: number }
 interface RrasRow { rras: string; empenhado: number; liquidado: number; pago_total: number }
 interface TipoDespesaRow { tipo_despesa: string; empenhado: number; liquidado: number; pago_total: number }
@@ -99,7 +99,7 @@ interface RotuloRow { rotulo: string; empenhado: number; pago_total: number }
 interface FavorecidoRow { favorecido: string; empenhado: number; pago_total: number; contratos: number }
 interface ProjetoRow { projeto: string; empenhado: number; pago_total: number; registros: number }
 interface UgRow { ug: string; empenhado: number; pago_total: number }
-interface RegiaoSaRow { regiao_sa: string; empenhado: number; pago_total: number }
+interface RegiaoSaRow { regiao_sa: string; empenhado: number; liquidado: number; pago_total: number }
 
 interface CachedData {
   kpis: KPIs;
@@ -421,7 +421,6 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'resumo',        label: 'Resumo',        icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
   { id: 'regional',      label: 'Regional',      icon: <Globe className="w-3.5 h-3.5" /> },
   { id: 'despesas',      label: 'Despesas',       icon: <Briefcase className="w-3.5 h-3.5" /> },
-  { id: 'fornecedores',  label: 'Fornecedores',  icon: <Users className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
   { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
   { id: 'legenda',       label: 'Legenda',          icon: <BookOpen className="w-3.5 h-3.5" /> },
@@ -692,7 +691,7 @@ function MultiSelect({ label, options, value, onChange, loading }: {
               className="w-full text-[11px] border border-[#E5E5E5] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#118DFF]" />
           </div>
           {hasValue && (
-            <button type="button" onClick={() => { onChange([]); setOpen(false); }}
+            <button type="button" onClick={() => { onChange([]); }}
               className="w-full text-left px-2 py-1.5 text-[11px] text-red-500 font-semibold hover:bg-red-50 border-b border-[#F0F0F0] flex items-center gap-1">
               <X className="w-2.5 h-2.5" /> Limpar
             </button>
@@ -1512,7 +1511,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
 }
 
 // --- Upload Panel ---
-function UploadPanel({ onClose }: { onClose: () => void }) {
+function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportDone?: () => void }) {
   const [step, setStep] = useState<UploadStep>('idle');
   const [rows, setRows] = useState<DataRow[]>([]);
   const [fileName, setFileName] = useState('');
@@ -1657,6 +1656,7 @@ function UploadPanel({ onClose }: { onClose: () => void }) {
         upd(3, 'warn', `${tipoNull > 0 ? tipoNull+' tipo_despesa nulos' : ''}${tipoNull>0&&rotuloNull>0?' · ':''}${rotuloNull>0?rotuloNull+' rótulos nulos':''}`);
       }
       setMessage(`${message || ''} · Pipeline concluído.`);
+      onImportDone?.();
       setStep('done');
     } catch (e: unknown) {
       setMessage((e as Error).message);
@@ -2017,9 +2017,9 @@ export default function App() {
         porGrupo: ((d.por_grupo as Record<string,unknown>[] ?? [])).map(r => ({ grupo_despesa: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porDrs: (() => { const raw = ((d.por_drs as Record<string,unknown>[] ?? [])).map(r => ({ drs: normalizeDrs(String(r.drs)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.drs); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.drs, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porMunic: ((d.por_municipio as Record<string,unknown>[] ?? [])).map(r => ({ municipio: String(r.municipio), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porElemento: ((d.por_elemento as Record<string,unknown>[] ?? [])).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porRegiaoAd: ((d.por_regiao_ad as Record<string,unknown>[] ?? [])).map(r => ({ regiao_ad: String(r.regiao_ad), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porFonte: ((d.por_fonte as Record<string,unknown>[] ?? [])).map(r => ({ fonte_recurso: String(r.fonte ?? r.fonte_recurso ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porElemento: ((d.por_elemento as Record<string,unknown>[] ?? [])).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porRegiaoAd: ((d.por_regiao_ad as Record<string,unknown>[] ?? [])).map(r => ({ regiao_ad: String(r.regiao_ad), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porUo: ((d.por_uo as Record<string,unknown>[] ?? [])).map(r => ({ uo: String(r.uo), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
         porRras: (() => { const raw = ((d.por_rras as Record<string,unknown>[] ?? [])).map(r => ({ rras: normalizeRras(String(r.rras)), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })); const m = new Map<string, typeof raw[0]>(); for (const r of raw) { const e = m.get(r.rras); if (e) { e.empenhado += r.empenhado; e.liquidado += r.liquidado; e.pago_total += r.pago_total; } else { m.set(r.rras, { ...r }); } } return Array.from(m.values()).sort((a, b) => b.empenhado - a.empenhado); })(),
         porTipoDespesa: ((d.por_tipo_despesa as Record<string,unknown>[] ?? [])).map(r => ({ tipo_despesa: String(r.tipo_despesa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
@@ -2027,12 +2027,11 @@ export default function App() {
         porFavorecido: ((d.por_favorecido as Record<string,unknown>[] ?? [])).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0), contratos: Number(r.contratos ?? 0) })),
         porProjeto: ((d.por_projeto as Record<string,unknown>[] ?? [])).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0) })),
         porUg: ((d.por_ug as Record<string,unknown>[] ?? [])).map(r => ({ ug: String(r.ug), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
-        porRegiaoSa: ((d.por_regiao_sa as Record<string,unknown>[] ?? [])).map(r => ({ regiao_sa: String(r.regiao_sa), empenhado: Number(r.empenhado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
+        porRegiaoSa: ((d.por_regiao_sa as Record<string,unknown>[] ?? [])).map(r => ({ regiao_sa: String(r.regiao_sa), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0) })),
       };
       cacheRef.current.set(cacheKey, parsed);
       if (ano === 'todos' && Object.keys(activeFilters).length === 0) setAvailableAnos(parsed.porAno.map(r => r.ano));
       setData(parsed);
-      setLastImportAt(new Date());
     } catch (e: unknown) { setError((e as Error).message); }
     finally { initialLoaded.current = true; setLoading(false); setDashboardLoading(false); }
   }, []);
@@ -3318,171 +3317,6 @@ export default function App() {
           );
         })()}
 
-        {/* ---------- TAB: FORNECEDORES ---------- */}
-        {activeTab === 'fornecedores' && data && (() => {
-          const totalFav = data.porFavorecido.reduce((s, r) => s + r.empenhado, 0);
-          const sorted = [...data.porFavorecido].sort((a, b) => b.empenhado - a.empenhado);
-          // Concentração: top 5 vs resto
-          const top5Sum = sorted.slice(0, 5).reduce((s, r) => s + r.empenhado, 0);
-          const top10Sum = sorted.slice(0, 10).reduce((s, r) => s + r.empenhado, 0);
-          const concentracao5 = totalFav > 0 ? top5Sum / totalFav * 100 : 0;
-          const concentracao10 = totalFav > 0 ? top10Sum / totalFav * 100 : 0;
-          // Pareto acumulado
-          let cumSum = 0;
-          const paretoData = sorted.map(r => {
-            cumSum += r.empenhado;
-            return { ...r, cumPct: totalFav > 0 ? cumSum / totalFav * 100 : 0 };
-          });
-          // Faixas de valor para segmentação
-          const faixas = [
-            { label: '> R$50M', min: 50e6, color: '#118DFF' },
-            { label: 'R$10M–50M', min: 10e6, max: 50e6, color: '#1AAB40' },
-            { label: 'R$1M–10M', min: 1e6, max: 10e6, color: '#D9B300' },
-            { label: 'R$100k–1M', min: 100e3, max: 1e6, color: '#E66C37' },
-            { label: '< R$100k', min: 0, max: 100e3, color: '#D64550' },
-          ];
-          const segData = faixas.map(f => ({
-            ...f,
-            count: sorted.filter(r => r.empenhado >= f.min && (f.max === undefined || r.empenhado < f.max)).length,
-            total: sorted.filter(r => r.empenhado >= f.min && (f.max === undefined || r.empenhado < f.max)).reduce((s, r) => s + r.empenhado, 0),
-          }));
-          const avgContratos = sorted.length > 0 ? sorted.reduce((s, r) => s + r.contratos, 0) / sorted.length : 0;
-          const topFav = sorted[0];
-          const maxContratos = sorted.reduce((m, r) => r.contratos > m.contratos ? r : m, sorted[0] ?? { favorecido: '-', contratos: 0 });
-
-          return (
-            <>
-              {/* KPIs fornecedores */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Concentração Top 5</p>
-                  <p className="text-[22px] font-bold leading-none text-[#118DFF]">{concentracao5.toFixed(1)}%</p>
-                  <p className="text-[11px] text-[#999] mt-0.5">dos recursos</p>
-                </div>
-                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Concentração Top 10</p>
-                  <p className="text-[22px] font-bold leading-none" style={{ color: concentracao10 > 80 ? '#D64550' : '#1AAB40' }}>{concentracao10.toFixed(1)}%</p>
-                  <p className="text-[11px] text-[#999] mt-0.5">dos recursos</p>
-                </div>
-                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Maior favorecido</p>
-                  <p className="text-[11px] font-bold text-[#118DFF] truncate">{stripNumPrefix(topFav?.favorecido ?? '-')}</p>
-                  <p className="text-[11px] text-[#666] mt-0.5">{fmt(topFav?.empenhado ?? 0, 'compact')}</p>
-                </div>
-                <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
-                  <p className="text-[10px] font-bold text-[#999] uppercase tracking-wide mb-1">Mais contratos</p>
-                  <p className="text-[11px] font-bold text-[#6B007B] truncate">{stripNumPrefix(maxContratos?.favorecido ?? '-')}</p>
-                  <p className="text-[11px] text-[#666] mt-0.5">{maxContratos?.contratos ?? 0} contratos · média {avgContratos.toFixed(0)}/forn.</p>
-                </div>
-              </div>
-
-              {/* Mapa de calor Pareto + Segmentação */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {/* Segmentação por faixa de valor */}
-                <Card title="Segmentação de Fornecedores por Porte" icon={<Users className="w-4 h-4" />}>
-                  <SegmentacaoFornecedores segData={segData} sorted={sorted} totalFav={totalFav} />
-                </Card>
-
-                {/* Curva de concentração (Pareto visual) */}
-                <Card title="Curva de Pareto — Concentração de Recursos" icon={<TrendingUp className="w-4 h-4" />}
-                  badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">Top 5: {concentracao5.toFixed(1)}%</span>}>
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    {/* Visual step chart showing cumulative % */}
-                    {sorted.slice(0, 12).map((r, i) => {
-                      const share = totalFav > 0 ? r.empenhado / totalFav * 100 : 0;
-                      const cum = paretoData[i].cumPct;
-                      const execPct = r.empenhado > 0 ? r.liquidado / r.empenhado * 100 : 0;
-                      const c = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
-                      return (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="text-[10px] text-[#999] font-mono w-4 shrink-0 text-right">{i+1}</span>
-                          <div className="flex-1 relative h-5 bg-[#F0F0F0] rounded overflow-hidden">
-                            <div className="absolute top-0 left-0 h-full bg-[#118DFF] opacity-25 rounded" style={{ width: cum + '%' }} />
-                            <div className="absolute top-0 left-0 h-full bg-[#118DFF] rounded" style={{ width: share + '%', opacity: 0.7 }} />
-                            <span className="absolute inset-0 flex items-center pl-1.5 text-[9px] font-semibold text-[#333] truncate max-w-[70%]">{stripNumPrefix(r.favorecido)}</span>
-                          </div>
-                          <span className="text-[10px] text-[#118DFF] font-bold w-12 text-right shrink-0">{share.toFixed(1)}%</span>
-                          <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color: c }}>{execPct.toFixed(0)}%</span>
-                        </div>
-                      );
-                    })}
-                    <div className="text-[10px] text-[#999] mt-1 flex justify-end gap-3">
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#118DFF] opacity-25 inline-block" />% acum.</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#118DFF] opacity-70 inline-block" />share</span>
-                      <span className="flex items-center gap-1"><b>%</b> exec.</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Gráfico top 15 */}
-              <Card title="Top 15 Favorecidos — Empenhado / Pago" icon={<Users className="w-4 h-4" />}>
-                <HGroupedBarChart data={sorted.slice(0,15) as unknown as Record<string,unknown>[]} yKey="favorecido" series={S2}
-                  height={Math.max(300, 15 * 40)} />
-              </Card>
-
-              {/* Ranking completo com métricas */}
-              <Card title="Ranking Completo de Favorecidos" noPad icon={<Table2 className="w-4 h-4" />}
-                badge={<span className="text-[10px] text-[#999] bg-[#F0F0F0] px-1.5 py-0.5 rounded font-semibold">{sorted.length} fornecedores</span>}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
-                      <th className="w-8 px-3 py-2.5 text-[10px] font-bold text-[#999]">#</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-[#999] uppercase">Favorecido</th>
-                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#118DFF] uppercase">Empenhado</th>
-                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#E66C37] uppercase">Pago Total</th>
-                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Exec.</th>
-                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Contratos</th>
-                      <th className="px-3 py-2.5 text-right text-[10px] font-bold text-[#999] uppercase">Share</th>
-                      <th className="px-3 py-2.5 text-[10px] font-bold text-[#999] uppercase hidden md:table-cell">Barra</th>
-                    </tr></thead>
-                    <tbody className="divide-y divide-[#F0F0F0]">
-                      {sorted.map((row, i) => {
-                        const execPct = row.empenhado > 0 ? row.pago_total / row.empenhado * 100 : 0;
-                        const share = totalFav > 0 ? row.empenhado / totalFav * 100 : 0;
-                        const c = execPct >= 80 ? '#1AAB40' : execPct >= 50 ? '#D9B300' : '#D64550';
-                        const porte = row.empenhado >= 50e6 ? '🔵' : row.empenhado >= 10e6 ? '🟢' : row.empenhado >= 1e6 ? '🟡' : row.empenhado >= 100e3 ? '🟠' : '🔴';
-                        return (
-                          <tr key={i} className="hover:bg-blue-50/30">
-                            <td className="px-3 py-2 text-xs text-[#CCC] font-mono">{i + 1}</td>
-                            <td className="px-3 py-2 max-w-xs">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px]" title="Porte">{porte}</span>
-                                <span className="text-[#333] text-[12px] truncate" title={stripNumPrefix(row.favorecido)}>{stripNumPrefix(row.favorecido)}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono font-bold text-[#118DFF] text-[12px]">{fmt(row.empenhado, 'currency')}</td>
-                            <td className="px-3 py-2 text-right font-mono text-[#E66C37] text-[12px]">{fmt(row.pago_total, 'currency')}</td>
-                            <td className="px-3 py-2 text-right">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: c + '18', color: c }}>{execPct.toFixed(1)}%</span>
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono text-[#6B007B] text-[12px]">{fmt(row.contratos)}</td>
-                            <td className="px-3 py-2 text-right text-[12px] text-[#999]">{share.toFixed(1)}%</td>
-                            <td className="px-3 py-2 hidden md:table-cell">
-                              <div className="w-28 h-2 bg-[#F0F0F0] rounded overflow-hidden">
-                                <div className="h-full rounded bg-[#118DFF]" style={{ width: share + '%', opacity: 0.6 }} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot><tr className="bg-[#1B1B1B] text-white">
-                      <td className="px-3 py-2.5" colSpan={2}><span className="text-[10px] font-bold text-[#888]">TOTAL</span></td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-300">{fmt(totalFav, 'currency')}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-orange-300">{fmt(sorted.reduce((s,r)=>s+r.pago_total,0), 'currency')}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-green-300">{totalFav > 0 ? (sorted.reduce((s,r)=>s+r.pago_total,0)/totalFav*100).toFixed(1) : '0'}%</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-purple-300">{fmt(sorted.reduce((s,r)=>s+r.contratos,0))}</td>
-                      <td className="px-3 py-2.5 text-right text-[#888]">100%</td>
-                      <td className="hidden md:table-cell" />
-                    </tr></tfoot>
-                  </table>
-                </div>
-              </Card>
-            </>
-          );
-        })()}
-
         {/* ---------- TAB: DADOS ---------- */}
         {activeTab === 'dados' && (
           <>
@@ -3997,7 +3831,7 @@ export default function App() {
       </main>
       )}
 
-      {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} />}
+      {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} onImportDone={() => { setLastImportAt(new Date()); setUploadOpen(false); }} />}
 
       {/* Password gate modal */}
       {pwdGateOpen && (
