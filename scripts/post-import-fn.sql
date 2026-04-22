@@ -166,6 +166,15 @@ BEGIN
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('drs_catch_all', n);
 
+  -- ── 2f. DRS: catch-all final — municípios fora do SP ou não reconhecidos → DRS I ──
+  -- Cobre BRASÍLIA e qualquer outro município que não constou em tab_municipios.
+  UPDATE public.lc131_despesas
+  SET drs = 'DRS I - Grande São Paulo'
+  WHERE (drs IS NULL OR drs = '')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('drs_final_catchall', n);
+
   -- ── 3b. RRAS: fallback por nome_municipio ────────────────────────────────────
   UPDATE public.lc131_despesas a
   SET rras = m.rras
@@ -199,6 +208,15 @@ BEGIN
     AND (p_ano IS NULL OR ano_referencia = p_ano);
   GET DIAGNOSTICS n = ROW_COUNT;
   r := r || jsonb_build_object('rras_catch_all', n);
+
+  -- ── 3e. RRAS: catch-all final — qualquer RRAS ainda nulo → RRAS 6 (SP) ──────────
+  -- Cobre BRASÍLIA e outros não reconhecidos.
+  UPDATE public.lc131_despesas
+  SET rras = '6'
+  WHERE (rras IS NULL OR rras = '')
+    AND (p_ano IS NULL OR ano_referencia = p_ano);
+  GET DIAGNOSTICS n = ROW_COUNT;
+  r := r || jsonb_build_object('rras_final_catchall', n);
 
   -- ── 4. Força reclassificação: NULL / SEM CLASSIFICAÇÃO → grupo fallback ──
   -- Último recurso absoluto; elimina qualquer linha sem tipo.

@@ -3718,13 +3718,12 @@ export default function App() {
 
           return (
             <>
-              {/* ── Cabeçalho para impressão / PDF ── */}
+              {/* Print CSS */}
               <style>{`
                 @media print {
                   body > *:not(#pag-print-root) { display: none !important; }
                   #pag-print-root { display: block !important; }
                   .no-print { display: none !important; }
-                  .print-break { page-break-before: always; }
                   #pag-table-wrap { overflow: visible !important; max-height: none !important; }
                 }
               `}</style>
@@ -3744,273 +3743,188 @@ export default function App() {
                   <img src="/img/logo1.png" alt="Logo SES/SP" style={{ height: '64px' }} />
                 </div>
 
-                {/* ── Painel de controle ── */}
-                <div className="no-print bg-white border border-[#E5E5E5] rounded-xl shadow-sm mb-3">
-                  {/* Header visual */}
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-[#F0F0F0]" style={{ background: 'linear-gradient(135deg,#fafafa,#f0f4ff)' }}>
-                    <div className="flex items-center gap-3">
-                      <img src="/img/logo1.png" alt="Logo" className="h-10 w-auto" />
-                      <div>
-                        <p className="text-[10px] font-semibold text-[#777] uppercase tracking-widest">Coordenadoria de Gestão Orçamentária e Financeira</p>
-                        <p className="text-[18px] font-extrabold tracking-tight leading-tight" style={{ color: '#CC0000' }}>PAGAMENTOS</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-[#AAA]">Soma de {vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO'}</p>
-                      <p className="text-[10px] text-[#AAA]">Atualizado {updatedDate}</p>
-                    </div>
-                  </div>
-
-                  {/* Filtros e ações */}
-                  <div className="flex items-center gap-3 flex-wrap px-4 py-2.5">
-                    {/* Município */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Município</span>
-                      <select value={pagMunicipio} onChange={e => { setPagMunicipio(e.target.value); setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
-                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer min-w-[180px]">
-                        <option value="">Todos os Municípios</option>
-                        {pagMunicList.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
-
-                    {/* DRS */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">DRS</span>
-                      <select value={pagDrs} onChange={e => { setPagDrs(e.target.value); }}
-                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer min-w-[140px]">
-                        <option value="">Todos os DRS</option>
-                        {drsList.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
-
-                    {/* Ano */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-[#AAA] uppercase tracking-wider shrink-0">Ano</span>
-                      <select value={String(pagAno)} onChange={e => { const v = e.target.value; setPagAno(v === 'todos' ? 'todos' : Number(v)); }}
-                        className="text-[11px] border border-[#D5D5D5] rounded-lg px-2.5 py-1.5 bg-white text-[#1a2234] font-semibold focus:outline-none focus:ring-1 focus:ring-[#CC0000] cursor-pointer">
-                        <option value="todos">Todos os Anos</option>
-                        {availableAnos.map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
-
-                    {/* Métrica */}
-                    <div className="flex items-center gap-1">
-                      {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
-                        <button key={k} onClick={() => setPagValueKey(k)}
-                          className={cn('px-2.5 py-1 text-[11px] font-bold rounded-md transition-all',
-                            pagValueKey === k ? 'bg-[#CC0000] text-white shadow-sm' : 'bg-[#F3F4F6] text-[#666] hover:bg-[#E5E7EB]')}>
-                          {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex-1" />
-
-                    {/* Expandir/recolher */}
-                    <button onClick={() => {
-                      const allFav = new Set(favEntries.map(f => f.fav));
-                      const allFonte = new Set(favEntries.flatMap(f => f.fontes.map(fo => `${f.fav}__${fo.fonte}`)));
-                      const allTipo = new Set(favEntries.flatMap(f => f.fontes.flatMap(fo => fo.tipos.map(ti => `${f.fav}__${fo.fonte}__${ti.tipo}`))));
-                      setPagExpandedFav(allFav); setPagExpandedFonte(allFonte); setPagExpandedTipo(allTipo);
-                    }} className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
-                      + Todos
+                {/* ── Barra de controles (no-print) ── */}
+                <div className="no-print flex items-center gap-2 flex-wrap mb-2 bg-white border border-[#D0D0D0] rounded px-3 py-2">
+                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">Município</span>
+                  <select value={pagMunicipio} onChange={e => { setPagMunicipio(e.target.value); setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
+                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white min-w-[160px]">
+                    <option value="">Todos</option>
+                    {pagMunicList.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <span className="text-[#CCC] mx-1">|</span>
+                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">DRS</span>
+                  <select value={pagDrs} onChange={e => setPagDrs(e.target.value)}
+                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white min-w-[130px]">
+                    <option value="">Todos os DRS</option>
+                    {drsList.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <span className="text-[#CCC] mx-1">|</span>
+                  <span className="text-[11px] font-bold text-[#555] uppercase tracking-wider shrink-0">Ano</span>
+                  <select value={String(pagAno)} onChange={e => { const v = e.target.value; setPagAno(v === 'todos' ? 'todos' : Number(v)); }}
+                    className="text-[11px] border border-[#D0D0D0] rounded px-2 py-1 bg-white">
+                    <option value="todos">Todos os Anos</option>
+                    {availableAnos.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  <span className="text-[#CCC] mx-1">|</span>
+                  {(['pago_total', 'empenhado', 'liquidado'] as const).map(k => (
+                    <button key={k} onClick={() => setPagValueKey(k)}
+                      className={cn('px-2 py-1 text-[11px] font-semibold rounded border transition-all',
+                        pagValueKey === k ? 'bg-[#1F4E79] text-white border-[#1F4E79]' : 'bg-white text-[#555] border-[#D0D0D0] hover:bg-[#F0F0F0]')}>
+                      {k === 'pago_total' ? 'Pago Total' : k === 'empenhado' ? 'Empenhado' : 'Liquidado'}
                     </button>
-                    <button onClick={() => { setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
-                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded-md hover:bg-[#E5E7EB] transition-all shrink-0">
-                      − Todos
-                    </button>
-
-                    <div className="w-px h-5 bg-[#E5E5E5] shrink-0" />
-
-                    {/* Contador */}
-                    <span className="text-[11px] text-[#BBB] font-mono shrink-0">
-                      {pagLoading ? <Spinner size={3} /> : `${favEntries.length} favorecido(s)`}
-                    </span>
-
-                    {/* Exportar XLSX */}
-                    <button onClick={downloadPagXlsx} disabled={pagXlsxLoading || !pagData.length}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#217346] text-white text-[11px] font-bold rounded-lg hover:bg-[#1a5c38] disabled:opacity-40 transition-all shadow-sm shrink-0">
-                      {pagXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
-                      XLSX
-                    </button>
-
-                    {/* Exportar PDF */}
-                    <button onClick={printPdf} disabled={!pagData.length}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#CC0000] text-white text-[11px] font-bold rounded-lg hover:bg-[#a30000] disabled:opacity-40 transition-all shadow-sm shrink-0">
-                      <FileText className="w-3.5 h-3.5" />
-                      PDF
-                    </button>
-                  </div>
+                  ))}
+                  <div className="flex-1" />
+                  <button onClick={() => {
+                    const allFav = new Set(favEntries.map(f => f.fav));
+                    const allFonte = new Set(favEntries.flatMap(f => f.fontes.map(fo => `${f.fav}__${fo.fonte}`)));
+                    const allTipo = new Set(favEntries.flatMap(f => f.fontes.flatMap(fo => fo.tipos.map(ti => `${f.fav}__${fo.fonte}__${ti.tipo}`))));
+                    setPagExpandedFav(allFav); setPagExpandedFonte(allFonte); setPagExpandedTipo(allTipo);
+                  }} className="px-2 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded border border-[#D0D0D0] hover:bg-[#E5E7EB] shrink-0">
+                    + Todos
+                  </button>
+                  <button onClick={() => { setPagExpandedFav(new Set()); setPagExpandedFonte(new Set()); setPagExpandedTipo(new Set()); }}
+                    className="px-2 py-1 text-[11px] font-semibold bg-[#F3F4F6] text-[#555] rounded border border-[#D0D0D0] hover:bg-[#E5E7EB] shrink-0">
+                    − Todos
+                  </button>
+                  <button onClick={downloadPagXlsx} disabled={pagXlsxLoading || !pagData.length}
+                    className="flex items-center gap-1 px-3 py-1 bg-[#217346] text-white text-[11px] font-bold rounded border border-[#1a5c38] hover:bg-[#1a5c38] disabled:opacity-40 shrink-0">
+                    {pagXlsxLoading ? <Spinner size={3} /> : <Download className="w-3.5 h-3.5" />}
+                    XLSX
+                  </button>
+                  <button onClick={printPdf} disabled={!pagData.length}
+                    className="flex items-center gap-1 px-3 py-1 bg-[#CC0000] text-white text-[11px] font-bold rounded border border-[#a30000] hover:bg-[#a30000] disabled:opacity-40 shrink-0">
+                    <FileText className="w-3.5 h-3.5" />
+                    PDF
+                  </button>
                 </div>
 
                 {/* ── Tabela ── */}
                 {pagError && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-3">
-                    <p className="text-xs font-bold text-red-700 mb-1">Erro ao carregar pagamentos</p>
-                    <p className="text-xs font-mono text-red-500">{pagError.includes('Could not find the function') ? 'Função lc131_pagamentos não encontrada. Execute scripts/pagamentos-fn.sql no Supabase SQL Editor.' : pagError}</p>
-                    <button onClick={loadPagamentos} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
+                  <div className="bg-red-50 border border-red-200 rounded p-3 mb-2">
+                    <p className="text-xs font-bold text-red-700">{pagError.includes('Could not find the function') ? 'Função lc131_pagamentos não encontrada. Execute scripts/pagamentos-fn.sql no Supabase SQL Editor.' : pagError}</p>
+                    <button onClick={loadPagamentos} className="mt-1 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
                   </div>
                 )}
 
-                <div className="bg-white border border-[#E5E5E5] rounded-xl shadow-sm overflow-hidden">
+                {/* ── Tabela estilo Excel ── */}
+                <div style={{ background: '#FFFFFF', border: '1px solid #7F9DB9', fontFamily: 'Calibri, Arial, sans-serif' }}>
+                  {/* Sub-cabeçalho: município + data */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #7F9DB9', background: '#DEEAF1', padding: '5px 10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                      MUNICÍPIO&nbsp;&nbsp;
+                      <span style={{ fontWeight: 'normal' }}>{pagMunicipio || 'Todos os Municípios'}</span>
+                      {pagDrs ? <span style={{ fontWeight: 'normal' }}>&nbsp;&nbsp;·&nbsp;&nbsp;{pagDrs}</span> : null}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#666' }}>Atualizado {updatedDate}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #7F9DB9', background: '#DEEAF1', padding: '3px 10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                      Soma de {vKey === 'pago_total' ? 'PAGO TOTAL' : vKey === 'empenhado' ? 'EMPENHADO' : 'LIQUIDADO'}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Rótulos de Coluna ▼</span>
+                  </div>
                   {pagLoading ? (
-                    <div className="flex items-center justify-center py-20"><Spinner size={6} /><span className="ml-3 text-sm text-[#888]">Carregando pagamentos…</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
+                      <Spinner size={5} /><span style={{ marginLeft: '12px', color: '#888', fontSize: '13px' }}>Carregando pagamentos…</span>
+                    </div>
                   ) : (
-                    <div id="pag-table-wrap" className="overflow-auto" style={{ maxHeight: '68vh' }}>
-                      <table className="w-full border-collapse text-[12px]" style={{ minWidth: `${240 + numCols * COL_W}px` }}>
+                    <div id="pag-table-wrap" style={{ maxHeight: '65vh', overflowY: 'auto', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: `${340 + pagAnos.length * 150}px` }}>
                         <thead>
-                          {/* Sub-header: "Rótulos de Coluna" */}
-                          <tr style={{ background: '#f8f9fa' }}>
-                            <th className="sticky left-0 z-20 px-4 py-2 text-left font-bold text-[10px] uppercase tracking-wider border-b border-r"
-                              style={{ minWidth: '300px', background: '#f8f9fa', borderColor: '#e5eaf2', color: '#6b7280' }}>
+                          <tr style={{ background: '#B8CCE4', position: 'sticky', top: 0, zIndex: 10 }}>
+                            <th style={{ textAlign: 'left', padding: '5px 10px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '340px', position: 'sticky', left: 0, background: '#B8CCE4', zIndex: 20 }}>
                               Rótulos de Linha ▼
                             </th>
-                            <th colSpan={pagAnos.length} className="px-4 py-2 text-center font-bold text-[10px] uppercase tracking-wider border-b border-r"
-                              style={{ borderColor: '#e5eaf2', color: '#6b7280' }}>
-                              Rótulos de Coluna ▼
-                            </th>
-                            <th className="px-4 py-2 text-right font-bold text-[10px] uppercase tracking-wider border-b"
-                              style={{ borderColor: '#e5eaf2', color: '#6b7280' }}>
-                            </th>
-                          </tr>
-                          {/* Year headers */}
-                          <tr style={{ background: '#1a2234' }}>
-                            <th className="sticky left-0 z-20 px-4 py-2.5 text-left font-bold text-[11px] border-b border-r"
-                              style={{ minWidth: '300px', background: '#1a2234', borderColor: 'rgba(255,255,255,0.1)', color: '#94a3b8' }}>
-                              Favorecido / Origem / Tipo / Rótulo
-                            </th>
                             {pagAnos.map(ano => (
-                              <th key={ano} className="px-4 py-2.5 text-right font-bold text-[11px] border-b border-r whitespace-nowrap"
-                                style={{ minWidth: `${COL_W}px`, borderColor: 'rgba(255,255,255,0.1)', color: '#93c5fd' }}>
+                              <th key={ano} style={{ textAlign: 'right', padding: '5px 14px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '150px', whiteSpace: 'nowrap' }}>
                                 {ano}
                               </th>
                             ))}
-                            <th className="px-4 py-2.5 text-right font-bold text-[11px] border-b whitespace-nowrap"
-                              style={{ minWidth: `${COL_W}px`, borderColor: 'rgba(255,255,255,0.1)', color: '#fbbf24' }}>
+                            <th style={{ textAlign: 'right', padding: '5px 14px', fontWeight: 'bold', border: '1px solid #7F9DB9', minWidth: '150px', whiteSpace: 'nowrap' }}>
                               Total Geral
                             </th>
                           </tr>
                         </thead>
                         <tbody>
-                          {favEntries.map((fe, fi) => {
+                          {favEntries.map(fe => {
                             const favKey = fe.fav;
                             const isFavExp = pagExpandedFav.has(favKey);
                             return (
                               <React.Fragment key={favKey}>
-                                {/* Level 1: Favorecido */}
-                                <tr className="cursor-pointer"
-                                  style={{ background: fi % 2 === 0 ? '#eef2fb' : '#f5f7ff', borderTop: '1px solid #d1d9f0' }}
-                                  onClick={() => {
-                                    const ns = new Set(pagExpandedFav);
-                                    if (isFavExp) ns.delete(favKey); else ns.add(favKey);
-                                    setPagExpandedFav(ns);
-                                  }}>
-                                  <td className="sticky left-0 z-10 px-3 py-2 font-bold border-r"
-                                    style={{ background: fi % 2 === 0 ? '#eef2fb' : '#f5f7ff', borderColor: '#d1d9f0', color: '#1a2234', fontSize: '11px' }}>
-                                    <span className="mr-1.5 inline-block w-3 text-center text-[#888]">{isFavExp ? '▾' : '▸'}</span>
-                                    <span className="font-mono text-[10px] text-[#6b7280] mr-1">{fe.fav.split('-')[0]?.trim() ?? ''}</span>
-                                    {fe.fav.includes('-') ? fe.fav.substring(fe.fav.indexOf('-') + 1).trim() : fe.fav}
+                                {/* Nível 1 — Favorecido */}
+                                <tr onClick={() => { const ns = new Set(pagExpandedFav); if (isFavExp) ns.delete(favKey); else ns.add(favKey); setPagExpandedFav(ns); }}
+                                  style={{ cursor: 'pointer', background: '#FFFFFF' }}>
+                                  <td style={{ padding: '3px 10px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
+                                    <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isFavExp ? '⊟' : '⊕'}</span>
+                                    {fe.fav}
                                   </td>
                                   {pagAnos.map(ano => (
-                                    <td key={ano} className="px-4 py-2 text-right font-mono border-r border-b whitespace-nowrap font-semibold"
-                                      style={{ borderColor: '#d1d9f0', color: '#1a2234' }}>
-                                      {fe.byYear[ano] ? fmt(fe.byYear[ano], 'currency') : <span style={{ color: '#d1d5db' }}>—</span>}
+                                    <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                      {fe.byYear[ano] ? fe.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                     </td>
                                   ))}
-                                  <td className="px-4 py-2 text-right font-mono border-b whitespace-nowrap font-bold"
-                                    style={{ borderColor: '#d1d9f0', color: '#1a2234' }}>
-                                    {fmt(fe.total, 'currency')}
+                                  <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                    {fe.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>
 
-                                {/* Level 2: Fonte (ESTADUAL/FEDERAL) */}
+                                {/* Nível 2 — Fonte (ESTADUAL/FEDERAL) */}
                                 {isFavExp && fe.fontes.map(fo => {
                                   const fonteKey = `${favKey}__${fo.fonte}`;
                                   const isFonteExp = pagExpandedFonte.has(fonteKey);
                                   return (
                                     <React.Fragment key={fonteKey}>
-                                      <tr className="cursor-pointer"
-                                        style={{ background: '#ffffff', borderTop: '1px solid #e5eaf2' }}
-                                        onClick={() => {
-                                          const ns = new Set(pagExpandedFonte);
-                                          if (isFonteExp) ns.delete(fonteKey); else ns.add(fonteKey);
-                                          setPagExpandedFonte(ns);
-                                        }}>
-                                        <td className="sticky left-0 z-10 px-3 py-1.5 font-bold border-r"
-                                          style={{ background: '#ffffff', borderColor: '#e5eaf2', color: '#374151', fontSize: '11px', paddingLeft: '28px' }}>
-                                          <span className="mr-1.5 inline-block w-3 text-center text-[#999]">{isFonteExp ? '▾' : '▸'}</span>
-                                          <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1',
-                                            fo.fonte === 'ESTADUAL' ? 'bg-blue-100 text-blue-700' : fo.fonte === 'FEDERAL' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}>
-                                            {fo.fonte}
-                                          </span>
+                                      <tr onClick={() => { const ns = new Set(pagExpandedFonte); if (isFonteExp) ns.delete(fonteKey); else ns.add(fonteKey); setPagExpandedFonte(ns); }}
+                                        style={{ cursor: 'pointer', background: '#FFFFFF' }}>
+                                        <td style={{ padding: '3px 10px 3px 28px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
+                                          <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isFonteExp ? '⊟' : '⊕'}</span>
+                                          {fo.fonte}
                                         </td>
                                         {pagAnos.map(ano => (
-                                          <td key={ano} className="px-4 py-1.5 text-right font-mono border-r border-b whitespace-nowrap font-semibold"
-                                            style={{ borderColor: '#e5eaf2', color: '#374151' }}>
-                                            {fo.byYear[ano] ? fmt(fo.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                          <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                            {fo.byYear[ano] ? fo.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                           </td>
                                         ))}
-                                        <td className="px-4 py-1.5 text-right font-mono border-b whitespace-nowrap font-bold"
-                                          style={{ borderColor: '#e5eaf2', color: '#374151' }}>
-                                          {fmt(fo.total, 'currency')}
+                                        <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                          {fo.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                       </tr>
 
-                                      {/* Level 3: Tipo (CUSTEIO/INVESTIMENTO) */}
+                                      {/* Nível 3 — Tipo (CUSTEIO/INVESTIMENTO) */}
                                       {isFonteExp && fo.tipos.map(ti => {
                                         const tipoKey = `${fonteKey}__${ti.tipo}`;
                                         const isTipoExp = pagExpandedTipo.has(tipoKey);
                                         return (
                                           <React.Fragment key={tipoKey}>
-                                            <tr className="cursor-pointer"
-                                              style={{ background: '#fafbff', borderTop: '1px solid #eef2ff' }}
-                                              onClick={() => {
-                                                const ns = new Set(pagExpandedTipo);
-                                                if (isTipoExp) ns.delete(tipoKey); else ns.add(tipoKey);
-                                                setPagExpandedTipo(ns);
-                                              }}>
-                                              <td className="sticky left-0 z-10 px-3 py-1.5 font-semibold border-r"
-                                                style={{ background: '#fafbff', borderColor: '#eef2ff', color: '#4b5563', fontSize: '11px', paddingLeft: '48px' }}>
-                                                <span className="mr-1.5 inline-block w-3 text-center text-[#bbb]">{isTipoExp ? '▾' : '▸'}</span>
-                                                <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1',
-                                                  ti.tipo === 'CUSTEIO' ? 'bg-orange-100 text-orange-700' : ti.tipo === 'INVESTIMENTO' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500')}>
-                                                  {ti.tipo}
-                                                </span>
+                                            <tr onClick={() => { const ns = new Set(pagExpandedTipo); if (isTipoExp) ns.delete(tipoKey); else ns.add(tipoKey); setPagExpandedTipo(ns); }}
+                                              style={{ cursor: 'pointer', background: '#FFFFFF' }}>
+                                              <td style={{ padding: '3px 10px 3px 50px', fontWeight: 'bold', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#1F3864' }}>
+                                                <span style={{ marginRight: '6px', fontSize: '11px', color: '#555', userSelect: 'none' }}>{isTipoExp ? '⊟' : '⊕'}</span>
+                                                {ti.tipo}
                                               </td>
                                               {pagAnos.map(ano => (
-                                                <td key={ano} className="px-4 py-1.5 text-right font-mono border-r border-b whitespace-nowrap"
-                                                  style={{ borderColor: '#eef2ff', color: '#4b5563' }}>
-                                                  {ti.byYear[ano] ? fmt(ti.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                                <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                                  {ti.byYear[ano] ? ti.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                                 </td>
                                               ))}
-                                              <td className="px-4 py-1.5 text-right font-mono border-b whitespace-nowrap font-semibold"
-                                                style={{ borderColor: '#eef2ff', color: '#4b5563' }}>
-                                                {fmt(ti.total, 'currency')}
+                                              <td style={{ padding: '3px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                                {ti.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </td>
                                             </tr>
 
-                                            {/* Level 4: Rótulo (leaf) */}
+                                            {/* Nível 4 — Rótulo */}
                                             {isTipoExp && ti.rotulos.map(rot => (
-                                              <tr key={rot.rotulo} style={{ background: '#fdfdff', borderTop: '1px solid #f1f5f9' }}>
-                                                <td className="sticky left-0 z-10 px-3 py-1 border-r"
-                                                  style={{ background: '#fdfdff', borderColor: '#f1f5f9', color: '#6b7280', fontSize: '11px', paddingLeft: '72px' }}>
+                                              <tr key={rot.rotulo} style={{ background: '#FFFFFF' }}>
+                                                <td style={{ padding: '3px 10px 3px 72px', border: '1px solid #D9D9D9', position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 5, color: '#C00000' }}>
                                                   {rot.rotulo}
                                                 </td>
                                                 {pagAnos.map(ano => (
-                                                  <td key={ano} className="px-4 py-1 text-right font-mono border-r border-b whitespace-nowrap"
-                                                    style={{ borderColor: '#f1f5f9', color: '#6b7280' }}>
-                                                    {rot.byYear[ano] ? fmt(rot.byYear[ano], 'currency') : <span style={{ color: '#e5e7eb' }}>—</span>}
+                                                  <td key={ano} style={{ padding: '3px 14px', textAlign: 'right', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#C00000' }}>
+                                                    {rot.byYear[ano] ? rot.byYear[ano].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                                   </td>
                                                 ))}
-                                                <td className="px-4 py-1 text-right font-mono border-b whitespace-nowrap"
-                                                  style={{ borderColor: '#f1f5f9', color: '#6b7280' }}>
-                                                  {fmt(rot.total, 'currency')}
+                                                <td style={{ padding: '3px 14px', textAlign: 'right', border: '1px solid #D9D9D9', whiteSpace: 'nowrap', color: '#C00000' }}>
+                                                  {rot.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
                                               </tr>
                                             ))}
@@ -4024,31 +3938,27 @@ export default function App() {
                             );
                           })}
 
-                          {/* Grand total */}
+                          {/* Total Geral */}
                           {favEntries.length > 0 && (
-                            <tr style={{ background: '#1a2234', borderTop: '2px solid #334155' }}>
-                              <td className="sticky left-0 z-10 px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap"
-                                style={{ minWidth: '300px', background: '#1a2234', color: '#94a3b8', fontSize: '11px' }}>
+                            <tr style={{ background: '#DEEAF1', borderTop: '2px solid #7F9DB9' }}>
+                              <td style={{ padding: '5px 10px', fontWeight: 'bold', border: '1px solid #7F9DB9', position: 'sticky', left: 0, background: '#DEEAF1', zIndex: 5, color: '#1F3864' }}>
                                 Total Geral
                               </td>
                               {pagAnos.map(ano => (
-                                <td key={ano} className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap border-r"
-                                  style={{ color: '#93c5fd', borderColor: 'rgba(255,255,255,0.08)' }}>
-                                  {fmt(grandByYear[ano] ?? 0, 'currency')}
+                                <td key={ano} style={{ padding: '5px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #7F9DB9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                  {(grandByYear[ano] ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                               ))}
-                              <td className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap"
-                                style={{ color: '#fbbf24' }}>
-                                {fmt(grandTotal, 'currency')}
+                              <td style={{ padding: '5px 14px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #7F9DB9', whiteSpace: 'nowrap', color: '#1F3864' }}>
+                                {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                             </tr>
                           )}
 
                           {!pagLoading && !pagData.length && (
-                            <tr><td colSpan={numCols} className="py-16 text-center" style={{ color: '#9ca3af' }}>
-                              <Database className="w-8 h-8 mx-auto mb-2 opacity-25" />
+                            <tr><td colSpan={pagAnos.length + 2} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
                               <p style={{ fontSize: '13px' }}>Nenhum dado encontrado</p>
-                              {!pagMunicipio && <p style={{ fontSize: '11px', marginTop: '4px', color: '#bbb' }}>Selecione um município ou aguarde o carregamento.</p>}
+                              {!pagMunicipio && <p style={{ fontSize: '11px', marginTop: '4px', color: '#bbb' }}>Selecione um município para ver os pagamentos.</p>}
                             </td></tr>
                           )}
                         </tbody>
