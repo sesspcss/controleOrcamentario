@@ -897,7 +897,7 @@ function normalizeDrs(raw: string): string {
 function normalizeRras(raw: string): string {
   if (!raw) return raw;
   const m = raw.match(/\b0?(\d{1,2})\b/);
-  if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 17) return `RRAS ${String(n).padStart(2, '0')}`; }
+  if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 18) return `RRAS ${String(n).padStart(2, '0')}`; }
   return raw;
 }
 
@@ -953,10 +953,22 @@ function mergeDrsRegions(regions: MapRegion[]): MapRegion[] {
       map.set(key, { ...r, name: key });
     }
   }
-  return Array.from(map.values()).sort((a, b) => b.empenhado - a.empenhado);
+  const sortAsc = (arr: MapRegion[]) => arr.sort((a, b) => {
+    const na = parseInt(a.name.match(/(\d+)/)?.[1] ?? '9999');
+    const nb = parseInt(b.name.match(/(\d+)/)?.[1] ?? '9999');
+    return na !== nb ? na - nb : a.name.localeCompare(b.name, 'pt-BR');
+  });
+  return sortAsc(Array.from(map.values()));
+}
+function sortRegionsAsc(arr: MapRegion[]): MapRegion[] {
+  return [...arr].sort((a, b) => {
+    const na = parseInt(a.name.match(/(\d+)/)?.[1] ?? '9999');
+    const nb = parseInt(b.name.match(/(\d+)/)?.[1] ?? '9999');
+    return na !== nb ? na - nb : a.name.localeCompare(b.name, 'pt-BR');
+  });
 }
 function makeRegionList(rows: Record<string, unknown>[], nameKey: string): MapRegion[] {
-  return (rows ?? []).map(r => ({
+  const list = (rows ?? []).map(r => ({
     name: String(r[nameKey] ?? ''),
     empenhado: Number(r.empenhado ?? 0),
     liquidado: Number(r.liquidado ?? 0),
@@ -964,7 +976,8 @@ function makeRegionList(rows: Record<string, unknown>[], nameKey: string): MapRe
     pago_total: Number(r.pago_total ?? 0),
     municipios: Number(r.municipios ?? 0),
     registros: Number(r.registros ?? 0),
-  })).filter(r => r.name).sort((a, b) => b.empenhado - a.empenhado);
+  })).filter(r => r.name);
+  return sortRegionsAsc(list);
 }
 
 // Module-level caches (persist across tab switches)
@@ -981,12 +994,12 @@ const DRS_PALETTE = [
   '#4ECDC4','#FF6B6B','#45B7D1','#FFA07A','#98D8C8',
   '#F7DC6F','#BB8FCE','#85C1E9','#F0B27A','#82E0AA',
   '#F1948A','#AED6F1','#A9DFBF','#FAD7A0','#D2B4DE',
-  '#A3E4D7','#EDBB99',
+  '#A3E4D7','#EDBB99','#C8A2C8',
 ];
 
 function getDrsColor(name: string, idx: number): string {
   const m = name.match(/(\d+)/);
-  if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 17) return DRS_PALETTE[n - 1]; }
+  if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= DRS_PALETTE.length) return DRS_PALETTE[n - 1]; }
   return DRS_PALETTE[idx % DRS_PALETTE.length];
 }
 
@@ -1148,9 +1161,9 @@ function InteractiveMap({ anoSel, onNavigate }: {
             const k = d.kpis as Record<string, number>;
             const dash = dashRpc2 as Record<string, unknown> ?? {};
             const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago: Number(r.pago ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
-            const rrasListData = makeRegionList((dash.por_rras as Record<string, unknown>[] ?? []).length ? (dash.por_rras as Record<string, unknown>[]) : (d.por_rras as Record<string, unknown>[] ?? []), 'rras');
-            const regiaoAdData = makeRegionList(dash.por_regiao_ad as Record<string, unknown>[] ?? [], 'regiao_ad');
-            const regiaoSaData = makeRegionList(dash.por_regiao_sa as Record<string, unknown>[] ?? [], 'regiao_sa');
+            const rrasListData = makeRegionList((d.por_rras as Record<string, unknown>[] ?? []).length ? (d.por_rras as Record<string, unknown>[]) : (dash.por_rras as Record<string, unknown>[] ?? []), 'rras');
+            const regiaoAdData = makeRegionList((d.por_regiao_ad as Record<string, unknown>[] ?? []).length ? (d.por_regiao_ad as Record<string, unknown>[]) : (dash.por_regiao_ad as Record<string, unknown>[] ?? []), 'regiao_ad');
+            const regiaoSaData = makeRegionList((d.por_regiao_sa as Record<string, unknown>[] ?? []).length ? (d.por_regiao_sa as Record<string, unknown>[]) : (dash.por_regiao_sa as Record<string, unknown>[] ?? []), 'regiao_sa');
             const result = {
               kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? dashPago), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
               drsList: mergedDrs,
@@ -1507,8 +1520,10 @@ function InteractiveMap({ anoSel, onNavigate }: {
               <div className="grid grid-cols-2 gap-2">
                 <MiniKpi label="Empenhado" value={fmt(currentRegion.empenhado, 'currency')} color="#89CFF0" />
                 <MiniKpi label="Liquidado" value={fmt(currentRegion.liquidado, 'currency')} color="#90EE90" />
+                <MiniKpi label="Pago" value={fmt(currentRegion.pago, 'currency')} color="#FFD580" />
                 <MiniKpi label="Pago Total" value={fmt(currentRegion.pago_total, 'currency')} color="#FFB347" />
                 <MiniKpi label="% Liq." value={(currentRegion.empenhado > 0 ? (currentRegion.liquidado / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.liquidado)} />
+                <MiniKpi label="% Exec." value={(currentRegion.empenhado > 0 ? (currentRegion.pago_total / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.pago_total)} />
               </div>
             ) : null}
 

@@ -200,7 +200,10 @@ BEGIN
     'por_regiao_ad', (
       SELECT json_agg(r) FROM (
         SELECT regiao_ad,
-          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago, SUM(_pt) AS pago_total,
+          COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
+          COUNT(*) AS registros
         FROM base WHERE regiao_ad IS NOT NULL AND regiao_ad<>''
         GROUP BY regiao_ad ORDER BY 2 DESC LIMIT 20
       ) r
@@ -216,7 +219,10 @@ BEGIN
     'por_rras', (
       SELECT json_agg(r) FROM (
         SELECT rras,
-          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado, SUM(_pt) AS pago_total
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago, SUM(_pt) AS pago_total,
+          COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
+          COUNT(*) AS registros
         FROM base WHERE rras IS NOT NULL AND rras<>''
         GROUP BY rras ORDER BY 2 DESC LIMIT 20
       ) r
@@ -264,7 +270,10 @@ BEGIN
     'por_regiao_sa', (
       SELECT json_agg(r) FROM (
         SELECT regiao_sa,
-          SUM(empenhado) AS empenhado, SUM(_pt) AS pago_total
+          SUM(empenhado) AS empenhado, SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago, SUM(_pt) AS pago_total,
+          COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
+          COUNT(*) AS registros
         FROM base WHERE regiao_sa IS NOT NULL AND regiao_sa<>''
         GROUP BY regiao_sa ORDER BY 2 DESC LIMIT 20
       ) r
@@ -593,7 +602,7 @@ AS $$
 DECLARE result json;
 BEGIN
   WITH base AS (
-    SELECT municipio, drs, rras,
+    SELECT municipio, drs, rras, regiao_ad, regiao_sa,
       COALESCE(empenhado, 0) AS empenhado,
       COALESCE(liquidado, 0) AS liquidado,
       COALESCE(pago, 0) AS pago,
@@ -618,6 +627,7 @@ BEGIN
         SELECT drs,
           SUM(empenhado) AS empenhado,
           SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago,
           SUM(pago_total) AS pago_total,
           COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
           COUNT(*) AS registros
@@ -630,6 +640,7 @@ BEGIN
         SELECT rras,
           SUM(empenhado) AS empenhado,
           SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago,
           SUM(pago_total) AS pago_total,
           COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
           COUNT(*) AS registros
@@ -637,15 +648,44 @@ BEGIN
         GROUP BY rras
       ) r
     ),
+    'por_regiao_ad', (
+      SELECT json_agg(r ORDER BY r.empenhado DESC) FROM (
+        SELECT regiao_ad,
+          SUM(empenhado) AS empenhado,
+          SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago,
+          SUM(pago_total) AS pago_total,
+          COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
+          COUNT(*) AS registros
+        FROM base WHERE regiao_ad IS NOT NULL AND regiao_ad <> ''
+        GROUP BY regiao_ad
+      ) r
+    ),
+    'por_regiao_sa', (
+      SELECT json_agg(r ORDER BY r.empenhado DESC) FROM (
+        SELECT regiao_sa,
+          SUM(empenhado) AS empenhado,
+          SUM(liquidado) AS liquidado,
+          SUM(pago) AS pago,
+          SUM(pago_total) AS pago_total,
+          COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
+          COUNT(*) AS registros
+        FROM base WHERE regiao_sa IS NOT NULL AND regiao_sa <> ''
+        GROUP BY regiao_sa
+      ) r
+    ),
     'municipios', (
       SELECT json_agg(r ORDER BY r.empenhado DESC) FROM (
         SELECT municipio,
-          MAX(NULLIF(drs, ''))  AS drs,
-          MAX(NULLIF(rras, '')) AS rras,
-          SUM(empenhado)  AS empenhado,
-          SUM(liquidado)  AS liquidado,
-          SUM(pago_total) AS pago_total,
-          COUNT(*)        AS registros
+          MAX(NULLIF(drs, ''))       AS drs,
+          MAX(NULLIF(rras, ''))      AS rras,
+          MAX(NULLIF(regiao_ad, '')) AS regiao_ad,
+          MAX(NULLIF(regiao_sa, '')) AS regiao_sa,
+          SUM(empenhado)   AS empenhado,
+          SUM(liquidado)   AS liquidado,
+          SUM(pago)        AS pago,
+          SUM(pago_total)  AS pago_total,
+          COUNT(*)         AS registros
         FROM base
         WHERE municipio IS NOT NULL AND municipio <> ''
         GROUP BY municipio
