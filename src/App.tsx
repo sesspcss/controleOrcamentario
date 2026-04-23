@@ -1260,7 +1260,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
             mouseover: (e: L.LeafletMouseEvent) => {
               if (levelRef.current !== 'estado') return;
               const t = e.target as L.Path;
-              t.setStyle({ fillOpacity: 0.85, weight: 2.5, color: '#333' }); t.bringToFront();
+              t.setStyle({ fillOpacity: 0.85, weight: 2.5, color: '#fff' }); t.bringToFront();
             },
             mouseout: (e: L.LeafletMouseEvent) => {
               if (levelRef.current !== 'estado') return;
@@ -1268,6 +1268,8 @@ function InteractiveMap({ anoSel, onNavigate }: {
             },
             click: () => {
               if (levelRef.current !== 'estado') return;
+              const mu = municByNameRef.current[mName];
+              if (mu) { selectMunicipality(mu); return; }
               const rName = regionMapRef.current[mName] || '';
               if (rName) drillIntoRegion(rName);
             },
@@ -1275,10 +1277,16 @@ function InteractiveMap({ anoSel, onNavigate }: {
         },
       }).addTo(map);
     }
-    // Labels das regiões
-    regionList.forEach(reg => {
+    // Labels das regiões — deduplica por coordenada (evita 2 labels sobrepostos)
+    const usedCoords = new Set<string>();
+    // Ordena por empenhado desc para que o maior apareça quando há conflito de coordenada
+    const sortedRegions = [...regionList].sort((a, b) => b.empenhado - a.empenhado);
+    sortedRegions.forEach(reg => {
       const c = findRegionCoord(reg.name);
       if (!c) return;
+      const coordKey = `${c.lat.toFixed(3)},${c.lng.toFixed(3)}`;
+      if (usedCoords.has(coordKey)) return;  // pula duplicata
+      usedCoords.add(coordKey);
       const icon = L.divIcon({
         className: 'drs-label',
         html: `<div class="drs-label-inner drs-label-clickable"><strong>${reg.name.replace(/^DRS\s*/i, '').replace(/^\d+\s*-\s*/, '').trim() || reg.name}</strong><span>${fmt(reg.empenhado, 'currency')}</span></div>`,
@@ -1547,7 +1555,8 @@ function InteractiveMap({ anoSel, onNavigate }: {
             <div className="min-w-0">
               <p className="font-bold text-white text-base truncate">{activeMunic ? activeMunic.municipio : activeRegion}</p>
               <p className="text-[11px] text-[#888] mt-1">
-                {activeMunic ? `${activeMunic.drs} · ${activeMunic.registros} registros`
+                {activeMunic
+                  ? `${[activeMunic.drs, activeMunic.rras, activeMunic.regiao_ad, activeMunic.regiao_sa].filter(Boolean).join(' · ')} · ${activeMunic.registros} registros`
                   : `${currentMunics.length} municípios · ${currentRegion?.registros ?? 0} registros`}
               </p>
             </div>
@@ -1559,13 +1568,23 @@ function InteractiveMap({ anoSel, onNavigate }: {
           <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
             {/* KPIs */}
             {activeMunic ? (
-              <div className="grid grid-cols-2 gap-2">
-                <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'currency')} color="#89CFF0" />
-                <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'currency')} color="#90EE90" />
-                <MiniKpi label="Pago" value={municDetail ? fmt(municDetail.pago, 'currency') : fmt(activeMunic.pago, 'currency')} color="#FFD580" />
-                <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'currency')} color="#FFB347" />
-                <MiniKpi label="% Liq." value={(activeMunic.empenhado > 0 ? (activeMunic.liquidado / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.liquidado)} />
-                <MiniKpi label="% Exec." value={(activeMunic.empenhado > 0 ? (activeMunic.pago_total / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.pago_total)} />
+              <div className="space-y-3">
+                {/* Tags de classificação */}
+                <div className="flex flex-wrap gap-1.5">
+                  {([['DRS', activeMunic.drs], ['RRAS', activeMunic.rras], ['Reg. Admin.', activeMunic.regiao_ad], ['Reg. Saúde', activeMunic.regiao_sa]] as [string,string][]).filter(([,v]) => v).map(([lbl, val]) => (
+                    <span key={lbl} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#222] border border-[#2a2a2a]">
+                      <span className="text-[#555]">{lbl}:</span> <span className="text-[#AAA]">{val}</span>
+                    </span>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'currency')} color="#89CFF0" />
+                  <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'currency')} color="#90EE90" />
+                  <MiniKpi label="Pago" value={municDetail ? fmt(municDetail.pago, 'currency') : fmt(activeMunic.pago, 'currency')} color="#FFD580" />
+                  <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'currency')} color="#FFB347" />
+                  <MiniKpi label="% Liq." value={(activeMunic.empenhado > 0 ? (activeMunic.liquidado / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.liquidado)} />
+                  <MiniKpi label="% Exec." value={(activeMunic.empenhado > 0 ? (activeMunic.pago_total / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.pago_total)} />
+                </div>
               </div>
             ) : currentRegion ? (
               <div className="grid grid-cols-2 gap-2">
