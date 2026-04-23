@@ -1109,6 +1109,25 @@ function InteractiveMap({ anoSel, onNavigate }: {
     return allMunics.some(m => m.regiao_sa !== '');
   }, [allMunics, mapView]);
 
+  // -- Refs para lookup em runtime (evita closures obsoletas e permite reutilizar camadas) --
+  const regionMapRef = useRef<Record<string, string>>({});
+  const regionColorMapRef = useRef<Record<string, string>>({});
+  const municByNameRef = useRef<Record<string, MapMunic>>({});
+  const levelRef = useRef<'estado' | 'regiao'>('estado');
+  useEffect(() => { regionMapRef.current = municToRegion; }, [municToRegion]);
+  useEffect(() => { regionColorMapRef.current = regionColorMap; }, [regionColorMap]);
+  useEffect(() => { municByNameRef.current = municByName; }, [municByName]);
+  useEffect(() => { levelRef.current = level; }, [level]);
+
+  // Função de estilo estável (lê dos refs — não muda de referência entre renders)
+  const stateStyleFn = useCallback((feature: unknown): L.PathOptions => {
+    const code = String((feature as { properties?: { codarea?: string } })?.properties?.codarea ?? '');
+    const mName = _codeToName[code] || '';
+    const rName = regionMapRef.current[mName] || '';
+    const color = regionColorMapRef.current[rName] || '#e0e0e0';
+    return { fillColor: color, fillOpacity: rName ? 0.6 : 0.15, color: '#888', weight: 0.6, opacity: 0.6 };
+  }, []);
+
   function execPct(emp: number, pago: number): string {
     if (emp <= 0) return '#555';
     const p = (pago / emp) * 100;
@@ -1203,11 +1222,11 @@ function InteractiveMap({ anoSel, onNavigate }: {
 
   useEffect(() => {
     const map = mapInst.current;
-    if (!map || !activeRegionList.length) return;
-    // Clear old layers
-    if (geoLayerRef.current) { map.removeLayer(geoLayerRef.current); geoLayerRef.current = null; }
+    if (!map) return;
+    // Limpa labels e camada de destaque (sempre, independente de ter dados)
     if (hlLayerRef.current) { map.removeLayer(hlLayerRef.current); hlLayerRef.current = null; }
     labelsRef.current?.clearLayers();
+    if (!activeRegionList.length) return;
 
     if (geoLoaded && _ibgeGeoJson) {
       if (level === 'estado') renderEstado(map);
@@ -1219,35 +1238,44 @@ function InteractiveMap({ anoSel, onNavigate }: {
   }, [mapView, drsList, rrasList, regiaoAdList, regiaoSaList, allMunics, geoLoaded, level, activeRegion]);
 
   function renderEstado(map: L.Map) {
-    geoLayerRef.current = L.geoJSON(_ibgeGeoJson, {
-      style: (feature) => {
-        const code = String(feature?.properties?.codarea ?? '');
-        const mName = _codeToName[code] || '';
-        const rName = regionMap[mName] || '';
-        const color = regionColorMap[rName] || '#e0e0e0';
-        return { fillColor: color, fillOpacity: rName ? 0.6 : 0.15, color: '#888', weight: 0.6, opacity: 0.6 };
-      },
-      onEachFeature: (feature, layer) => {
-        const code = String(feature?.properties?.codarea ?? '');
-        const mName = _codeToName[code] || '';
-        const rName = regionMap[mName] || '';
-        if (!rName) return;
-        const mu = municByName[mName];
-        layer.bindTooltip(
-          `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#2563eb;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'currency')}</strong></div>` : ''}</div>`,
-          { className: 'map-tooltip-dark', direction: 'top' }
-        );
-        layer.on({
-          mouseover: (e: L.LeafletMouseEvent) => {
-            const t = e.target as L.Path;
-            t.setStyle({ fillOpacity: 0.85, weight: 2.5, color: '#333' }); t.bringToFront();
-          },
-          mouseout: (e: L.LeafletMouseEvent) => geoLayerRef.current?.resetStyle(e.target),
-          click: () => drillIntoRegion(rName),
-        });
-      },
-    }).addTo(map);
-    // DRS labels
+    if (geoLayerRef.current) {
+      // Caminho rápido: camada já existe → só atualiza estilos (sem recriar features)
+      geoLayerRef.current.setStyle(stateStyleFn);
+      if (!map.hasLayer(geoLayerRef.current)) geoLayerRef.current.addTo(map);
+    } else {
+      // Primeira vez: cria camada com handlers de evento
+      geoLayerRef.current = L.geoJSON(_ibgeGeoJson, {
+        style: stateStyleFn,
+        onEachFeature: (feature, layer) => {
+          const code = String(feature?.properties?.codarea ?? '');
+          const mName = _codeToName[code] || '';
+          // Tooltip dinâmico: lê dos refs no momento da exibição
+          layer.bindTooltip(() => {
+            const rName = regionMapRef.current[mName] || '';
+            const mu = municByNameRef.current[mName];
+            if (!rName) return '';
+            return `<div style="min-width:160px"><strong>${mName}</strong><div style="color:#2563eb;font-size:10px">${rName}</div>${mu ? `<div style="margin-top:3px;font-size:11px">Emp: <strong>${fmt(mu.empenhado, 'currency')}</strong></div>` : ''}</div>`;
+          }, { className: 'map-tooltip-dark', direction: 'top' });
+          layer.on({
+            mouseover: (e: L.LeafletMouseEvent) => {
+              if (levelRef.current !== 'estado') return;
+              const t = e.target as L.Path;
+              t.setStyle({ fillOpacity: 0.85, weight: 2.5, color: '#333' }); t.bringToFront();
+            },
+            mouseout: (e: L.LeafletMouseEvent) => {
+              if (levelRef.current !== 'estado') return;
+              geoLayerRef.current?.resetStyle(e.target);
+            },
+            click: () => {
+              if (levelRef.current !== 'estado') return;
+              const rName = regionMapRef.current[mName] || '';
+              if (rName) drillIntoRegion(rName);
+            },
+          });
+        },
+      }).addTo(map);
+    }
+    // Labels das regiões
     regionList.forEach(reg => {
       const c = findRegionCoord(reg.name);
       if (!c) return;
@@ -1268,10 +1296,14 @@ function InteractiveMap({ anoSel, onNavigate }: {
       const mName = _codeToName[code] || '';
       return regionMap[mName] === activeRegion;
     });
-    // Background: all SP dim
-    geoLayerRef.current = L.geoJSON(_ibgeGeoJson, {
-      style: () => ({ fillColor: '#d0d0d0', fillOpacity: 0.3, color: '#aaa', weight: 0.3 }),
-    }).addTo(map);
+    // Fundo: reutiliza camada existente (setStyle) ou cria nova dim
+    const dimStyle = () => ({ fillColor: '#d0d0d0', fillOpacity: 0.3, color: '#aaa', weight: 0.3 });
+    if (geoLayerRef.current) {
+      geoLayerRef.current.setStyle(dimStyle);
+      if (!map.hasLayer(geoLayerRef.current)) geoLayerRef.current.addTo(map);
+    } else {
+      geoLayerRef.current = L.geoJSON(_ibgeGeoJson, { style: dimStyle }).addTo(map);
+    }
     // Foreground: highlighted region
     const rc = regionColorMap[activeRegion] || '#118DFF';
     hlLayerRef.current = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures }, {
