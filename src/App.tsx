@@ -872,8 +872,8 @@ function DonutLegend({ data, nameKey, colors }: { data: Record<string, unknown>[
 }
 
 // --- Interactive Map ---
-interface MapMunic { municipio: string; drs: string; empenhado: number; liquidado: number; pago_total: number; registros: number }
-interface MapRegion { name: string; empenhado: number; liquidado: number; pago_total: number; municipios: number; registros: number }
+interface MapMunic { municipio: string; drs: string; rras: string; regiao_ad: string; regiao_sa: string; empenhado: number; liquidado: number; pago: number; pago_total: number; registros: number }
+interface MapRegion { name: string; empenhado: number; liquidado: number; pago: number; pago_total: number; municipios: number; registros: number }
 interface MapKpis { empenhado: number; liquidado: number; pago: number; pago_total: number; registros: number; municipios: number; drs_count: number }
 
 // Canonical DRS names (17 regions) — normalizes all variants
@@ -945,6 +945,7 @@ function mergeDrsRegions(regions: MapRegion[]): MapRegion[] {
     if (existing) {
       existing.empenhado += r.empenhado;
       existing.liquidado += r.liquidado;
+      existing.pago += r.pago;
       existing.pago_total += r.pago_total;
       existing.municipios += r.municipios;
       existing.registros += r.registros;
@@ -954,9 +955,20 @@ function mergeDrsRegions(regions: MapRegion[]): MapRegion[] {
   }
   return Array.from(map.values()).sort((a, b) => b.empenhado - a.empenhado);
 }
+function makeRegionList(rows: Record<string, unknown>[], nameKey: string): MapRegion[] {
+  return (rows ?? []).map(r => ({
+    name: String(r[nameKey] ?? ''),
+    empenhado: Number(r.empenhado ?? 0),
+    liquidado: Number(r.liquidado ?? 0),
+    pago: Number(r.pago ?? 0),
+    pago_total: Number(r.pago_total ?? 0),
+    municipios: Number(r.municipios ?? 0),
+    registros: Number(r.registros ?? 0),
+  })).filter(r => r.name).sort((a, b) => b.empenhado - a.empenhado);
+}
 
 // Module-level caches (persist across tab switches)
-const _mapDataCache: Record<string, { kpis: MapKpis; drsList: MapRegion[]; allMunics: MapMunic[] }> = {};
+const _mapDataCache: Record<string, { kpis: MapKpis; drsList: MapRegion[]; rrasList: MapRegion[]; regiaoAdList: MapRegion[]; regiaoSaList: MapRegion[]; allMunics: MapMunic[] }> = {};
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _ibgeGeoJson: any = null;
 
@@ -1064,13 +1076,18 @@ function InteractiveMap({ anoSel, onNavigate }: {
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
   const [activeMunic, setActiveMunic] = useState<MapMunic | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [municDetail, setMunicDetail] = useState<{ projetos: { projeto: string; empenhado: number }[]; favorecidos: { favorecido: string; empenhado: number }[]; fontes: { fonte: string; empenhado: number }[]; elementos: { elemento: string; empenhado: number }[]; grupos: { grupo: string; empenhado: number }[] } | null>(null);
+  const [municDetail, setMunicDetail] = useState<{ pago: number; projetos: { projeto: string; empenhado: number }[]; favorecidos: { favorecido: string; empenhado: number }[]; fontes: { fonte: string; empenhado: number }[]; elementos: { elemento: string; empenhado: number }[]; grupos: { grupo: string; empenhado: number }[] } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [mapView, setMapView] = useState<'drs'|'rras'|'regiao_ad'|'regiao_sa'>('drs');
+  const [rrasList, setRrasList] = useState<MapRegion[]>([]);
+  const [regiaoAdList, setRegiaoAdList] = useState<MapRegion[]>([]);
+  const [regiaoSaList, setRegiaoSaList] = useState<MapRegion[]>([]);
 
   // -- Lookups (memoized) --
-  const municToDrs = useMemo(() => { const m: Record<string, string> = {}; allMunics.forEach(mu => { if (mu.drs) m[mu.municipio] = mu.drs; }); return m; }, [allMunics]);
+  const activeRegionList = useMemo(() => { switch (mapView) { case 'rras': return rrasList; case 'regiao_ad': return regiaoAdList; case 'regiao_sa': return regiaoSaList; default: return drsList; } }, [mapView, drsList, rrasList, regiaoAdList, regiaoSaList]);
+  const regionColorMap = useMemo(() => { const m: Record<string, string> = {}; activeRegionList.forEach((d, i) => { m[d.name] = getDrsColor(d.name, i); }); return m; }, [activeRegionList]);
+  const municToRegion = useMemo(() => { const m: Record<string, string> = {}; allMunics.forEach(mu => { const val = mapView === 'drs' ? mu.drs : mapView === 'rras' ? mu.rras : mapView === 'regiao_ad' ? mu.regiao_ad : mu.regiao_sa; if (val) m[mu.municipio] = val; }); return m; }, [allMunics, mapView]);
   const municByName = useMemo(() => { const m: Record<string, MapMunic> = {}; allMunics.forEach(mu => { m[mu.municipio] = mu; }); return m; }, [allMunics]);
-  const drsColorMap = useMemo(() => { const m: Record<string, string> = {}; drsList.forEach((d, i) => { m[d.name] = getDrsColor(d.name, i); }); return m; }, [drsList]);
 
   function execPct(emp: number, pago: number): string {
     if (emp <= 0) return '#555';
@@ -1129,13 +1146,21 @@ function InteractiveMap({ anoSel, onNavigate }: {
               };
             } else { d = mapRpc as Record<string, unknown>; }
             const k = d.kpis as Record<string, number>;
-            const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
+            const dash = dashRpc2 as Record<string, unknown> ?? {};
+            const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago: Number(r.pago ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
+            const rrasListData = makeRegionList((dash.por_rras as Record<string, unknown>[] ?? []).length ? (dash.por_rras as Record<string, unknown>[]) : (d.por_rras as Record<string, unknown>[] ?? []), 'rras');
+            const regiaoAdData = makeRegionList(dash.por_regiao_ad as Record<string, unknown>[] ?? [], 'regiao_ad');
+            const regiaoSaData = makeRegionList(dash.por_regiao_sa as Record<string, unknown>[] ?? [], 'regiao_sa');
             const result = {
               kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? dashPago), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
               drsList: mergedDrs,
+              rrasList: rrasListData,
+              regiaoAdList: regiaoAdData,
+              regiaoSaList: regiaoSaData,
               allMunics: ((d.municipios as Record<string, unknown>[]) ?? []).map(r => ({
                 municipio: String(r.municipio ?? ''), drs: normalizeDrs(String(r.drs ?? '')),
-                empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0),
+                rras: normalizeRras(String(r.rras ?? '')), regiao_ad: String(r.regiao_ad ?? ''), regiao_sa: String(r.regiao_sa ?? ''),
+                empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago: Number(r.pago ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0),
               })) as MapMunic[],
             };
             _mapDataCache[key] = result;
@@ -1143,19 +1168,19 @@ function InteractiveMap({ anoSel, onNavigate }: {
           })(),
         ]);
         if (geo) setGeoLoaded(true);
-        setKpis(cached.kpis); setDrsList(cached.drsList); setAllMunics(cached.allMunics);
+        setKpis(cached.kpis); setDrsList(cached.drsList); setRrasList(cached.rrasList ?? []); setRegiaoAdList(cached.regiaoAdList ?? []); setRegiaoSaList(cached.regiaoSaList ?? []); setAllMunics(cached.allMunics);
       } catch (e: unknown) { setError((e as Error).message); }
       finally { setLoading(false); }
     })();
   }, [anoSel]);
 
   // -- Render map layers --
-  const regionMap = municToDrs;
-  const regionList = drsList;
+  const regionMap = municToRegion;
+  const regionList = activeRegionList;
 
   useEffect(() => {
     const map = mapInst.current;
-    if (!map || !drsList.length) return;
+    if (!map || !activeRegionList.length) return;
     // Clear old layers
     if (geoLayerRef.current) { map.removeLayer(geoLayerRef.current); geoLayerRef.current = null; }
     if (hlLayerRef.current) { map.removeLayer(hlLayerRef.current); hlLayerRef.current = null; }
@@ -1168,7 +1193,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       renderCircleFallback(map);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drsList, allMunics, geoLoaded, level, activeRegion]);
+  }, [mapView, drsList, rrasList, regiaoAdList, regiaoSaList, allMunics, geoLoaded, level, activeRegion]);
 
   function renderEstado(map: L.Map) {
     geoLayerRef.current = L.geoJSON(_ibgeGeoJson, {
@@ -1176,7 +1201,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const code = String(feature?.properties?.codarea ?? '');
         const mName = _codeToName[code] || '';
         const rName = regionMap[mName] || '';
-        const color = drsColorMap[rName] || '#e0e0e0';
+        const color = regionColorMap[rName] || '#e0e0e0';
         return { fillColor: color, fillOpacity: rName ? 0.6 : 0.15, color: '#888', weight: 0.6, opacity: 0.6 };
       },
       onEachFeature: (feature, layer) => {
@@ -1225,7 +1250,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       style: () => ({ fillColor: '#d0d0d0', fillOpacity: 0.3, color: '#aaa', weight: 0.3 }),
     }).addTo(map);
     // Foreground: highlighted region
-    const rc = drsColorMap[activeRegion] || '#118DFF';
+    const rc = regionColorMap[activeRegion] || '#118DFF';
     hlLayerRef.current = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures }, {
       style: (feature) => {
         const code = String(feature?.properties?.codarea ?? '');
@@ -1308,7 +1333,9 @@ function InteractiveMap({ anoSel, onNavigate }: {
       const { data: rpc } = await supabase.rpc('lc131_dashboard', params);
       if (!rpc) return;
       const d = rpc as Record<string, unknown>;
+      const dk2 = (d.kpis as Record<string, number>) ?? {};
       setMunicDetail({
+        pago: Number(dk2.pago ?? 0),
         projetos: ((d.por_projeto as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0) })),
         favorecidos: ((d.por_favorecido as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0) })),
         fontes: (() => {
@@ -1341,8 +1368,10 @@ function InteractiveMap({ anoSel, onNavigate }: {
     mapInst.current?.flyTo([-22.3, -48.8], 7, { duration: 1 });
   }
 
-  const currentRegion = activeRegion ? regionList.find(d => d.name === activeRegion) : null;
-  const currentMunics = activeRegion ? allMunics.filter(m => m.drs === activeRegion).sort((a, b) => b.empenhado - a.empenhado) : [];
+  const currentRegion = activeRegion ? activeRegionList.find(d => d.name === activeRegion) : null;
+  const currentMunics = activeRegion ? allMunics.filter(m => municToRegion[m.municipio] === activeRegion).sort((a, b) => b.empenhado - a.empenhado) : [];
+  const mapViewLabel = mapView === 'drs' ? 'DRS' : mapView === 'rras' ? 'RRAS' : mapView === 'regiao_ad' ? 'Reg. Admin.' : 'Reg. Saúde';
+  const mapViewFilterKey = mapView === 'drs' ? 'p_drs' : mapView === 'rras' ? 'p_rras' : mapView === 'regiao_ad' ? 'p_regiao_ad' : 'p_regiao_sa';
 
   // -- RENDER --
   return (
@@ -1374,6 +1403,15 @@ function InteractiveMap({ anoSel, onNavigate }: {
 
       {/* Breadcrumb + toggle */}
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 flex-wrap">
+        {/* View selector */}
+        <div className="flex items-center gap-0.5 bg-[#1B1B1B]/90 backdrop-blur px-1.5 py-1 rounded-xl shadow-lg border border-[#333]">
+          {([['drs','DRS'],['rras','RRAS'],['regiao_ad','Reg. Admin.'],['regiao_sa','Reg. Saúde']] as [string,string][]).map(([k, lb]) => (
+            <button key={k} onClick={() => { setMapView(k as 'drs'|'rras'|'regiao_ad'|'regiao_sa'); if (level !== 'estado') { setLevel('estado'); setActiveRegion(null); setActiveMunic(null); setMunicDetail(null); setSidebarOpen(false); } }}
+              className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold transition whitespace-nowrap', mapView === k ? 'bg-[#118DFF] text-white' : 'text-[#888] hover:text-white hover:bg-[#333]')}>
+              {lb}
+            </button>
+          ))}
+        </div>
         {level !== 'estado' && (
           <button onClick={goBack}
             className="flex items-center gap-1 px-3 py-2 bg-[#1B1B1B]/90 backdrop-blur text-white rounded-lg text-xs font-semibold hover:bg-[#333] transition shadow-lg border border-[#333]">
@@ -1460,15 +1498,17 @@ function InteractiveMap({ anoSel, onNavigate }: {
               <div className="grid grid-cols-2 gap-2">
                 <MiniKpi label="Empenhado" value={fmt(activeMunic.empenhado, 'currency')} color="#89CFF0" />
                 <MiniKpi label="Liquidado" value={fmt(activeMunic.liquidado, 'currency')} color="#90EE90" />
+                <MiniKpi label="Pago" value={municDetail ? fmt(municDetail.pago, 'currency') : fmt(activeMunic.pago, 'currency')} color="#FFD580" />
                 <MiniKpi label="Pago Total" value={fmt(activeMunic.pago_total, 'currency')} color="#FFB347" />
-                <MiniKpi label="% Liquidado" value={(activeMunic.empenhado > 0 ? (activeMunic.liquidado / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.liquidado)} />
+                <MiniKpi label="% Liq." value={(activeMunic.empenhado > 0 ? (activeMunic.liquidado / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.liquidado)} />
+                <MiniKpi label="% Exec." value={(activeMunic.empenhado > 0 ? (activeMunic.pago_total / activeMunic.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(activeMunic.empenhado, activeMunic.pago_total)} />
               </div>
             ) : currentRegion ? (
               <div className="grid grid-cols-2 gap-2">
                 <MiniKpi label="Empenhado" value={fmt(currentRegion.empenhado, 'currency')} color="#89CFF0" />
                 <MiniKpi label="Liquidado" value={fmt(currentRegion.liquidado, 'currency')} color="#90EE90" />
                 <MiniKpi label="Pago Total" value={fmt(currentRegion.pago_total, 'currency')} color="#FFB347" />
-                <MiniKpi label="% Liquidado" value={(currentRegion.empenhado > 0 ? (currentRegion.liquidado / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.liquidado)} />
+                <MiniKpi label="% Liq." value={(currentRegion.empenhado > 0 ? (currentRegion.liquidado / currentRegion.empenhado * 100).toFixed(1) : '0') + '%'} color={execPct(currentRegion.empenhado, currentRegion.liquidado)} />
               </div>
             ) : null}
 
@@ -1492,7 +1532,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
                     );
                   })}
                 </div>
-                <button onClick={() => onNavigate({ p_drs: [activeRegion!] }, 'regional')}
+                <button onClick={() => onNavigate({ [mapViewFilterKey]: [activeRegion!] }, 'regional')}
                   className="w-full mt-3 py-2.5 bg-[#118DFF]/20 text-[#89CFF0] text-xs font-bold rounded-lg hover:bg-[#118DFF]/30 transition flex items-center justify-center gap-2">
                   <Globe className="w-3.5 h-3.5" /> Ver Análise Regional
                 </button>
@@ -1553,15 +1593,15 @@ function InteractiveMap({ anoSel, onNavigate }: {
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D9B300]" /><span className="text-[11px] text-[#CCC]">50–80%</span></div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#D64550]" /><span className="text-[11px] text-[#CCC]">{'< 50%'}</span></div>
           </div>
-          {level === 'estado' && drsList.length > 0 && (
+          {level === 'estado' && activeRegionList.length > 0 && (
             <>
               <div className="border-t border-[#333] my-2.5" />
-              <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">DRS (clique para detalhar)</p>
+              <p className="text-[9px] text-[#888] uppercase font-bold mb-2 tracking-wider">{mapViewLabel} (clique para detalhar)</p>
               <div className="flex flex-col gap-0.5 max-h-[280px] overflow-y-auto custom-scrollbar">
-                {regionList.map((d, i) => (
+                {activeRegionList.map((d, i) => (
                   <button key={i} onClick={() => drillIntoRegion(d.name)}
                     className="flex items-center gap-2 hover:bg-[#333] rounded-lg px-2 py-1 transition text-left">
-                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: drsColorMap[d.name] || '#999' }} />
+                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: regionColorMap[d.name] || '#999' }} />
                     <span className="text-[10px] text-[#CCC] truncate">{d.name}</span>
                   </button>
                 ))}
@@ -2031,10 +2071,10 @@ export default function App() {
   const [xlsxLoading, setXlsxLoading]     = useState(false);
   const DETAIL_PAGE_SIZE = 200;
 
-  const [lastImportAt, setLastImportAt]   = useState<Date | null>(null);
+  const [lastImportAt, setLastImportAt]   = useState<Date | null>(() => { try { const s = localStorage.getItem('lc131_lastImportAt'); return s ? new Date(s) : null; } catch { return null; } });
 
   // -- Pivot tab (multi-level, Excel-style) --
-  const [pivotDims, setPivotDims]           = useState<string[]>(['municipio','fonte_simpl','grupo_simpl','rotulo']);
+  const [pivotDims, setPivotDims]           = useState<string[]>(['municipio','fonte_simpl','grupo_simpl','tipo_despesa']);
   const [pivotMultiRaw, setPivotMultiRaw]   = useState<MultiPivotRow[]>([]);
   const [pivotLoading, setPivotLoading]     = useState(false);
   const [pivotError, setPivotError]         = useState<string|null>(null);
@@ -4078,7 +4118,7 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
       </main>
       )}
 
-      {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} onImportDone={() => { setLastImportAt(new Date()); setUploadOpen(false); }} />}
+      {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} onImportDone={() => { const d = new Date(); try { localStorage.setItem('lc131_lastImportAt', d.toISOString()); } catch {} setLastImportAt(d); setUploadOpen(false); }} />}
 
       {/* Password gate modal */}
       {pwdGateOpen && (
