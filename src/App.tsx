@@ -1101,6 +1101,13 @@ function InteractiveMap({ anoSel, onNavigate }: {
   const regionColorMap = useMemo(() => { const m: Record<string, string> = {}; activeRegionList.forEach((d, i) => { m[d.name] = getDrsColor(d.name, i); }); return m; }, [activeRegionList]);
   const municToRegion = useMemo(() => { const m: Record<string, string> = {}; allMunics.forEach(mu => { const val = mapView === 'drs' ? mu.drs : mapView === 'rras' ? mu.rras : mapView === 'regiao_ad' ? mu.regiao_ad : mu.regiao_sa; if (val) m[mu.municipio] = val; }); return m; }, [allMunics, mapView]);
   const municByName = useMemo(() => { const m: Record<string, MapMunic> = {}; allMunics.forEach(mu => { m[mu.municipio] = mu; }); return m; }, [allMunics]);
+  // Detecta se a view atual tem dados por município (necessário para colorir o mapa)
+  const hasMunicViewData = useMemo(() => {
+    if (mapView === 'drs')       return allMunics.some(m => m.drs !== '');
+    if (mapView === 'rras')      return allMunics.some(m => m.rras !== '');
+    if (mapView === 'regiao_ad') return allMunics.some(m => m.regiao_ad !== '');
+    return allMunics.some(m => m.regiao_sa !== '');
+  }, [allMunics, mapView]);
 
   function execPct(emp: number, pago: number): string {
     if (emp <= 0) return '#555';
@@ -1161,9 +1168,12 @@ function InteractiveMap({ anoSel, onNavigate }: {
             const k = d.kpis as Record<string, number>;
             const dash = dashRpc2 as Record<string, unknown> ?? {};
             const mergedDrs = mergeDrsRegions((d.por_drs as Record<string, unknown>[] ?? []).map(r => ({ name: String(r.drs ?? ''), empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago: Number(r.pago ?? 0), pago_total: Number(r.pago_total ?? 0), municipios: Number(r.municipios ?? 0), registros: Number(r.registros ?? 0) })));
-            const rrasListData = makeRegionList((d.por_rras as Record<string, unknown>[] ?? []).length ? (d.por_rras as Record<string, unknown>[]) : (dash.por_rras as Record<string, unknown>[] ?? []), 'rras');
-            const regiaoAdData = makeRegionList((d.por_regiao_ad as Record<string, unknown>[] ?? []).length ? (d.por_regiao_ad as Record<string, unknown>[]) : (dash.por_regiao_ad as Record<string, unknown>[] ?? []), 'regiao_ad');
-            const regiaoSaData = makeRegionList((d.por_regiao_sa as Record<string, unknown>[] ?? []).length ? (d.por_regiao_sa as Record<string, unknown>[]) : (dash.por_regiao_sa as Record<string, unknown>[] ?? []), 'regiao_sa');
+            const rrasRows = (d.por_rras as Record<string, unknown>[] ?? []).length ? (d.por_rras as Record<string, unknown>[]) : (dash.por_rras as Record<string, unknown>[] ?? []);
+            const rrasListData = makeRegionList(rrasRows, 'rras', normalizeRras);
+            const regiaoAdRows = (d.por_regiao_ad as Record<string, unknown>[] ?? []).length ? (d.por_regiao_ad as Record<string, unknown>[]) : (dash.por_regiao_ad as Record<string, unknown>[] ?? []);
+            const regiaoAdData = makeRegionList(regiaoAdRows, 'regiao_ad');
+            const regiaoSaRows = (d.por_regiao_sa as Record<string, unknown>[] ?? []).length ? (d.por_regiao_sa as Record<string, unknown>[]) : (dash.por_regiao_sa as Record<string, unknown>[] ?? []);
+            const regiaoSaData = makeRegionList(regiaoSaRows, 'regiao_sa');
             const result = {
               kpis: { empenhado: Number(k?.empenhado ?? 0), liquidado: Number(k?.liquidado ?? 0), pago: Number(k?.pago ?? dashPago), pago_total: Number(k?.pago_total ?? 0), registros: Number(k?.registros ?? 0), municipios: Number(k?.municipios ?? 0), drs_count: mergedDrs.length } as MapKpis,
               drsList: mergedDrs,
@@ -1411,6 +1421,15 @@ function InteractiveMap({ anoSel, onNavigate }: {
           <p className="font-bold mb-1">Erro ao carregar mapa</p>
           <p className="text-red-200 text-xs font-mono">{error}</p>
           <p className="text-red-300 text-[10px] mt-2">Execute <code className="bg-red-800 px-1 rounded">scripts/compact_functions_all.sql</code> no Supabase SQL Editor</p>
+        </div>
+      )}
+
+      {/* SQL-not-applied warning for regiao_ad / regiao_sa */}
+      {!loading && !error && !hasMunicViewData && activeRegionList.length > 0 && level === 'estado' && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-[#1B1B1B]/95 backdrop-blur border border-[#F59E0B] text-[#F59E0B] px-5 py-3 rounded-xl text-xs shadow-2xl max-w-md text-center pointer-events-none">
+          <p className="font-bold text-sm mb-1">⚠ Cores por {mapViewLabel} indisponíveis</p>
+          <p className="text-[#FCD34D]">Execute <strong>scripts/compact_functions_all.sql</strong> no Supabase SQL Editor para habilitar a coloração dos municípios por {mapViewLabel}.</p>
+          <p className="text-[#888] mt-1 text-[10px]">A lista de regiões na legenda já está disponível.</p>
         </div>
       )}
 

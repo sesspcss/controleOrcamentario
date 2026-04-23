@@ -205,7 +205,7 @@ BEGIN
           COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
           COUNT(*) AS registros
         FROM base WHERE regiao_ad IS NOT NULL AND regiao_ad<>''
-        GROUP BY regiao_ad ORDER BY 2 DESC LIMIT 20
+        GROUP BY regiao_ad ORDER BY 2 DESC
       ) r
     ),
     'por_uo', (
@@ -224,7 +224,7 @@ BEGIN
           COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
           COUNT(*) AS registros
         FROM base WHERE rras IS NOT NULL AND rras<>''
-        GROUP BY rras ORDER BY 2 DESC LIMIT 20
+        GROUP BY rras ORDER BY 2 DESC
       ) r
     ),
     'por_tipo_despesa', (
@@ -275,7 +275,7 @@ BEGIN
           COUNT(DISTINCT NULLIF(municipio, '')) AS municipios,
           COUNT(*) AS registros
         FROM base WHERE regiao_sa IS NOT NULL AND regiao_sa<>''
-        GROUP BY regiao_sa ORDER BY 2 DESC LIMIT 20
+        GROUP BY regiao_sa ORDER BY 2 DESC
       ) r
     )
   ) INTO result;
