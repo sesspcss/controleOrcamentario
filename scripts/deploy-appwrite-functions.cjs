@@ -24,17 +24,12 @@ const PROJECT_ID  = '69ea271e000d28e3afce';
 const API_KEY     = 'standard_8834bd8610e14b14457c14af3d1ebaa4de0a89405faeb1186a02d517d251b31c125896555137773df5d8fc00f87bb0f67b032cdb5f2dea1b6d4841b9b0d46e8022df8202ccd30b5b9046bf190eb9f5c0e26501ffbc89527f94e8c95eb14c627af38568f0647b64973868741b16b8e2d0ac257b8b1a838600c24a7d6120edf204';
 const AW_HOST     = 'fra.cloud.appwrite.io';
 const AW_BASE     = '/v1';
-const RUNTIME     = 'node-20.0';
+const RUNTIME     = 'node-18.0';
 const FUNC_DIR    = path.resolve(__dirname, '..', 'appwrite-functions');
 
 const FUNCTIONS = [
-  { id: 'lc131-dashboard',    name: 'LC131 Dashboard',    entrypoint: 'index.js' },
-  { id: 'lc131-map-data',     name: 'LC131 Map Data',     entrypoint: 'index.js' },
-  { id: 'lc131-distincts',    name: 'LC131 Distincts',    entrypoint: 'index.js' },
-  { id: 'lc131-detail',       name: 'LC131 Detail',       entrypoint: 'index.js' },
-  { id: 'lc131-pivot-multi',  name: 'LC131 Pivot Multi',  entrypoint: 'index.js' },
-  { id: 'lc131-delete-year',  name: 'LC131 Delete Year',  entrypoint: 'index.js' },
-  { id: 'post-import-cleanup',name: 'Post Import Cleanup',entrypoint: 'index.js' },
+  { id: 'lc131-dashboard', name: 'LC131 Dashboard (Router)', entrypoint: 'index.js' },
+  { id: 'lc131-map-data',  name: 'LC131 Map Data',           entrypoint: 'index.js' },
 ];
 
 // ─── HTTP helpers ────────────────────────────────────────────────────────────
@@ -123,13 +118,20 @@ async function setEnvVar(fnId, key, value) {
   if (list.status === 200 && list.data.variables) {
     const existing = list.data.variables.find(v => v.key === key);
     if (existing) {
+      // Update existing variable
       const upd = await awReq('PUT', `/functions/${fnId}/variables/${existing.$id}`, { key, value });
-      if (upd.status === 200) { console.log(`  [✓] Updated env ${key} on ${fnId}`); return; }
+      if (upd.status === 200 || upd.status === 201) { console.log(`  [✓] Updated env ${key} on ${fnId}`); return; }
+      console.warn(`  [!] Update env failed: ${JSON.stringify(upd.data)}`);
+      return;
     }
   }
-  const create = await awReq('POST', `/functions/${fnId}/variables`, { key, value });
+  // Create new variable — Appwrite 1.9.x requires variableId (unique across project)
+  const variableId = (fnId + '-' + key).replace(/_/g,'-').toLowerCase().slice(0,36);
+  const create = await awReq('POST', `/functions/${fnId}/variables`, { variableId, key, value });
   if (create.status === 201 || create.status === 200) {
     console.log(`  [+] Set env ${key} on ${fnId}`);
+  } else if (create.status === 409) {
+    console.log(`  [✓] Env ${key} already set on ${fnId}`);
   } else {
     console.warn(`  [!] Could not set env ${key} on ${fnId}: ${JSON.stringify(create.data)}`);
   }
@@ -162,8 +164,8 @@ async function deployFunction(fn) {
   const deploy = await awMultipart('POST', `/functions/${fn.id}/deployments`, fields, 'code', fn.id + '.tar.gz', tarBuf);
   fs.unlinkSync(tmpFile);
 
-  if (deploy.status === 201 || deploy.status === 200) {
-    console.log(`  [✓] Deployed ${fn.id} — deployment ${deploy.data.$id || '?'}`);
+  if (deploy.status === 201 || deploy.status === 200 || deploy.status === 202) {
+    console.log(`  [✓] Deployed ${fn.id} — deployment ${(deploy.data && deploy.data.$id) || '?'} (status: ${deploy.status})`);
   } else {
     throw new Error(`Deploy failed for ${fn.id}: HTTP ${deploy.status} — ${JSON.stringify(deploy.data)}`);
   }

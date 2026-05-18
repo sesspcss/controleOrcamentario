@@ -11,19 +11,20 @@ const PROJECT_ID = '69ea271e000d28e3afce';
 
 export const DATABASE_ID = '69ea274b00316d3d1dfb';
 
-// Supabase RPC name → Appwrite Function ID
-const RPC_MAP: Record<string, string> = {
-  lc131_dashboard:         'lc131-dashboard',
-  lc131_map_data:          'lc131-map-data',
-  lc131_distincts:         'lc131-distincts',
-  lc131_pivot_multi:       'lc131-pivot-multi',
-  lc131_delete_year:       'lc131-delete-year',
-  post_import_cleanup:     'post-import-cleanup',
-  refresh_dashboard_batch: 'post-import-cleanup',
+// Supabase RPC name → { Appwrite Function ID, optional action }
+// Plano free: apenas 2 funções. lc131-dashboard faz routing por action.
+const RPC_MAP: Record<string, { id: string; action?: string }> = {
+  lc131_dashboard:         { id: 'lc131-dashboard' },
+  lc131_map_data:          { id: 'lc131-map-data' },
+  lc131_distincts:         { id: 'lc131-dashboard', action: 'distincts' },
+  lc131_pivot_multi:       { id: 'lc131-dashboard', action: 'pivot' },
+  lc131_delete_year:       { id: 'lc131-dashboard', action: 'delete_year' },
+  post_import_cleanup:     { id: 'lc131-dashboard', action: 'cleanup' },
+  refresh_dashboard_batch: { id: 'lc131-dashboard', action: 'cleanup' },
   // Stubs — not needed in Appwrite
-  refresh_bdref_lookup:    '',
-  get_lc131_id_range:      '',
-  fix_tipo_despesa_by_year:'',
+  refresh_bdref_lookup:    { id: '' },
+  get_lc131_id_range:      { id: '' },
+  fix_tipo_despesa_by_year:{ id: '' },
 };
 
 // ──────────────── SDK setup ────────────────
@@ -164,22 +165,26 @@ export const appwrite = {
   from: (collectionId: string) => new QueryBuilder(collectionId),
 
   rpc: async (fnName: string, params?: Record<string, unknown>) => {
-    const fnId = RPC_MAP[fnName];
+    const entry = RPC_MAP[fnName];
 
-    if (fnId === '') {
-      console.warn(`[appwrite] rpc('${fnName}') not implemented — stub response`);
-      return { data: { ok: true, rows: [] }, error: null, status: 200 };
-    }
-
-    if (!fnId) {
+    if (!entry) {
       console.warn(`[appwrite] Unknown rpc name: ${fnName}`);
       return { data: null, error: { message: `Unknown function: ${fnName}` }, status: 404 };
     }
 
+    if (entry.id === '') {
+      console.warn(`[appwrite] rpc('${fnName}') not implemented — stub response`);
+      return { data: { ok: true, rows: [] }, error: null, status: 200 };
+    }
+
+    const body = entry.action
+      ? { action: entry.action, ...(params ?? {}) }
+      : (params ?? {});
+
     try {
       const execution = await fnClient.createExecution(
-        fnId,
-        params ? JSON.stringify(params) : '{}',
+        entry.id,
+        JSON.stringify(body),
         false,
         '/',
         'POST' as 'POST',
@@ -187,7 +192,7 @@ export const appwrite = {
       );
 
       if (execution.responseStatusCode >= 400) {
-        let errMsg = `Function ${fnId} returned ${execution.responseStatusCode}`;
+        let errMsg = `Function ${entry.id} returned ${execution.responseStatusCode}`;
         try { errMsg = (JSON.parse(execution.responseBody) as { message?: string })?.message ?? errMsg; } catch { /* ok */ }
         return { data: null, error: { message: errMsg }, status: execution.responseStatusCode };
       }
