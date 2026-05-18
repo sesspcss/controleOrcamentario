@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, memo, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { supabase } from './supabase';
+import { appwrite as supabase } from './appwrite';  // ✅ MIGRADO: Supabase → Appwrite
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, Legend,
