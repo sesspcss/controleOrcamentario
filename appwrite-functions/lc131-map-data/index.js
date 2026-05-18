@@ -1,49 +1,127 @@
 ﻿/**
  * Appwrite Function: lc131-map-data
- * Proxy para Supabase RPC lc131_map_data
+ * Retorna dados para o mapa (por município, DRS, RRAS, regiões).
+ * Lê do cache quando disponível (sem filtros), senão agrega dos documentos.
  */
-
+'use strict';
 const https = require('https');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://teikzwrfsxjipxozzhbr.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3ODkwNDQsImV4cCI6MjA5MTM2NTA0NH0.t3tWIh3F9lmg-a6zzdmoKpupHB9i7hTfvFmPyFbZNZs';
+const DB_ID = '69ea274b00316d3d1dfb';
+const COLL  = 'lc131_despesas';
+const CACHE = 'cache';
+const LIMIT = 5000;
 
-function callSupabaseRpc(functionName, params) {
+function qEq(field, vals) {
+  const a = Array.isArray(vals) ? vals : [vals];
+  const v = a.map(x => typeof x === 'number' ? String(x) : `"${String(x).replace(/"/g,'\\\"')}"`).join(',');
+  return `equal("${field}",[${v}])`;
+}
+function buildQS(queries) { return queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&'); }
+
+function awGet(endpoint, path) {
   return new Promise((resolve, reject) => {
-    const payload = JSON.stringify(params || {});
-    const url = new URL(SUPABASE_URL + '/rest/v1/rpc/' + functionName);
+    const url = new URL(endpoint + path);
     const opts = {
-      hostname: url.hostname,
-      path: url.pathname,
-      method: 'POST',
+      hostname: url.hostname, path: url.pathname + url.search, method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'X-Appwrite-Project': process.env.APPWRITE_FUNCTION_PROJECT_ID,
+        'X-Appwrite-Key': process.env.APPWRITE_API_KEY,
       },
     };
-    const req = https.request(opts, (res) => {
-      let data = '';
-      res.on('data', (c) => (data += c));
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+    const req = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
     });
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
+    req.on('error', reject); req.end();
   });
+}
+
+async function fetchAll(endpoint, extraQ) {
+  const docs = []; let offset = 0;
+  while (true) {
+    const q = [...extraQ, `limit(${LIMIT})`, ...(offset > 0 ? [`offset(${offset})`] : [])];
+    const r = await awGet(endpoint, `/databases/${DB_ID}/collections/${COLL}/documents?${buildQS(q)}`);
+    if (!r.documents) break;
+    docs.push(...r.documents);
+    if (r.documents.length < LIMIT) break;
+    offset += LIMIT;
+  }
+  return docs;
+}
+
+const N = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+function aggregateMap(docs) {
+  const kpis = { empenhado: 0, liquidado: 0, pago: 0, pago_total: 0, registros: docs.length, municipios: 0, drs_count: 0 };
+  const allMunic = new Set(), allDrs = new Set();
+  for (const r of docs) {
+    kpis.empenhado += N(r.empenhado); kpis.liquidado += N(r.liquidado);
+    kpis.pago += N(r.pago); kpis.pago_total += N(r.pago_total);
+    allMunic.add(r.municipio || ''); if (r.drs) allDrs.add(r.drs);
+  }
+  kpis.municipios = allMunic.size; kpis.drs_count = allDrs.size;
+  kpis.empenhado = Math.round(kpis.empenhado * 100) / 100;
+  kpis.liquidado = Math.round(kpis.liquidado * 100) / 100;
+  kpis.pago = Math.round(kpis.pago * 100) / 100;
+  kpis.pago_total = Math.round(kpis.pago_total * 100) / 100;
+
+  function grpRegion(key) {
+    const m = new Map();
+    for (const r of docs) {
+      const k = r[key] || ''; if (!k) continue;
+      const e = m.get(k) || { [key]: k, empenhado: 0, liquidado: 0, pago: 0, pago_total: 0, municipios: new Set(), registros: 0 };
+      e.empenhado += N(r.empenhado); e.liquidado += N(r.liquidado);
+      e.pago += N(r.pago); e.pago_total += N(r.pago_total);
+      e.municipios.add(r.municipio || ''); e.registros++; m.set(k, e);
+    }
+    return Array.from(m.values()).map(e => ({
+      [key]: e[key], empenhado: Math.round(e.empenhado*100)/100, liquidado: Math.round(e.liquidado*100)/100,
+      pago: Math.round(e.pago*100)/100, pago_total: Math.round(e.pago_total*100)/100,
+      municipios: e.municipios.size, registros: e.registros,
+    }));
+  }
+
+  const municMap = new Map();
+  for (const r of docs) {
+    const k = r.municipio || ''; if (!k) continue;
+    const e = municMap.get(k) || { municipio: k, drs: r.drs||'', rras: r.rras||'', regiao_ad: r.regiao_ad||'', regiao_sa: r.regiao_sa||'', empenhado: 0, liquidado: 0, pago: 0, pago_total: 0, registros: 0 };
+    e.empenhado += N(r.empenhado); e.liquidado += N(r.liquidado);
+    e.pago += N(r.pago); e.pago_total += N(r.pago_total); e.registros++;
+    municMap.set(k, e);
+  }
+  const municipios = Array.from(municMap.values()).map(e => ({
+    ...e, empenhado: Math.round(e.empenhado*100)/100, liquidado: Math.round(e.liquidado*100)/100,
+    pago: Math.round(e.pago*100)/100, pago_total: Math.round(e.pago_total*100)/100,
+  }));
+
+  return {
+    kpis,
+    por_drs: grpRegion('drs'),
+    por_rras: grpRegion('rras'),
+    por_regiao_ad: grpRegion('regiao_ad'),
+    por_regiao_sa: grpRegion('regiao_sa'),
+    municipios,
+  };
 }
 
 module.exports = async function(req, res) {
   try {
-    const params = req.body || {};
-    const result = await callSupabaseRpc('lc131_map_data', params);
-    if (result.status >= 400) {
-      return res.json({ error: result.body }, result.status);
+    const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
+    const p = req.body || {};
+    const queries = p.p_ano ? [qEq('ano_referencia', [Number(p.p_ano)])] : [];
+
+    // Try cache (only for p_ano-only queries)
+    if (!p.p_drs && !p.p_rras && !p.p_regiao_ad && !p.p_regiao_sa && !p.p_municipio) {
+      const cacheId = p.p_ano ? `map_${p.p_ano}` : 'map_todos';
+      const cached = await awGet(endpoint, `/databases/${DB_ID}/collections/${CACHE}/documents/${cacheId}`);
+      if (cached && cached.data) {
+        try { return res.json(JSON.parse(cached.data), 200); } catch { /* fall through */ }
+      }
     }
-    return res.send(result.body, result.status, { 'Content-Type': 'application/json' });
-  } catch (error) {
-    console.error('Erro em lc131_map_data:', error);
-    return res.json({ error: error.message }, 500);
+
+    const docs = await fetchAll(endpoint, queries);
+    return res.json(aggregateMap(docs), 200);
+  } catch (err) {
+    return res.json({ error: err.message }, 500);
   }
 };

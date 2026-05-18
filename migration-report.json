@@ -1,0 +1,22 @@
+{
+  "lc131_despesas": {
+    "total": 0,
+    "migrado": 0,
+    "erro": 0
+  },
+  "bd_ref": {
+    "total": 0,
+    "migrado": 0,
+    "erro": 0
+  },
+  "tab_drs": {
+    "total": 0,
+    "migrado": 0,
+    "erro": 0
+  },
+  "tab_rras": {
+    "total": 0,
+    "migrado": 0,
+    "erro": 0
+  }
+}

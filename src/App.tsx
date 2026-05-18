@@ -372,7 +372,7 @@ function applyFiltersToQuery(
     const v = activeFilters[f.key];
     if (!Array.isArray(v) || v.length === 0) continue;
     const expanded = expandFilterValues(f.key, v);
-    if (f.key === 'p_fonte_recurso') query = query.or(buildFonteOrFilter(expanded));
+    if (f.key === 'p_fonte_recurso') query = query.in('fonte_simpl', expanded);
     else if (f.key === 'p_codigo_ug') query = query.in('codigo_ug', expanded);
     else {
       const col = FILTER_TO_COL[f.key];

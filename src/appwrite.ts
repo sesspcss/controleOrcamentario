@@ -1,259 +1,223 @@
 /**
- * Appwrite Client Configuration
- * Data source: Supabase (RPC) + Appwrite (future)
- *
- * Configurações Appwrite:
- * - Endpoint: https://fra.cloud.appwrite.io/v1
- * - Project ID: 69ea271e000d28e3afce
- * - Database ID: 69ea274b00316d3d1dfb
- *
- * Supabase (dados ainda aqui):
- * - URL: https://teikzwrfsxjipxozzhbr.supabase.co
+ * Appwrite Client — pure Appwrite, sem Supabase.
+ * Exposição de API compatível com o padrão supabase-js usado no App.tsx.
  */
 
-import { Client, Databases, Query } from 'appwrite';
+import { Client, Databases, Functions, Query, ID } from 'appwrite';
 
-// Supabase config – usada para chamadas RPC enquanto dados não migrados
-const SUPABASE_URL = 'https://teikzwrfsxjipxozzhbr.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3ODkwNDQsImV4cCI6MjA5MTM2NTA0NH0.t3tWIh3F9lmg-a6zzdmoKpupHB9i7hTfvFmPyFbZNZs';
+// ──────────────── Config ────────────────
+const ENDPOINT   = 'https://fra.cloud.appwrite.io/v1';
+const PROJECT_ID = '69ea271e000d28e3afce';
 
-// Configuração do cliente Appwrite
-const client = new Client()
-  .setEndpoint('https://fra.cloud.appwrite.io/v1')
-  .setProject('69ea271e000d28e3afce');
+export const DATABASE_ID = '69ea274b00316d3d1dfb';
 
-export const appwriteClient = client;
-export const databases = new Databases(client);
-
-// IDs de recursos no Appwrite
-export const APPWRITE_CONFIG = {
-  DATABASE_ID: '69ea274b00316d3d1dfb',
-  COLLECTIONS: {
-    LC131_DESPESAS: 'lc131_despesas',
-    BD_REF: 'bd_ref',
-    TAB_DRS: 'tab_drs',
-    TAB_RRAS: 'tab_rras',
-  },
-  FUNCTIONS: {
-    LC131_DASHBOARD: 'lc131-dashboard',
-    LC131_MAP_DATA: 'lc131-map-data',
-    LC131_PIVOT_MULTI: 'lc131-pivot-multi',
-    REFRESH_BDREF_LOOKUP: 'refresh-bdref-lookup',
-    GET_LC131_ID_RANGE: 'get-lc131-id-range',
-    FIX_TIPO_DESPESA: 'fix-tipo-despesa-by-year',
-    POST_IMPORT_CLEANUP: 'post-import-cleanup',
-    LC131_DELETE_YEAR: 'lc131-delete-year',
-    REFRESH_DASHBOARD_BATCH: 'refresh-dashboard-batch',
-  },
+// Supabase RPC name → Appwrite Function ID
+const RPC_MAP: Record<string, string> = {
+  lc131_dashboard:         'lc131-dashboard',
+  lc131_map_data:          'lc131-map-data',
+  lc131_distincts:         'lc131-distincts',
+  lc131_pivot_multi:       'lc131-pivot-multi',
+  lc131_delete_year:       'lc131-delete-year',
+  post_import_cleanup:     'post-import-cleanup',
+  refresh_dashboard_batch: 'post-import-cleanup',
+  // Stubs — not needed in Appwrite
+  refresh_bdref_lookup:    '',
+  get_lc131_id_range:      '',
+  fix_tipo_despesa_by_year:'',
 };
 
-/**
- * Wrapper para manter compatibilidade com API do Supabase
- * Isso permite transição gradual do App.tsx
- */
-export const appwrite = {
-  /**
-   * Simula supabase.from('table').select()
-   */
-  from: (collectionId: string) => {
-    return {
-      select: async (columns: string = '*', options?: any) => {
-        try {
-          const queries: string[] = [];
-          
-          if (options?.limit) {
-            queries.push(Query.limit(options.limit));
-          }
-          if (options?.offset) {
-            queries.push(Query.offset(options.offset));
-          }
-          if (options?.order) {
-            const [field, direction] = typeof options.order === 'string' 
-              ? [options.order, 'ASC']
-              : [options.order.column || options.order[0], 
-                 options.order.ascending === false ? 'DESC' : 'ASC'];
-            queries.push(Query.orderBy(field, direction));
-          }
+// ──────────────── SDK setup ────────────────
+const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID);
+export const databases  = new Databases(client);
+const fnClient          = new Functions(client);
+export const appwriteClient = client;
 
-          const documents = await databases.listDocuments(
-            APPWRITE_CONFIG.DATABASE_ID,
-            collectionId,
-            queries
-          );
+// ──────────────── Helper ────────────────
+function computeFonteSimpl(row: Record<string, unknown>): string {
+  const s = String(row.codigo_nome_fonte_recurso ?? row.fonte_recurso ?? '').toLowerCase();
+  return (s.includes('fed') || s.includes('uni') || s.includes('fundo nacional') ||
+          s.includes('transfe') || s.includes('sus'))
+    ? 'FEDERAL' : 'ESTADUAL';
+}
 
-          return {
-            data: documents.documents,
-            error: null,
-            status: 200,
-            statusText: 'OK',
-            count: documents.total,
-          };
-        } catch (error) {
-          return {
-            data: null,
-            error,
-            status: 500,
-            statusText: 'Error',
-          };
+function computeGrupoSimpl(row: Record<string, unknown>): string {
+  const g = String(row.codigo_nome_grupo ?? '');
+  if (g.startsWith('1')) return 'Pessoal';
+  if (g.startsWith('2')) return 'Dívida';
+  if (g.startsWith('3')) return 'Custeio';
+  if (g.startsWith('4')) return 'Investimento';
+  return 'Outros';
+}
+
+// ──────────────── Fluent query builder ────────────────
+type AwResult = {
+  data: unknown | null;
+  error: { message: string } | null;
+  count: number | null;
+};
+
+class QueryBuilder {
+  private _coll: string;
+  private _queries: string[] = [];
+  private _lim = 500;
+  private _off = 0;
+  private _singleMode = false;
+  private _insertData: Record<string, unknown>[] | null = null;
+
+  constructor(coll: string) { this._coll = coll; }
+
+  select(_cols: string, _opts?: { count?: string }) {
+    return this;
+  }
+
+  order(field: string, opts?: { ascending?: boolean }) {
+    this._queries.push(
+      opts?.ascending === false ? Query.orderDesc(field) : Query.orderAsc(field)
+    );
+    return this;
+  }
+
+  limit(n: number) { this._lim = n; return this; }
+
+  range(from: number, to: number) {
+    this._off = from;
+    this._lim = to - from + 1;
+    return this;
+  }
+
+  eq(field: string, value: unknown) {
+    this._queries.push(Query.equal(field, value as string));
+    return this;
+  }
+
+  in(field: string, values: unknown[]) {
+    if (values.length === 0) return this;
+    this._queries.push(Query.equal(field, values as string[]));
+    return this;
+  }
+
+  // Stub — PostgREST .or() not supported; App.tsx was updated to use .in('fonte_simpl', ...)
+  or(_postgrest: string) {
+    console.warn('[appwrite] QueryBuilder.or() called — should not happen in Appwrite mode');
+    return this;
+  }
+
+  single() { this._singleMode = true; this._lim = 1; return this; }
+
+  insert(rows: Record<string, unknown>[]) {
+    this._insertData = rows;
+    return this;
+  }
+
+  then(
+    onFulfilled: (v: AwResult) => unknown,
+    onRejected?: (r: unknown) => unknown,
+  ) {
+    return this._execute().then(onFulfilled, onRejected);
+  }
+
+  catch(onRejected: (r: unknown) => unknown) {
+    return this._execute().catch(onRejected);
+  }
+
+  private async _execute(): Promise<AwResult> {
+    if (this._insertData) {
+      try {
+        for (const rawRow of this._insertData) {
+          const row = { ...rawRow } as Record<string, unknown>;
+          row.fonte_simpl = computeFonteSimpl(row);
+          row.grupo_simpl = computeGrupoSimpl(row);
+          if (row.codigo_ug !== undefined && row.codigo_ug !== null) {
+            row.codigo_ug = String(row.codigo_ug);
+          }
+          const docId = (row.$id as string | undefined)
+            ?? (row.id !== undefined ? String(row.id) : ID.unique());
+          delete row.$id;
+          delete row.id;
+          await databases.createDocument(DATABASE_ID, this._coll, docId, row);
         }
-      },
-      
-      insert: async (rows: any[]) => {
-        try {
-          const results = [];
-          for (const row of rows) {
-            // Appwrite usa '$id' como ID do documento, mapeia 'id' para '$id' se existir
-            const doc = { ...row };
-            if (row.id && !row.$id) {
-              doc.$id = String(row.id);
-            }
-            
-            const created = await databases.createDocument(
-              APPWRITE_CONFIG.DATABASE_ID,
-              collectionId,
-              doc.$id || 'unique()',
-              doc
-            );
-            results.push(created);
-          }
+        return { data: this._insertData, error: null, count: null };
+      } catch (e: unknown) {
+        return { data: null, error: { message: (e as Error).message }, count: null };
+      }
+    }
 
-          return {
-            data: results,
-            error: null,
-            status: 201,
-            statusText: 'Created',
-          };
-        } catch (error) {
-          return {
-            data: null,
-            error,
-            status: 500,
-            statusText: 'Error',
-          };
-        }
-      },
-
-      delete: async (filterFn?: (doc: any) => boolean) => {
-        try {
-          const { documents } = await databases.listDocuments(
-            APPWRITE_CONFIG.DATABASE_ID,
-            collectionId,
-            [Query.limit(1000)] // Appwrite limita a 100/1000 docs por request
-          );
-
-          for (const doc of documents) {
-            if (!filterFn || filterFn(doc)) {
-              await databases.deleteDocument(
-                APPWRITE_CONFIG.DATABASE_ID,
-                collectionId,
-                doc.$id
-              );
-            }
-          }
-
-          return {
-            data: { deleted: documents.length },
-            error: null,
-            status: 200,
-            statusText: 'OK',
-          };
-        } catch (error) {
-          return {
-            data: null,
-            error,
-            status: 500,
-            statusText: 'Error',
-          };
-        }
-      },
-
-      order: async (column: string, options?: any) => {
-        // Implementar ordenação
-        return this.select('*', {
-          order: { column, ascending: options?.ascending !== false },
-        });
-      },
-
-      limit: async (count: number) => {
-        return this.select('*', { limit: count });
-      },
-
-      single: async () => {
-        const result = await this.select('*', { limit: 1 });
-        return {
-          data: result.data?.[0] || null,
-          error: result.error,
-        };
-      },
-
-      count: async (options?: any) => {
-        try {
-          const response = await databases.listDocuments(
-            APPWRITE_CONFIG.DATABASE_ID,
-            collectionId,
-            [Query.limit(1)]
-          );
-
-          return {
-            data: null,
-            count: response.total,
-            error: null,
-          };
-        } catch (error) {
-          return {
-            data: null,
-            count: null,
-            error,
-          };
-        }
-      },
-    };
-  },
-
-  /**
-   * Simula supabase.rpc('function_name', { param1: value1, ... })
-   * Chama Supabase REST API diretamente (dados ainda estão lá).
-   * Quando as Appwrite Functions forem deployadas, basta trocar a URL.
-   */
-  rpc: async (functionName: string, params?: Record<string, any>) => {
     try {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/rpc/${functionName}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify(params || {}),
-        }
+      const q = [
+        ...this._queries,
+        Query.limit(this._lim),
+        ...(this._off > 0 ? [Query.offset(this._off)] : []),
+      ];
+      const res = await databases.listDocuments(DATABASE_ID, this._coll, q);
+      if (this._singleMode) {
+        return { data: res.documents[0] ?? null, error: null, count: null };
+      }
+      return { data: res.documents, error: null, count: res.total };
+    } catch (e: unknown) {
+      return { data: null, error: { message: (e as Error).message }, count: null };
+    }
+  }
+}
+
+// ──────────────── Main export ────────────────
+export const appwrite = {
+  from: (collectionId: string) => new QueryBuilder(collectionId),
+
+  rpc: async (fnName: string, params?: Record<string, unknown>) => {
+    const fnId = RPC_MAP[fnName];
+
+    if (fnId === '') {
+      console.warn(`[appwrite] rpc('${fnName}') not implemented — stub response`);
+      return { data: { ok: true, rows: [] }, error: null, status: 200 };
+    }
+
+    if (!fnId) {
+      console.warn(`[appwrite] Unknown rpc name: ${fnName}`);
+      return { data: null, error: { message: `Unknown function: ${fnName}` }, status: 404 };
+    }
+
+    try {
+      const execution = await fnClient.createExecution(
+        fnId,
+        params ? JSON.stringify(params) : '{}',
+        false,
+        '/',
+        'POST' as 'POST',
+        {},
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          data: null,
-          error: data,
-          status: response.status,
-        };
+      if (execution.responseStatusCode >= 400) {
+        let errMsg = `Function ${fnId} returned ${execution.responseStatusCode}`;
+        try { errMsg = (JSON.parse(execution.responseBody) as { message?: string })?.message ?? errMsg; } catch { /* ok */ }
+        return { data: null, error: { message: errMsg }, status: execution.responseStatusCode };
       }
 
-      return {
-        data,
-        error: null,
-        status: 200,
-      };
-    } catch (error) {
-      return {
-        data: null,
-        error,
-        status: 500,
-      };
+      let data: unknown;
+      try { data = JSON.parse(execution.responseBody); } catch { data = execution.responseBody; }
+      return { data, error: null, status: 200 };
+    } catch (e: unknown) {
+      return { data: null, error: { message: (e as Error).message }, status: 500 };
     }
   },
 };
 
 export default appwrite;
+export { Query, ID };
+export const APPWRITE_CONFIG = {
+  DATABASE_ID,
+  COLLECTIONS: {
+    LC131_DESPESAS: 'lc131_despesas',
+    CACHE:          'cache',
+    BD_REF:         'bd_ref',
+    TAB_DRS:        'tab_drs',
+    TAB_RRAS:       'tab_rras',
+  },
+  FUNCTIONS: {
+    LC131_DASHBOARD:  'lc131-dashboard',
+    LC131_MAP_DATA:   'lc131-map-data',
+    LC131_DISTINCTS:  'lc131-distincts',
+    LC131_PIVOT:      'lc131-pivot-multi',
+    LC131_DELETE:     'lc131-delete-year',
+    POST_CLEANUP:     'post-import-cleanup',
+  },
+};
