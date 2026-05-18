@@ -267,9 +267,10 @@ const DIM_TO_COL = {
 };
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MAIN ROUTER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-module.exports = async function(req, res) {
+module.exports = async function(context) {
+  const { req, res } = context;
   const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
-  // req.body can be a string or an object depending on Appwrite runtime version
+  // req.body is a string in Appwrite 1.9.x context
   let p = {};
   try { p = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch { p = {}; }
   const action = p.action || 'dashboard';

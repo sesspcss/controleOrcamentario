@@ -104,7 +104,8 @@ function aggregateMap(docs) {
   };
 }
 
-module.exports = async function(req, res) {
+module.exports = async function(context) {
+  const { req, res } = context;
   try {
     const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
     let p = {};
@@ -115,14 +116,25 @@ module.exports = async function(req, res) {
     if (!p.p_drs && !p.p_rras && !p.p_regiao_ad && !p.p_regiao_sa && !p.p_municipio) {
       const cacheId = p.p_ano ? `map_${p.p_ano}` : 'map_todos';
       const cached = await awGet(endpoint, `/databases/${DB_ID}/collections/${CACHE}/documents/${cacheId}`);
+      context.log(`cache fetch: status=${cached?.code||'ok'} hasData=${!!cached?.data} dataLen=${cached?.data?.length||0}`);
       if (cached && cached.data) {
-        try { return res.json(JSON.parse(cached.data), 200); } catch { /* fall through */ }
+        try {
+          const parsed = JSON.parse(cached.data);
+          context.log(`cache hit: registros=${parsed.kpis?.registros}`);
+          return res.json(parsed, 200);
+        } catch (pe) {
+          context.log(`cache parse error: ${pe.message}`);
+          /* fall through */
+        }
       }
     }
 
+    context.log(`fetching fresh: queries=${JSON.stringify(queries)}`);
     const docs = await fetchAll(endpoint, queries);
+    context.log(`fetched: ${docs.length} docs`);
     return res.json(aggregateMap(docs), 200);
   } catch (err) {
+    context.error(err.message);
     return res.json({ error: err.message }, 500);
   }
 };

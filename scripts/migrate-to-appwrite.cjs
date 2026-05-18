@@ -21,6 +21,7 @@ const COLLECTION     = 'lc131_despesas';
 const CACHE_COLL     = 'cache';
 const PAGE_SIZE      = 1000;   // rows per Supabase query
 const CONCURRENCY    = 50;     // parallel Appwrite inserts
+const START_YEAR     = process.argv[2] ? Number(process.argv[2]) : 0; // 0 = all years
 
 // ──────────────────────────── Supabase API ────────────────────────────
 function supaQuery(sql) {
@@ -74,7 +75,7 @@ function awReq(method, path, body) {
         catch { resolve({ status: res.statusCode, data: d }); }
       });
     });
-    req.on('error', reject);
+    req.on('error', e => resolve({ status: 0, data: { message: e.message } })); // don't reject, resolve with error
     if (bodyStr) req.write(bodyStr);
     req.end();
   });
@@ -317,20 +318,16 @@ function computeMap(rows) {
 
 function computeDistincts(rows) {
   const uniq = field => [...new Set(rows.map(r => r[field] || '').filter(Boolean))].sort();
+  // Only cache small arrays — large ones (municipio, uo, elemento, favorecido) exceed Appwrite's 131072 char limit
   return {
-    distinct_drs:           uniq('drs'),
-    distinct_regiao_ad:     uniq('regiao_ad'),
-    distinct_rras:          uniq('rras'),
-    distinct_regiao_sa:     uniq('regiao_sa'),
-    distinct_municipio:     uniq('municipio'),
-    distinct_grupo:         uniq('codigo_nome_grupo'),
-    distinct_tipo:          uniq('tipo_despesa'),
-    distinct_rotulo:        uniq('rotulo'),
-    distinct_fonte:         [...new Set(rows.map(r => computeFonteSimpl(r)))].sort(),
-    distinct_codigo_ug:     uniq('codigo_ug'),
-    distinct_uo:            uniq('codigo_nome_uo'),
-    distinct_elemento:      uniq('codigo_nome_elemento'),
-    distinct_favorecido:    uniq('codigo_nome_favorecido'),
+    distinct_drs:        uniq('drs'),
+    distinct_regiao_ad:  uniq('regiao_ad'),
+    distinct_rras:       uniq('rras'),
+    distinct_regiao_sa:  uniq('regiao_sa'),
+    distinct_grupo:      uniq('codigo_nome_grupo'),
+    distinct_tipo:       uniq('tipo_despesa'),
+    distinct_rotulo:     uniq('rotulo'),
+    distinct_fonte:      [...new Set(rows.map(r => computeFonteSimpl(r)))].sort(),
   };
 }
 
@@ -417,7 +414,8 @@ async function runConcurrent(tasks, concurrency) {
   const workers = Array.from({ length: concurrency }, async () => {
     while (idx < total) {
       const i = idx++;
-      const result = await tasks[i]();
+      let result;
+      try { result = await tasks[i](); } catch (e) { result = { ok: false, error: e.message }; }
       done++;
       if (!result?.ok) {
         errors++;
@@ -435,7 +433,7 @@ async function runConcurrent(tasks, concurrency) {
 // ──────────────────────────── Main migration ────────────────────────────
 async function main() {
   console.log('=== Migração Supabase → Appwrite ===\n');
-  console.log(`Total estimado: 470,947 registros em 5 anos\n`);
+  if (START_YEAR) console.log(`Iniciando a partir do ano: ${START_YEAR}\n`);
 
   // 1. Get all years
   const yearsRes = await supaQuery('SELECT DISTINCT ano_referencia FROM lc131_despesas ORDER BY ano_referencia');
@@ -445,6 +443,11 @@ async function main() {
   const allRowsForCache = []; // all rows for final "todos" cache computation
 
   for (const ano of years) {
+    // Skip years before START_YEAR
+    if (START_YEAR && ano < START_YEAR) {
+      console.log(`\n─── Pulando ano ${ano} (start from ${START_YEAR}) ───`);
+      continue;
+    }
     console.log(`\n─── Processando ano ${ano} ───`);
 
     // 2. Count rows for this year
@@ -486,28 +489,18 @@ async function main() {
     await writeCache(`map_${ano}`, mapData);
     await writeCache(`distincts_${ano}`, distData);
 
-    // 6. Pre-compute per-DRS cache for this year (for fast filtered dashboard)
-    const drsGroups = {};
-    for (const row of yearRows) {
-      const d = row.drs || 'SEM DRS';
-      if (!drsGroups[d]) drsGroups[d] = [];
-      drsGroups[d].push(row);
-    }
-    for (const [drs, rows] of Object.entries(drsGroups)) {
-      const drsId = drs.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase().slice(0, 50);
-      const cacheId = `dashboard_${ano}_drs_${drsId}`;
-      await writeCache(cacheId, computeDashboard(rows));
-    }
-    console.log(`  Cache DRS escrito: ${Object.keys(drsGroups).length} regiões`);
+    // NOTE: per-DRS sub-cache removed (documentId too long / not critical for MVP)
 
     allRowsForCache.push(...yearRows);
   }
 
-  // 7. Compute "todos" (all years combined)
-  console.log('\n─── Computando cache para todos os anos ───');
-  await writeCache('dashboard_todos', computeDashboard(allRowsForCache));
-  await writeCache('map_todos', computeMap(allRowsForCache));
-  await writeCache('distincts_todos', computeDistincts(allRowsForCache));
+  // 7. Compute "todos" (all years combined) — skipped if START_YEAR > 0
+  if (!START_YEAR) {
+    console.log('\n─── Computando cache para todos os anos ───');
+    await writeCache('dashboard_todos', computeDashboard(allRowsForCache));
+    await writeCache('map_todos', computeMap(allRowsForCache));
+    await writeCache('distincts_todos', computeDistincts(allRowsForCache));
+  }
 
   console.log('\n=== Migração concluída! ===');
   console.log('Próximo passo: node scripts/deploy-appwrite-functions.cjs');
