@@ -249,10 +249,12 @@ function computeMap(docs) {
 
 // â”€â”€ Cache upsert â”€â”€
 async function awUpsert(endpoint, docId, data) {
-  const payload = { data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() };
-  const upd = await awReq(endpoint, 'PATCH', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, payload);
+  const attrs = { data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() };
+  // Try PATCH (update) first — nested format for 1.9.5
+  const upd = await awReq(endpoint, 'PATCH', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, { data: attrs });
   if (upd.status === 200 || upd.status === 201) return upd;
-  return awReq(endpoint, 'POST', `/databases/${DB_ID}/collections/${CACHE}/documents`, { documentId: docId, ...payload });
+  // Create with nested format
+  return awReq(endpoint, 'POST', `/databases/${DB_ID}/collections/${CACHE}/documents`, { documentId: docId, data: attrs });
 }
 
 // â”€â”€ DIM mapping for pivot â”€â”€
