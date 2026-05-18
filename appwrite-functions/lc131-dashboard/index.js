@@ -248,28 +248,11 @@ function computeMap(docs) {
 }
 
 // â”€â”€ Cache upsert â”€â”€
-function awUpsert(endpoint, docId, data) {
-  const payload = JSON.stringify({ data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() });
-  function tryCreate() {
-    return awReq(endpoint, 'POST', `/databases/${DB_ID}/collections/${CACHE}/documents`, JSON.parse(payload)).then(r => {
-      if (r.status === 409) return tryUpdate();
-      return r;
-    });
-  }
-  function tryUpdate() {
-    return awReq(endpoint, 'PATCH', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, JSON.parse(payload));
-  }
-  // The document needs $id field for creation
-  const createBody = { data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() };
-  return new Promise(async (resolve, reject) => {
-    try {
-      const r1 = await awReq(endpoint, 'POST', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, createBody);
-      if (r1.status === 409 || r1.status === 200) {
-        const r2 = await awReq(endpoint, 'PATCH', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, createBody);
-        resolve(r2);
-      } else resolve(r1);
-    } catch(e) { reject(e); }
-  });
+async function awUpsert(endpoint, docId, data) {
+  const payload = { data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() };
+  const upd = await awReq(endpoint, 'PATCH', `/databases/${DB_ID}/collections/${CACHE}/documents/${docId}`, payload);
+  if (upd.status === 200 || upd.status === 201) return upd;
+  return awReq(endpoint, 'POST', `/databases/${DB_ID}/collections/${CACHE}/documents`, { documentId: docId, ...payload });
 }
 
 // â”€â”€ DIM mapping for pivot â”€â”€

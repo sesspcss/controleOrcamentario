@@ -350,10 +350,10 @@ async function writeCache(id, data) {
   }
 
   // Try upsert (update if exists, create if not)
-  const upd = await awReq('PUT', `/databases/${AW_DATABASE}/collections/${CACHE_COLL}/documents/${id}`, payload);
-  if (upd.status === 200) { console.log(`  Cache updated: ${id}`); return; }
+  const upd = await awReq('PATCH', `/databases/${AW_DATABASE}/collections/${CACHE_COLL}/documents/${id}`, { data: payload });
+  if (upd.status === 200 || upd.status === 201) { console.log(`  Cache updated: ${id}`); return; }
   const cre = await awReq('POST', `/databases/${AW_DATABASE}/collections/${CACHE_COLL}/documents`, {
-    documentId: id, ...payload,
+    documentId: id, data: payload,
   });
   if (cre.status === 201) { console.log(`  Cache created: ${id}`); }
   else { console.warn(`  Cache WARN ${id}: ${cre.status} ${JSON.stringify(cre.data?.message || cre.data)}`); }
@@ -401,7 +401,7 @@ async function insertDoc(row, retries = 3) {
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     const r = await awReq('POST', `/databases/${AW_DATABASE}/collections/${COLLECTION}/documents`, {
-      documentId: docId, ...doc,
+      documentId: docId, data: doc,
     });
     if (r.status === 201) return { ok: true };
     if (r.status === 409) return { ok: true, skipped: true }; // already exists
@@ -412,19 +412,23 @@ async function insertDoc(row, retries = 3) {
 
 // Concurrent batch runner
 async function runConcurrent(tasks, concurrency) {
-  let idx = 0; let done = 0; let errors = 0;
+  let idx = 0; let done = 0; let errors = 0; let firstError = null;
   const total = tasks.length;
   const workers = Array.from({ length: concurrency }, async () => {
     while (idx < total) {
       const i = idx++;
       const result = await tasks[i]();
       done++;
-      if (!result?.ok) errors++;
+      if (!result?.ok) {
+        errors++;
+        if (!firstError && result?.error) firstError = result.error;
+      }
       if (done % 1000 === 0) process.stdout.write(`\r    Progress: ${done}/${total} (${errors} errors)`);
     }
   });
   await Promise.all(workers);
   process.stdout.write(`\r    Progress: ${done}/${total} (${errors} errors)\n`);
+  if (firstError) console.warn(`    First error sample: ${firstError}`);
   return errors;
 }
 
