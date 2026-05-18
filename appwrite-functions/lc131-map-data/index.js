@@ -107,7 +107,8 @@ function aggregateMap(docs) {
 module.exports = async function(req, res) {
   try {
     const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
-    const p = req.body || {};
+    let p = {};
+    try { p = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch { p = {}; }
     const queries = p.p_ano ? [qEq('ano_referencia', [Number(p.p_ano)])] : [];
 
     // Try cache (only for p_ano-only queries)

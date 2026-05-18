@@ -372,7 +372,7 @@ async function insertDoc(row, retries = 3) {
     regiao_sa:                       row.regiao_sa || null,
     cod_ibge:                        row.cod_ibge || null,
     codigo_nome_uo:                  row.codigo_nome_uo || null,
-    codigo_ug:                       row.codigo_ug ? String(row.codigo_ug) : null,
+    codigo_ug:                       row.codigo_ug != null ? Number(row.codigo_ug) : null,
     codigo_nome_ug:                  row.codigo_nome_ug || null,
     codigo_projeto_atividade:        row.codigo_projeto_atividade || null,
     codigo_nome_projeto_atividade:   row.codigo_nome_projeto_atividade || null,
