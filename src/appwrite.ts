@@ -129,7 +129,7 @@ class QueryBuilder {
           row.fonte_simpl = computeFonteSimpl(row);
           row.grupo_simpl = computeGrupoSimpl(row);
           if (row.codigo_ug !== undefined && row.codigo_ug !== null) {
-            row.codigo_ug = String(row.codigo_ug);
+            row.codigo_ug = Number(row.codigo_ug);
           }
           const docId = (row.$id as string | undefined)
             ?? (row.id !== undefined ? String(row.id) : ID.unique());
@@ -146,7 +146,7 @@ class QueryBuilder {
     try {
       const q = [
         ...this._queries,
-        Query.limit(this._lim),
+        Query.limit(Math.min(this._lim, 5000)), // Appwrite max is 5000
         ...(this._off > 0 ? [Query.offset(this._off)] : []),
       ];
       const res = await databases.listDocuments(DATABASE_ID, this._coll, q);

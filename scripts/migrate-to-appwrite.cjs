@@ -20,7 +20,7 @@ const AW_API_KEY     = 'standard_8834bd8610e14b14457c14af3d1ebaa4de0a89405faeb11
 const COLLECTION     = 'lc131_despesas';
 const CACHE_COLL     = 'cache';
 const PAGE_SIZE      = 1000;   // rows per Supabase query
-const CONCURRENCY    = 25;     // parallel Appwrite inserts
+const CONCURRENCY    = 50;     // parallel Appwrite inserts
 
 // ──────────────────────────── Supabase API ────────────────────────────
 function supaQuery(sql) {
