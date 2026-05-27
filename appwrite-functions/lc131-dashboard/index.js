@@ -23,7 +23,7 @@ function qEq(field, vals) {
   return `equal("${field}",[${v}])`;
 }
 function buildQS(queries) {
-  return queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');
+  return queries.map((q, i) => `queries%5B${i}%5D=${encodeURIComponent(q)}`).join('&');
 }
 
 // â”€â”€ HTTP helpers â”€â”€
@@ -34,6 +34,7 @@ function awReq(endpoint, method, path, body) {
     const headers = {
       'X-Appwrite-Project': process.env.APPWRITE_FUNCTION_PROJECT_ID,
       'X-Appwrite-Key': process.env.APPWRITE_API_KEY,
+      'X-Appwrite-Response-Format': '1.4.0',
       'Content-Type': 'application/json',
     };
     if (payload) headers['Content-Length'] = Buffer.byteLength(payload);
@@ -247,7 +248,77 @@ function computeMap(docs) {
   };
 }
 
-// â”€â”€ Cache upsert â”€â”€
+// ── Merge per-year caches for "todos" ──
+function mergeDashboardCaches(caches) {
+  const R = v => Math.round(v * 100) / 100;
+  const Nn = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+  function mergeByKey(arrays, keyField, fields) {
+    const m = new Map();
+    for (const arr of (arrays || [])) {
+      for (const item of (arr || [])) {
+        const k = item[keyField]; if (k === undefined || k === null || k === '') continue;
+        const e = m.get(k) || { [keyField]: k };
+        for (const f of fields) e[f] = (e[f] || 0) + Nn(item[f] || 0);
+        m.set(k, e);
+      }
+    }
+    return Array.from(m.values()).map(e => {
+      const o = { [keyField]: e[keyField] };
+      for (const f of fields) o[f] = R(e[f] || 0);
+      return o;
+    }).sort((a, b) => (b.empenhado || 0) - (a.empenhado || 0));
+  }
+
+  function mergeRegion(key, nameField) {
+    const m = new Map();
+    for (const cache of caches) {
+      for (const item of (cache[key] || [])) {
+        const k = item[nameField]; if (!k) continue;
+        const e = m.get(k) || { [nameField]: k, empenhado: 0, liquidado: 0, pago: 0, pago_total: 0, municipios: 0, registros: 0 };
+        e.empenhado += Nn(item.empenhado || 0); e.liquidado += Nn(item.liquidado || 0);
+        e.pago += Nn(item.pago || 0); e.pago_total += Nn(item.pago_total || 0);
+        e.municipios += Nn(item.municipios || 0); e.registros += Nn(item.registros || 0);
+        m.set(k, e);
+      }
+    }
+    return Array.from(m.values()).map(e => ({ ...e, empenhado: R(e.empenhado), liquidado: R(e.liquidado), pago: R(e.pago), pago_total: R(e.pago_total) })).sort((a, b) => b.empenhado - a.empenhado);
+  }
+
+  const kpis = { empenhado: 0, liquidado: 0, pago: 0, pago_total: 0, total: 0, municipios: 0 };
+  for (const c of caches) {
+    kpis.empenhado += Nn(c.kpis?.empenhado || 0); kpis.liquidado += Nn(c.kpis?.liquidado || 0);
+    kpis.pago += Nn(c.kpis?.pago || 0); kpis.pago_total += Nn(c.kpis?.pago_total || 0);
+    kpis.total += Nn(c.kpis?.total || 0); kpis.municipios += Nn(c.kpis?.municipios || 0);
+  }
+  kpis.empenhado = R(kpis.empenhado); kpis.liquidado = R(kpis.liquidado);
+  kpis.pago = R(kpis.pago); kpis.pago_total = R(kpis.pago_total);
+
+  const v4 = ['empenhado', 'liquidado', 'pago', 'pago_total'];
+  const v3 = ['empenhado', 'liquidado', 'pago_total'];
+  return {
+    kpis,
+    por_ano: mergeByKey(caches.map(c => c.por_ano), 'ano', ['empenhado', 'liquidado', 'pago', 'pago_total', 'registros']).sort((a, b) => a.ano - b.ano),
+    por_drs: mergeRegion('por_drs', 'drs'),
+    por_rras: mergeRegion('por_rras', 'rras'),
+    por_regiao_ad: mergeRegion('por_regiao_ad', 'regiao_ad'),
+    por_regiao_sa: mergeRegion('por_regiao_sa', 'regiao_sa'),
+    por_grupo: mergeRegion('por_grupo', 'grupo_despesa'),
+    por_grupo_simpl: mergeByKey(caches.map(c => c.por_grupo_simpl), 'grupo_simpl', v4),
+    por_fonte_simpl: mergeByKey(caches.map(c => c.por_fonte_simpl), 'fonte_simpl', v4),
+    por_tipo_despesa: mergeByKey(caches.map(c => c.por_tipo_despesa), 'tipo_despesa', v4),
+    por_rotulo: mergeByKey(caches.map(c => c.por_rotulo), 'rotulo', v4),
+    por_favorecido: mergeByKey(caches.map(c => c.por_favorecido), 'favorecido', ['empenhado', 'pago_total']).slice(0, 50),
+    por_projeto: mergeByKey(caches.map(c => c.por_projeto), 'projeto', ['empenhado', 'pago_total']).slice(0, 50),
+    por_ug: mergeByKey(caches.map(c => c.por_ug), 'ug', v3).slice(0, 100),
+    por_uo: mergeByKey(caches.map(c => c.por_uo), 'uo', v3).slice(0, 100),
+    por_fonte: mergeByKey(caches.map(c => c.por_fonte), 'fonte_recurso', v3).slice(0, 100),
+    por_municipio: mergeByKey(caches.map(c => c.por_municipio), 'municipio', v3).slice(0, 1000),
+    por_elemento: mergeByKey(caches.map(c => c.por_elemento), 'elemento', v3).slice(0, 200),
+  };
+}
+
+// ── Cache upsert ──
 async function awUpsert(endpoint, docId, data) {
   const attrs = { data: JSON.stringify(data), cache_key: docId, updated_at: new Date().toISOString() };
   // Try PATCH (update) first — nested format for 1.9.5
@@ -286,6 +357,22 @@ module.exports = async function(context) {
         if (cached.data && cached.data.data) {
           try { return res.json(JSON.parse(cached.data.data), 200); } catch { /* fall through */ }
         }
+        // For todos: aggregate per-year caches instead of fetching all docs (would timeout)
+        if (!p.p_ano) {
+          const YEARS = [2022, 2023, 2024, 2025, 2026];
+          const yearCaches = await Promise.all(
+            YEARS.map(y => awGet(endpoint, `/databases/${DB_ID}/collections/${CACHE}/documents/dashboard_${y}`).catch(() => ({ data: null })))
+          );
+          const validCaches = yearCaches.map(c => {
+            if (!c.data || !c.data.data) return null;
+            try { return JSON.parse(c.data.data); } catch { return null; }
+          }).filter(Boolean);
+          if (validCaches.length > 0) {
+            const merged = mergeDashboardCaches(validCaches);
+            awUpsert(endpoint, 'dashboard_todos', merged).catch(() => {});
+            return res.json(merged, 200);
+          }
+        }
       }
       const docs = await fetchAll(endpoint, queries);
       return res.json(computeDashboard(docs), 200);
@@ -300,6 +387,32 @@ module.exports = async function(context) {
         const cached = await awGet(endpoint, `/databases/${DB_ID}/collections/${CACHE}/documents/${cacheId}`);
         if (cached.data && cached.data.data) {
           try { return res.json(JSON.parse(cached.data.data), 200); } catch { /* fall through */ }
+        }
+        // For todos: merge per-year distincts
+        if (!p.p_ano) {
+          const YEARS = [2022, 2023, 2024, 2025, 2026];
+          const yearCaches = await Promise.all(
+            YEARS.map(y => awGet(endpoint, `/databases/${DB_ID}/collections/${CACHE}/documents/distincts_${y}`).catch(() => ({ data: null })))
+          );
+          const validCaches = yearCaches.map(c => {
+            if (!c.data || !c.data.data) return null;
+            try { return JSON.parse(c.data.data); } catch { return null; }
+          }).filter(Boolean);
+          if (validCaches.length > 0) {
+            const uniqMerge = (key) => Array.from(new Set(validCaches.flatMap(c => c[key] || []))).sort();
+            const merged = {
+              distinct_drs: uniqMerge('distinct_drs'),
+              distinct_regiao_ad: uniqMerge('distinct_regiao_ad'),
+              distinct_rras: uniqMerge('distinct_rras'),
+              distinct_regiao_sa: uniqMerge('distinct_regiao_sa'),
+              distinct_grupo: uniqMerge('distinct_grupo'),
+              distinct_tipo: uniqMerge('distinct_tipo'),
+              distinct_rotulo: uniqMerge('distinct_rotulo'),
+              distinct_fonte: uniqMerge('distinct_fonte'),
+            };
+            awUpsert(endpoint, 'distincts_todos', merged).catch(() => {});
+            return res.json(merged, 200);
+          }
         }
       }
       const docs = await fetchAll(endpoint, queries);

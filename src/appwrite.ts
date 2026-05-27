@@ -1,228 +1,259 @@
 /**
- * Appwrite Client — pure Appwrite, sem Supabase.
- * Exposição de API compatível com o padrão supabase-js usado no App.tsx.
+ * Worker Client — substitui Appwrite, chama Cloudflare Worker com D1.
+ * Mantém interface compatível com o padrão supabase-js usado em App.tsx.
  */
 
-import { Client, Databases, Functions, Query, ID } from 'appwrite';
+// ── Config ──────────────────────────────────────────────────────────────────
+const WORKER_URL = import.meta.env.VITE_WORKER_URL
+  ?? 'https://lc131-api.sessp-css2.workers.dev';
 
-// ──────────────── Config ────────────────
-const ENDPOINT   = 'https://fra.cloud.appwrite.io/v1';
-const PROJECT_ID = '69ea271e000d28e3afce';
+// Token usado apenas na função insert() (upload de arquivo no admin panel).
+// Defina VITE_IMPORT_TOKEN no arquivo .env.local para habilitar uploads.
+const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? '';
 
-export const DATABASE_ID = '69ea274b00316d3d1dfb';
+// ── Core fetch helper ────────────────────────────────────────────────────────
+async function workerPost<T = unknown>(
+  path: string,
+  body: Record<string, unknown>,
+  retries = 2,
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${WORKER_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = (await res.json()) as T;
+      if (!res.ok) {
+        const msg = (json as Record<string, unknown>)?.error as string
+          ?? `Worker error ${res.status}`;
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        return { data: null, error: { message: msg } };
+      }
+      return { data: json, error: null };
+    } catch (e: unknown) {
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+        continue;
+      }
+      return { data: null, error: { message: (e as Error).message ?? 'Network error' } };
+    }
+  }
+  return { data: null, error: { message: 'Max retries exceeded' } };
+}
 
-// Supabase RPC name → { Appwrite Function ID, optional action }
-// Plano free: apenas 2 funções. lc131-dashboard faz routing por action.
-const RPC_MAP: Record<string, { id: string; action?: string }> = {
-  lc131_dashboard:         { id: 'lc131-dashboard' },
-  lc131_map_data:          { id: 'lc131-map-data' },
-  lc131_distincts:         { id: 'lc131-dashboard', action: 'distincts' },
-  lc131_pivot_multi:       { id: 'lc131-dashboard', action: 'pivot' },
-  lc131_delete_year:       { id: 'lc131-dashboard', action: 'delete_year' },
-  post_import_cleanup:     { id: 'lc131-dashboard', action: 'cleanup' },
-  refresh_dashboard_batch: { id: 'lc131-dashboard', action: 'cleanup' },
-  // Stubs — not needed in Appwrite
-  refresh_bdref_lookup:    { id: '' },
-  get_lc131_id_range:      { id: '' },
-  fix_tipo_despesa_by_year:{ id: '' },
+// ── Column name → p_xxx param name mapping (reverse of Worker's PARAM_TO_COL) ──
+const COL_TO_PARAM: Record<string, string> = {
+  ano_referencia:        'p_ano',
+  drs:                   'p_drs',
+  regiao_ad:             'p_regiao_ad',
+  rras:                  'p_rras',
+  regiao_sa:             'p_regiao_sa',
+  municipio:             'p_municipio',
+  codigo_nome_grupo:     'p_grupo_despesa',
+  tipo_despesa:          'p_tipo_despesa',
+  rotulo:                'p_rotulo',
+  codigo_nome_uo:        'p_uo',
+  codigo_nome_elemento:  'p_elemento',
+  codigo_nome_favorecido:'p_favorecido',
+  codigo_ug:             'p_codigo_ug',
+  fonte_simpl:           'p_fonte_recurso',
 };
 
-// ──────────────── SDK setup ────────────────
-const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID);
-export const databases  = new Databases(client);
-const fnClient          = new Functions(client);
-export const appwriteClient = client;
-
-// ──────────────── Helper ────────────────
-function computeFonteSimpl(row: Record<string, unknown>): string {
-  const s = String(row.codigo_nome_fonte_recurso ?? row.fonte_recurso ?? '').toLowerCase();
-  return (s.includes('fed') || s.includes('uni') || s.includes('fundo nacional') ||
-          s.includes('transfe') || s.includes('sus'))
-    ? 'FEDERAL' : 'ESTADUAL';
-}
-
-function computeGrupoSimpl(row: Record<string, unknown>): string {
-  const g = String(row.codigo_nome_grupo ?? '');
-  if (g.startsWith('1')) return 'Pessoal';
-  if (g.startsWith('2')) return 'Dívida';
-  if (g.startsWith('3')) return 'Custeio';
-  if (g.startsWith('4')) return 'Investimento';
-  return 'Outros';
-}
-
-// ──────────────── Fluent query builder ────────────────
-type AwResult = {
-  data: unknown | null;
+// ── QueryBuilder — fluent interface compatible with supabase-js ──────────────
+type AwResult<T = unknown> = {
+  data: T | null;
   error: { message: string } | null;
   count: number | null;
 };
 
-class QueryBuilder {
-  private _coll: string;
-  private _queries: string[] = [];
-  private _lim = 500;
-  private _off = 0;
+class QueryBuilder<T = Record<string, unknown>> {
+  private _cols = '*';
+  private _countMode = false;
+  private _params: Record<string, unknown> = {};
+  private _limit  = 500;
+  private _offset = 0;
   private _singleMode = false;
   private _insertData: Record<string, unknown>[] | null = null;
+  private _yearQuery = false; // special case: select ano_referencia + order + single
 
-  constructor(coll: string) { this._coll = coll; }
+  constructor(_table: string) {}
 
-  select(_cols: string, _opts?: { count?: string }) {
+  select(cols: string, _opts?: { count?: string }) {
+    this._cols = cols;
+    if (_opts?.count) this._countMode = true;
+    // Detect year-range pattern
+    if (cols.trim() === 'ano_referencia') this._yearQuery = true;
     return this;
   }
 
-  order(field: string, opts?: { ascending?: boolean }) {
-    this._queries.push(
-      opts?.ascending === false ? Query.orderDesc(field) : Query.orderAsc(field)
-    );
+  order(field: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) {
+    if (field === 'ano_referencia') {
+      // store ordering direction for year query
+      (this._params as Record<string, unknown>).__yearOrder = opts?.ascending !== false ? 'asc' : 'desc';
+    }
     return this;
   }
 
-  limit(n: number) { this._lim = n; return this; }
+  limit(n: number) { this._limit = n; return this; }
 
   range(from: number, to: number) {
-    this._off = from;
-    this._lim = to - from + 1;
+    this._offset = from;
+    this._limit  = to - from + 1;
     return this;
   }
 
   eq(field: string, value: unknown) {
-    this._queries.push(Query.equal(field, value as string));
+    const param = COL_TO_PARAM[field];
+    if (param) this._params[param] = value;
     return this;
   }
 
   in(field: string, values: unknown[]) {
-    if (values.length === 0) return this;
-    this._queries.push(Query.equal(field, values as string[]));
+    if (!values || values.length === 0) return this;
+    const param = COL_TO_PARAM[field];
+    if (param) this._params[param] = (values as string[]).join('|');
     return this;
   }
 
-  // Stub — PostgREST .or() not supported; App.tsx was updated to use .in('fonte_simpl', ...)
-  or(_postgrest: string) {
-    console.warn('[appwrite] QueryBuilder.or() called — should not happen in Appwrite mode');
-    return this;
-  }
+  // Stub — not used in D1 mode (PostgREST-only)
+  or(_expr: string) { return this; }
 
-  single() { this._singleMode = true; this._lim = 1; return this; }
+  single() { this._singleMode = true; this._limit = 1; return this; }
 
   insert(rows: Record<string, unknown>[]) {
     this._insertData = rows;
     return this;
   }
 
-  then(
-    onFulfilled: (v: AwResult) => unknown,
-    onRejected?: (r: unknown) => unknown,
+  then<TResult1 = AwResult<T>>(
+    onFulfilled: (v: AwResult<T>) => TResult1,
+    onRejected?: (r: unknown) => TResult1,
   ) {
-    return this._execute().then(onFulfilled, onRejected);
+    return this._execute().then(onFulfilled as never, onRejected);
   }
 
-  catch(onRejected: (r: unknown) => unknown) {
+  catch<TResult = never>(onRejected: (r: unknown) => TResult) {
     return this._execute().catch(onRejected);
   }
 
-  private async _execute(): Promise<AwResult> {
+  private async _execute(): Promise<AwResult<T>> {
+    // ── INSERT ──────────────────────────────────────────────────────────────
     if (this._insertData) {
-      try {
-        for (const rawRow of this._insertData) {
-          const row = { ...rawRow } as Record<string, unknown>;
-          row.fonte_simpl = computeFonteSimpl(row);
-          row.grupo_simpl = computeGrupoSimpl(row);
-          if (row.codigo_ug !== undefined && row.codigo_ug !== null) {
-            row.codigo_ug = Number(row.codigo_ug);
-          }
-          const docId = (row.$id as string | undefined)
-            ?? (row.id !== undefined ? String(row.id) : ID.unique());
-          delete row.$id;
-          delete row.id;
-          await databases.createDocument(DATABASE_ID, this._coll, docId, row);
-        }
-        return { data: this._insertData, error: null, count: null };
-      } catch (e: unknown) {
-        return { data: null, error: { message: (e as Error).message }, count: null };
+      if (!IMPORT_TOKEN) {
+        return {
+          data: null,
+          error: { message: 'VITE_IMPORT_TOKEN não configurado. Defina no .env.local para habilitar uploads diretos.' },
+          count: null,
+        };
       }
+      const res = await fetch(`${WORKER_URL}/api/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: IMPORT_TOKEN, rows: this._insertData }),
+      });
+      const json = await res.json() as Record<string, unknown>;
+      if (!res.ok) return { data: null, error: { message: String(json.error ?? res.status) }, count: null };
+      return { data: this._insertData as unknown as T, error: null, count: null };
     }
 
-    try {
-      const q = [
-        ...this._queries,
-        Query.limit(Math.min(this._lim, 5000)), // Appwrite max is 5000
-        ...(this._off > 0 ? [Query.offset(this._off)] : []),
-      ];
-      const res = await databases.listDocuments(DATABASE_ID, this._coll, q);
-      if (this._singleMode) {
-        return { data: res.documents[0] ?? null, error: null, count: null };
-      }
-      return { data: res.documents, error: null, count: res.total };
-    } catch (e: unknown) {
-      return { data: null, error: { message: (e as Error).message }, count: null };
+    // ── YEAR RANGE QUERY ─────────────────────────────────────────────────────
+    // Pattern: .select('ano_referencia').order().limit(1).single()
+    if (this._yearQuery && this._singleMode) {
+      const res = await fetch(`${WORKER_URL}/api/years`);
+      if (!res.ok) return { data: null, error: { message: `Worker /api/years error ${res.status}` }, count: null };
+      const years = await res.json() as { min: number | null; max: number | null };
+      const order = this._params.__yearOrder;
+      const ano   = order === 'asc' ? years.min : (years.max ?? years.min);
+      return { data: { ano_referencia: ano } as unknown as T, error: null, count: null };
     }
+
+    // ── COLUMN VALIDATION (limit 1, no filters) ─────────────────────────────
+    // Just return empty success — column validation is a D1 no-op
+    if (this._limit === 1 && !this._singleMode && Object.keys(this._params).length === 0) {
+      return { data: [] as unknown as T, error: null, count: null };
+    }
+
+    // ── SELECT / DETAIL ──────────────────────────────────────────────────────
+    const body: Record<string, unknown> = {
+      ...this._params,
+      p_limit:  this._limit,
+      p_offset: this._offset,
+      action:   'detail',
+    };
+    delete body.__yearOrder;
+
+    const res = await workerPost<{ rows: unknown[]; total: number }>('/api/detail', body);
+    if (res.error) return { data: null, error: res.error, count: null };
+
+    const rows = res.data?.rows ?? [];
+    const total = res.data?.total ?? rows.length;
+
+    if (this._singleMode) {
+      return { data: (rows[0] ?? null) as T, error: null, count: null };
+    }
+    return { data: rows as unknown as T, error: null, count: total };
   }
 }
 
-// ──────────────── Main export ────────────────
+// ── RPC name → Worker action mapping ─────────────────────────────────────────
+const RPC_MAP: Record<string, string | null> = {
+  lc131_dashboard:          'dashboard',
+  lc131_map_data:           'map_data',
+  lc131_distincts:          'distincts',
+  lc131_pivot_multi:        'pivot',
+  lc131_delete_year:        'delete_year',
+  post_import_cleanup:      null,   // no-op — D1 computes on the fly
+  refresh_dashboard_batch:  null,   // no-op
+  refresh_bdref_lookup:     null,   // no-op
+  get_lc131_id_range:       null,   // no-op
+  fix_tipo_despesa_by_year: null,   // no-op
+};
+
+// ── Main export (compatible with old appwrite.ts) ────────────────────────────
 export const appwrite = {
-  from: (collectionId: string) => new QueryBuilder(collectionId),
+  from: <T = Record<string, unknown>>(table: string) => new QueryBuilder<T>(table),
 
-  rpc: async (fnName: string, params?: Record<string, unknown>) => {
-    const entry = RPC_MAP[fnName];
+  rpc: async (
+    fnName: string,
+    params?: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: { message: string } | null; status?: number }> => {
+    const action = RPC_MAP[fnName];
 
-    if (!entry) {
-      console.warn(`[appwrite] Unknown rpc name: ${fnName}`);
+    if (action === undefined) {
+      console.warn(`[worker-client] Unknown rpc: ${fnName}`);
       return { data: null, error: { message: `Unknown function: ${fnName}` }, status: 404 };
     }
 
-    if (entry.id === '') {
-      console.warn(`[appwrite] rpc('${fnName}') not implemented — stub response`);
-      return { data: { ok: true, rows: [] }, error: null, status: 200 };
+    // No-op stubs
+    if (action === null) {
+      console.info(`[worker-client] rpc('${fnName}') → no-op in D1 mode`);
+      return { data: { ok: true }, error: null, status: 200 };
     }
 
-    const body = entry.action
-      ? { action: entry.action, ...(params ?? {}) }
-      : (params ?? {});
+    const body: Record<string, unknown> = { action, ...(params ?? {}) };
 
-    try {
-      const execution = await fnClient.createExecution(
-        entry.id,
-        JSON.stringify(body),
-        false,
-        '/',
-        'POST' as 'POST',
-        {},
-      );
-
-      if (execution.responseStatusCode >= 400) {
-        let errMsg = `Function ${entry.id} returned ${execution.responseStatusCode}`;
-        try { errMsg = (JSON.parse(execution.responseBody) as { message?: string })?.message ?? errMsg; } catch { /* ok */ }
-        return { data: null, error: { message: errMsg }, status: execution.responseStatusCode };
+    // delete_year needs the import token
+    if (action === 'delete_year') {
+      if (!IMPORT_TOKEN) {
+        return { data: null, error: { message: 'VITE_IMPORT_TOKEN não configurado.' }, status: 401 };
       }
-
-      let data: unknown;
-      try { data = JSON.parse(execution.responseBody); } catch { data = execution.responseBody; }
-      return { data, error: null, status: 200 };
-    } catch (e: unknown) {
-      return { data: null, error: { message: (e as Error).message }, status: 500 };
+      body.token = IMPORT_TOKEN;
     }
+
+    const { data, error } = await workerPost(`/api/${action.replace(/_/g, '-')}`, body);
+    return { data, error, status: error ? 500 : 200 };
   },
 };
 
+// Back-compat: some imports use `import { appwrite as supabase }` pattern
 export default appwrite;
-export { Query, ID };
-export const APPWRITE_CONFIG = {
-  DATABASE_ID,
-  COLLECTIONS: {
-    LC131_DESPESAS: 'lc131_despesas',
-    CACHE:          'cache',
-    BD_REF:         'bd_ref',
-    TAB_DRS:        'tab_drs',
-    TAB_RRAS:       'tab_rras',
-  },
-  FUNCTIONS: {
-    LC131_DASHBOARD:  'lc131-dashboard',
-    LC131_MAP_DATA:   'lc131-map-data',
-    LC131_DISTINCTS:  'lc131-distincts',
-    LC131_PIVOT:      'lc131-pivot-multi',
-    LC131_DELETE:     'lc131-delete-year',
-    POST_CLEANUP:     'post-import-cleanup',
-  },
-};
+
+// Legacy exports (keep unused but non-breaking)
+export const DATABASE_ID = '';
+export const databases   = null;
+export const appwriteClient = null;

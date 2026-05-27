@@ -17,7 +17,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Settings,
   Database, BarChart3, Search, SlidersHorizontal,
   Building2, MapPin, Layers, Users, LayoutDashboard, FileText,
-  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen, ExternalLink, Info,
+  Table2, Globe, Briefcase, Map as MapIcon, Menu, Lock, BookOpen, ExternalLink, Info, Tag,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -25,6 +25,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { SP_COORDS } from './sp-coords';
 import { findRegionCoord } from './drs-coords';
+import MUNICIPIOS_LOOKUP from './data/municipios_lookup.json';
+import DESPESAS_LOOKUPS from './data/despesas_lookups.json';
+import TIPO_LOOKUP from './data/tipo_by_elem_proj.json';
 
 // --- Utility -------------------------------------------------------------------
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
@@ -81,7 +84,7 @@ const S2 = [
 
 // --- Types ----------------------------------------------------------------------
 type DataRow = Record<string, unknown>;
-type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'dados' | 'pivot' | 'legenda';
+type Tab = 'resumo' | 'regional' | 'mapa' | 'despesas' | 'dados' | 'pivot' | 'legenda' | 'ob';
 
 interface KPIs { empenhado: number; liquidado: number; pago: number; pago_total: number; total: number; municipios: number }
 interface AnoRow { ano: number; empenhado: number; liquidado: number; pago_total: number; registros: number }
@@ -424,6 +427,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'despesas',      label: 'Despesas',       icon: <Briefcase className="w-3.5 h-3.5" /> },
   { id: 'dados',         label: 'Dados',          icon: <Table2 className="w-3.5 h-3.5" /> },
   { id: 'pivot',         label: 'Tabela Dinâmica', icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
+  { id: 'ob',            label: 'OB',             icon: <DollarSign className="w-3.5 h-3.5" /> },
   { id: 'legenda',       label: 'Legenda',          icon: <BookOpen className="w-3.5 h-3.5" /> },
 ];
 
@@ -536,7 +540,11 @@ function parseCSV(text: string): DataRow[] {
   const lines = text.trim().split('\n');
   if (lines.length < 2) return [];
   const sep = lines[0].includes(';') ? ';' : ',';
-  const headers = lines[0].split(sep).map(h => h.replace(/"/g,'').trim().toLowerCase().replace(/\s+/g,'_'));
+  const headers = lines[0].split(sep).map(h =>
+    h.replace(/"/g, '').trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').replace(/^_+|_+$/g, '').replace(/__+/g, '_')
+  );
   return lines.slice(1).map(line => {
     const vals = line.split(sep).map(v => v.replace(/"/g,'').trim());
     const row: DataRow = {};
@@ -1152,7 +1160,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
     return () => { map.remove(); mapInst.current = null; };
   }, []);
 
-  // -- Load IBGE GeoJSON + Supabase data --
+  // -- Load IBGE GeoJSON + Worker data --
   useEffect(() => {
     (async () => {
       setLoading(true); setError(null);
@@ -1162,20 +1170,23 @@ function InteractiveMap({ anoSel, onNavigate }: {
         const [geo, cached] = await Promise.all([
           fetchIBGE(),
           _mapDataCache[key] ? Promise.resolve(_mapDataCache[key]) : (async () => {
+            const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
             const params: Record<string, unknown> = {};
             if (anoSel !== 'todos') params.p_ano = Number(anoSel);
             let d: Record<string, unknown>;
             // Fetch map data + dashboard in parallel (dashboard needed for pago kpi)
-            const [{ data: mapRpc, error: mapErr }, { data: dashRpc2 }] = await Promise.all([
-              supabase.rpc('lc131_map_data', params),
-              supabase.rpc('lc131_dashboard', params),
+            const [mapRes, dashRes] = await Promise.all([
+              fetch(`${WORKER_URL}/api/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'map_data', ...params }) }),
+              fetch(`${WORKER_URL}/api/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'dashboard', ...params }) }),
             ]);
+            const [mapRpc, dashRpc2] = await Promise.all([mapRes.json(), dashRes.json()]);
+            const mapErr = !mapRes.ok;
             const dashPago = Number((dashRpc2 as Record<string, unknown>)?.kpis != null
               ? ((dashRpc2 as Record<string, unknown>).kpis as Record<string, number>).pago ?? 0
               : 0);
             if (mapErr) {
               const dashRpc = dashRpc2;
-              if (!dashRpc) throw new Error(mapErr.message);
+              if (!dashRpc) throw new Error('Falha ao carregar dados do mapa');
               d = dashRpc as Record<string, unknown>;
               const dk = d.kpis as Record<string, number> ?? {};
               d = {
@@ -1199,7 +1210,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
               rrasList: rrasListData,
               regiaoAdList: regiaoAdData,
               regiaoSaList: regiaoSaData,
-              allMunics: ((d.municipios as Record<string, unknown>[]) ?? []).map(r => ({
+              allMunics: (((d.por_municipio ?? d.municipios) as Record<string, unknown>[]) ?? []).map(r => ({
                 municipio: String(r.municipio ?? ''), drs: normalizeDrs(String(r.drs ?? '')),
                 rras: normalizeRras(String(r.rras ?? '')), regiao_ad: String(r.regiao_ad ?? ''), regiao_sa: String(r.regiao_sa ?? ''),
                 empenhado: Number(r.empenhado ?? 0), liquidado: Number(r.liquidado ?? 0), pago: Number(r.pago ?? 0), pago_total: Number(r.pago_total ?? 0), registros: Number(r.registros ?? 0),
@@ -1389,32 +1400,31 @@ function InteractiveMap({ anoSel, onNavigate }: {
   }
 
   async function loadMunicDetail(mun: string) {
+    const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
     setDetailLoading(true);
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000);
     try {
-      const params: Record<string, unknown> = { p_municipio: mun };
-      if (anoSel !== 'todos') params.p_ano = Number(anoSel);
-      const { data: rpc } = await supabase.rpc('lc131_dashboard', params);
-      if (!rpc) return;
-      const d = rpc as Record<string, unknown>;
-      const dk2 = (d.kpis as Record<string, number>) ?? {};
-      setMunicDetail({
-        pago: Number(dk2.pago ?? 0),
-        projetos: ((d.por_projeto as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ projeto: String(r.projeto), empenhado: Number(r.empenhado ?? 0) })),
-        favorecidos: ((d.por_favorecido as Record<string, unknown>[] ?? []).slice(0, 8)).map(r => ({ favorecido: String(r.favorecido), empenhado: Number(r.empenhado ?? 0) })),
-        fontes: (() => {
-          const raw = (d.por_fonte as Record<string, unknown>[] ?? []);
-          const acc: Record<string, number> = {};
-          for (const r of raw) {
-            const s = String(r.fonte ?? r.fonte_recurso ?? '').toLowerCase();
-            const cat = (s.includes('fed') || s.includes('unia') || s.includes('uniao') || s.includes('fundo nacional') || s.includes('transfere') || s.includes('sus')) ? 'FEDERAL' : 'ESTADUAL';
-            acc[cat] = (acc[cat] ?? 0) + Number(r.empenhado ?? 0);
-          }
-          return Object.entries(acc).map(([fonte, empenhado]) => ({ fonte, empenhado })).sort((a, b) => b.empenhado - a.empenhado);
-        })(),
-        elementos: ((d.por_elemento as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ elemento: String(r.elemento), empenhado: Number(r.empenhado ?? 0) })),
-        grupos: ((d.por_grupo as Record<string, unknown>[] ?? []).slice(0, 6)).map(r => ({ grupo: String(r.grupo_despesa), empenhado: Number(r.empenhado ?? 0) })),
+      const body: Record<string, unknown> = { action: 'munic_detail', p_municipio: mun };
+      if (anoSel !== 'todos') body.p_ano = Number(anoSel);
+      const res = await fetch(`${WORKER_URL}/api/query`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
-    } catch { /* silent */ }
+      clearTimeout(tid);
+      if (!res.ok) return;
+      const d = await res.json() as Record<string, unknown>;
+      if (!d || d.error) return;
+      setMunicDetail({
+        pago:        Number((d.pago as number) ?? 0),
+        projetos:    (d.projetos as { projeto: string; empenhado: number }[] ?? []),
+        favorecidos: (d.favorecidos as { favorecido: string; empenhado: number }[] ?? []),
+        fontes:      (d.fontes as { fonte: string; empenhado: number }[] ?? []),
+        elementos:   (d.elementos as { elemento: string; empenhado: number }[] ?? []),
+        grupos:      (d.grupos as { grupo: string; empenhado: number }[] ?? []),
+      });
+    } catch { clearTimeout(tid); /* silent: timeout ou erro de rede */ }
     finally { setDetailLoading(false); }
   }
 
@@ -1460,7 +1470,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-red-900/95 backdrop-blur text-white px-5 py-3 rounded-xl text-sm shadow-2xl max-w-lg text-center">
           <p className="font-bold mb-1">Erro ao carregar mapa</p>
           <p className="text-red-200 text-xs font-mono">{error}</p>
-          <p className="text-red-300 text-[10px] mt-2">Execute <code className="bg-red-800 px-1 rounded">scripts/compact_functions_all.sql</code> no Supabase SQL Editor</p>
+          <p className="text-red-300 text-[10px] mt-2">Entre em contato com o administrador do sistema.</p>
         </div>
       )}
 
@@ -1468,7 +1478,7 @@ function InteractiveMap({ anoSel, onNavigate }: {
       {!loading && !error && !hasMunicViewData && activeRegionList.length > 0 && level === 'estado' && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-[#1B1B1B]/95 backdrop-blur border border-[#F59E0B] text-[#F59E0B] px-5 py-3 rounded-xl text-xs shadow-2xl max-w-md text-center pointer-events-none">
           <p className="font-bold text-sm mb-1">⚠ Cores por {mapViewLabel} indisponíveis</p>
-          <p className="text-[#FCD34D]">Execute <strong>scripts/compact_functions_all.sql</strong> no Supabase SQL Editor para habilitar a coloração dos municípios por {mapViewLabel}.</p>
+          <p className="text-[#FCD34D]">Dados de coloração por {mapViewLabel} não disponíveis para o período selecionado. Selecione um ano específico.</p>
           <p className="text-[#888] mt-1 text-[10px]">A lista de regiões na legenda já está disponível.</p>
         </div>
       )}
@@ -1699,163 +1709,579 @@ function InteractiveMap({ anoSel, onNavigate }: {
   );
 }
 
-// --- Upload Panel ---
-function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportDone?: () => void }) {
+// --- Upload OB Panel ---
+function UploadObPanel({ onClose, onImportDone }: { onClose: () => void; onImportDone?: (count: number) => void }) {
   const [step, setStep] = useState<UploadStep>('idle');
   const [rows, setRows] = useState<DataRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
-  const [confirm, setConfirm] = useState(false);
-  const [uploadMode, setUploadMode] = useState<'replace'|'incremental'>('incremental');
-  const [dbCount, setDbCount] = useState<number | null>(null);
-  const [procSteps, setProcSteps] = useState<{label:string; status:'wait'|'running'|'ok'|'warn'}[]>([]);
-  const [procProgress, setProcProgress] = useState(0);
+  const [inserted, setInserted] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    supabase.from('lc131_despesas').select('id', { count: 'estimated' }).limit(1)
-      .then(({ count }) => setDbCount(count ?? 0));
-  }, []);
+  const WORKER_URL   = import.meta.env.VITE_WORKER_URL   ?? 'https://lc131-api.sessp-css2.workers.dev';
+  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? '';
 
-  const SVC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWt6d3Jmc3hqaXB4b3p6aGJyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc4OTA0NCwiZXhwIjoyMDkxMzY1MDQ0fQ.YUaFE11ZfuKAaRj1UMmhvLr3bN_1yjP9D2WDBcpBee0';
-  const SVC_HEADERS = { apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}`, 'Content-Type': 'application/json' };
-  const SUPABASE_REST = 'https://teikzwrfsxjipxozzhbr.supabase.co/rest/v1';
-  const CHUNK_SIZE = 5000;
+  // Mapeamento: cabeçalho xlsx (normalizado) → coluna D1
+  // Nota: "Nº" normaliza para "n" (º = U+00BA não é diacrítico), por isso variantes
+  // como "n_processo", "n_do_processo" e "numero_do_processo" são necessárias.
+  const OB_COL_MAP: Record<string, string> = {
+    // ano
+    'ano_referencia':              'ano_referencia',
+    'ano':                         'ano_referencia',
+    'ano_referencia_pagamento':    'ano_referencia',
+    // mes
+    'mes_lancamento':              'mes_lancamento',
+    'mes':                         'mes_lancamento',
+    // credor
+    'codigo_nome_credor':          'codigo_nome_credor',
+    'credor':                      'codigo_nome_credor',
+    'nome_credor':                 'codigo_nome_credor',
+    'favorecido':                  'codigo_nome_credor',
+    // data
+    'data_lancamento':             'data_lancamento',
+    'data':                        'data_lancamento',
+    // numero_documento — "Nº Documento" → "n_documento"
+    'numero_documento':            'numero_documento',
+    'n_documento':                 'numero_documento',
+    'n_do_documento':              'numero_documento',
+    'num_documento':               'numero_documento',
+    'nro_documento':               'numero_documento',
+    'numero_do_documento':         'numero_documento',
+    // valor
+    'valor_documento':             'valor_documento',
+    'valor':                       'valor_documento',
+    // ug
+    'codigo_nome_ug_responsavel':  'codigo_nome_ug',
+    'codigo_nome_ug':              'codigo_nome_ug',
+    'ug':                          'codigo_nome_ug',
+    // uo
+    'codigo_uo_responsavel':       'codigo_uo',
+    'codigo_uo':                   'codigo_uo',
+    'uo':                          'codigo_uo',
+    // descricao
+    'descricao_documento':         'descricao_documento',
+    'descricao':                   'descricao_documento',
+    // orgao
+    'codigo_nome_orgao_responsavel':'codigo_nome_orgao',
+    'codigo_nome_orgao':           'codigo_nome_orgao',
+    'orgao':                       'codigo_nome_orgao',
+    // doc origem
+    'numero_documento_origem':     'numero_documento_origem',
+    'n_documento_origem':          'numero_documento_origem',
+    'doc_origem':                  'numero_documento_origem',
+    'doc_de_origem':               'numero_documento_origem',
+    // ne
+    'ne_origem':                   'ne_origem',
+    'ne':                          'ne_origem',
+    // fonte
+    'codigo_nome_fonte_recurso':   'codigo_nome_fonte_recurso',
+    'fonte_recurso':               'codigo_nome_fonte_recurso',
+    'fonte':                       'codigo_nome_fonte_recurso',
+    // programa
+    'codigo_nome_programa_trabalho':'codigo_nome_programa',
+    'codigo_nome_programa':        'codigo_nome_programa',
+    'programa':                    'codigo_nome_programa',
+    // elemento
+    'codigo_nome_elemento':        'codigo_nome_elemento',
+    'elemento':                    'codigo_nome_elemento',
+    // numero_processo — "Nº Processo" (col Q) → normaliza para "n_processo"
+    'numero_processo':             'numero_processo',
+    'n_processo':                  'numero_processo',
+    'n_do_processo':               'numero_processo',
+    'numero_do_processo':          'numero_processo',
+    'numero_de_processo':          'numero_processo',
+    'num_processo':                'numero_processo',
+    'num_do_processo':             'numero_processo',
+    'nro_processo':                'numero_processo',
+    'no_processo':                 'numero_processo',
+  };
 
-  const runPipeline = async (ano: number) => {
-    setStep('processing');
-    const steps: {label:string; status:'wait'|'running'|'ok'|'warn'}[] = [
-      { label: 'Preparando lookups de classificação', status: 'wait' },
-      { label: 'Classificando tipo de despesa', status: 'wait' },
-      { label: 'Normalizando DRS/RRAS e rótulos', status: 'wait' },
-      { label: 'Verificando dados', status: 'wait' },
-    ];
-    const upd = (i: number, s: 'wait'|'running'|'ok'|'warn', label?: string) => {
-      steps[i] = { ...steps[i], status: s, ...(label ? { label } : {}) };
-      setProcSteps([...steps]);
-    };
-    setProcSteps([...steps]);
-    setProcProgress(0);
+  const normHeader = (h: string) =>
+    h.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
 
-    try {
-      // Step 1: refresh_bdref_lookup
-      upd(0, 'running');
-      await supabase.rpc('refresh_bdref_lookup');
-      upd(0, 'ok'); setProcProgress(10);
-
-      // Step 2: fix_tipo_despesa_by_year in chunks
-      upd(1, 'running');
-      let tipoUpdated = 0;
-      try {
-        const { data: range } = await supabase.rpc('get_lc131_id_range', { p_ano: ano });
-        const minId: number = range?.min_id ?? 0;
-        const maxId: number = range?.max_id ?? 0;
-        const total: number = range?.total ?? 0;
-        if (total > 0) {
-          const chunks = Math.ceil((maxId - minId + 1) / CHUNK_SIZE);
-          for (let i = 0; i < chunks; i++) {
-            const idMin = minId + i * CHUNK_SIZE;
-            const idMax = Math.min(idMin + CHUNK_SIZE - 1, maxId);
-            const { data: res } = await supabase.rpc('fix_tipo_despesa_by_year', { p_ano: ano, p_id_min: idMin, p_id_max: idMax });
-            tipoUpdated += res?.updated ?? 0;
-            const pct = 10 + Math.round(((i + 1) / chunks) * 55);
-            upd(1, 'running', `Classificando tipo de despesa (lote ${i+1}/${chunks}: ${tipoUpdated.toLocaleString('pt-BR')} linhas)`);
-            setProcProgress(pct);
-          }
-        }
-        upd(1, 'ok', `Tipo de despesa: ${tipoUpdated.toLocaleString('pt-BR')} linhas classificadas`);
-      } catch {
-        upd(1, 'warn', 'Tipo de despesa: fallback por grupo');
-      }
-      setProcProgress(65);
-
-      // Fallback REST: fill tipo_despesa = NULL by grupo
-      const GRUPO_MAP = [
-        { prefix: '1', tipo: 'PESSOAL E ENCARGOS SOCIAIS' },
-        { prefix: '2', tipo: 'JUROS E ENCARGOS DA DÍVIDA' },
-        { prefix: '3', tipo: 'OUTRAS DESPESAS CORRENTES' },
-        { prefix: '4', tipo: 'INVESTIMENTOS' },
-        { prefix: '5', tipo: 'INVERSÕES FINANCEIRAS' },
-      ];
-      for (const { prefix, tipo } of GRUPO_MAP) {
-        await fetch(
-          `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null&codigo_nome_grupo=like.${prefix}%25`,
-          { method: 'PATCH', headers: { ...SVC_HEADERS }, body: JSON.stringify({ tipo_despesa: tipo }) }
-        );
-      }
-      await fetch(
-        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null`,
-        { method: 'PATCH', headers: { ...SVC_HEADERS }, body: JSON.stringify({ tipo_despesa: 'OUTRAS DESPESAS CORRENTES' }) }
-      );
-      setProcProgress(70);
-
-      // Step 3: post_import_cleanup (DRS, RRAS, rótulo, TRUNCATE bd_ref_tipo)
-      upd(2, 'running');
-      let rotuloFilled = 0;
-      try {
-        const { data: cln } = await supabase.rpc('post_import_cleanup', { p_ano: ano });
-        rotuloFilled = cln?.rotulo_filled ?? 0;
-        upd(2, 'ok', `DRS/RRAS normalizados · ${rotuloFilled.toLocaleString('pt-BR')} rótulos preenchidos`);
-      } catch {
-        upd(2, 'warn', 'Limpeza parcial — preenchendo rótulos via REST');
-      }
-      setProcProgress(80);
-
-      // Fallback: fill rotulo via REST if still NULL
-      if (rotuloFilled === 0) {
-        try {
-          const resp = await fetch(
-            `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&codigo_nome_projeto_atividade=not.is.null&select=codigo_nome_projeto_atividade&limit=5000`,
-            { headers: SVC_HEADERS }
-          );
-          const nullRows: {codigo_nome_projeto_atividade: string}[] = resp.ok ? await resp.json() : [];
-          const unique = [...new Set(nullRows.map(r => r.codigo_nome_projeto_atividade?.trim()).filter(Boolean))];
-          let rFilled = 0;
-          for (const val of unique) {
-            const pr = await fetch(
-              `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&codigo_nome_projeto_atividade=eq.${encodeURIComponent(val)}`,
-              { method: 'PATCH', headers: { ...SVC_HEADERS, Prefer: 'count=exact' }, body: JSON.stringify({ rotulo: val }) }
-            );
-            const n = parseInt((pr.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
-            if (!isNaN(n)) rFilled += n;
-          }
-          if (rFilled > 0) upd(2, 'ok', `${rFilled.toLocaleString('pt-BR')} rótulos preenchidos`);
-        } catch { /* ignorar */ }
-      }
-      setProcProgress(90);
-
-      // Step 4: verificação
-      upd(3, 'running');
-      const vt = await fetch(
-        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&tipo_despesa=is.null&select=id&limit=1`,
-        { headers: { ...SVC_HEADERS, Prefer: 'count=exact' } }
-      );
-      const tipoNull = parseInt((vt.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
-      const vr = await fetch(
-        `${SUPABASE_REST}/lc131_despesas?ano_referencia=eq.${ano}&rotulo=is.null&select=id&limit=1`,
-        { headers: { ...SVC_HEADERS, Prefer: 'count=exact' } }
-      );
-      const rotuloNull = parseInt((vr.headers.get('content-range') ?? '').split('/')[1] ?? '0', 10);
-      setProcProgress(100);
-
-      if (tipoNull === 0 && rotuloNull === 0) {
-        upd(3, 'ok', '✓ Todos os dados classificados e completos');
-      } else {
-        upd(3, 'warn', `${tipoNull > 0 ? tipoNull+' tipo_despesa nulos' : ''}${tipoNull>0&&rotuloNull>0?' · ':''}${rotuloNull>0?rotuloNull+' rótulos nulos':''}`);
-      }
-      setMessage(`${message || ''} · Pipeline concluído.`);
-      onImportDone?.();
-      setStep('done');
-    } catch (e: unknown) {
-      setMessage((e as Error).message);
-      setStep('error');
-    }
+  // Converte serial Excel → "DD/MM/YYYY"
+  const excelSerial = (v: unknown): string | null => {
+    if (!v) return null;
+    if (typeof v === 'string' && v.includes('/')) return v;
+    const n = Number(v);
+    if (!n || isNaN(n)) return typeof v === 'string' ? v : null;
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
   };
 
   const handleFile = async (file: File) => {
     setFileName(file.name); setStep('parsing');
     try {
+      if (!file.name.match(/\.(xlsx|xls)$/i)) throw new Error('Apenas arquivos .xlsx são suportados para OB.');
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const matrix: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Localiza header: primeira linha a partir de index 2 com >= 5 células texto
+      let hIdx = 3;
+      for (let i = 2; i < Math.min(8, matrix.length); i++) {
+        const row = matrix[i] as unknown[];
+        const texts = row.filter(v => typeof v === 'string' && v.trim().length > 2);
+        if (texts.length >= 5) { hIdx = i; break; }
+      }
+
+      const rawHeaders = (matrix[hIdx] as unknown[]).map(h => normHeader(String(h ?? '')));
+      const colMap: Record<number, string> = {};
+      rawHeaders.forEach((h, i) => {
+        const d1Col = OB_COL_MAP[h];
+        if (d1Col) colMap[i] = d1Col;
+      });
+
+      const mapped = Object.values(colMap);
+      if (mapped.length < 4) throw new Error(`Colunas não reconhecidas. Detectadas: ${rawHeaders.filter(Boolean).slice(0, 5).join(', ')}`);
+
+      const SKIP = ['total geral','total','subtotal'];
+      const parsed: DataRow[] = [];
+      for (let i = hIdx + 1; i < matrix.length; i++) {
+        const arr = matrix[i] as unknown[];
+        if (arr.every(v => v === '' || v == null)) continue;
+        const first = String(arr[0] ?? '').toLowerCase().trim();
+        if (SKIP.some(s => first.startsWith(s))) continue;
+        const row: DataRow = {};
+        for (const [idx, d1Col] of Object.entries(colMap)) {
+          const j = Number(idx);
+          let v: unknown = arr[j] ?? null;
+          if (d1Col === 'data_lancamento') v = excelSerial(v);
+          else if (d1Col === 'ano_referencia') v = parseInt(String(v)) || null;
+          else if (d1Col === 'valor_documento') v = parseFloat(String(v)) || 0;
+          else v = (v === '' || v == null) ? null : String(v).trim();
+          row[d1Col] = v;
+        }
+        if (!row.numero_documento && !row.ano_referencia) continue;
+        parsed.push(row);
+      }
+      if (!parsed.length) throw new Error('Nenhum registro encontrado.');
+      setRows(parsed); setStep('preview');
+    } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
+  };
+
+  const handleUpload = async () => {
+    setStep('uploading'); setProgress(0);
+    const CHUNK = 500;
+    let totalInserted = 0;
+    try {
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const batch = rows.slice(i, i + CHUNK);
+        const res = await fetch(`${WORKER_URL}/api/import-ob`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: IMPORT_TOKEN, rows: batch }),
+        });
+        const data = await res.json() as { ok?: boolean; inserted?: number; error?: string };
+        if (!data.ok) throw new Error(data.error ?? 'Erro no servidor');
+        totalInserted += data.inserted ?? 0;
+        setProgress(Math.round(((i + batch.length) / rows.length) * 100));
+      }
+      setInserted(totalInserted);
+      setMessage(`${totalInserted.toLocaleString('pt-BR')} OBs inseridas (${rows.length.toLocaleString('pt-BR')} no arquivo).`);
+      setStep('done');
+      onImportDone?.(totalInserted);
+    } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
+  };
+
+  const reset = () => { setStep('idle'); setRows([]); setFileName(''); setProgress(0); setMessage(''); setInserted(0); };
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#E5E5E5] flex items-center justify-between bg-[#FAFAFA]">
+          <div className="flex items-center gap-2.5">
+            <DollarSign className="w-4 h-4 text-[#E66C37]" />
+            <div>
+              <p className="font-bold text-[#333] text-sm">Importar OB (Ordens Bancárias)</p>
+              <p className="text-[10px] text-[#999]">Lis OB – Entidades e municípios · 2022-2025</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#E5E5E5]">
+            <X className="w-4 h-4 text-[#666]" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Info banner */}
+          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+            <div>
+              <p className="font-bold mb-0.5">Arquivo esperado</p>
+              <p className="text-[11px] leading-relaxed">
+                <span className="font-mono">Lis OB - Entidades e municipios.xlsx</span> — cabeçalho na linha 4, colunas:
+                Ano, Mês, Credor, Data, Nº Documento, Valor, UG, UO, Descrição, Órgão, Doc. Origem, NE, Fonte, Programa, Elemento, Nº Processo.
+              </p>
+              <p className="mt-1 text-[11px]">Os OBs são vinculados a LC 131 via <strong>Número de Processo</strong>.</p>
+            </div>
+          </div>
+
+          {step === 'idle' && (
+            <div onDrop={e => { e.preventDefault(); e.dataTransfer.files[0] && handleFile(e.dataTransfer.files[0]); }}
+              onDragOver={e => e.preventDefault()} onClick={() => fileRef.current?.click()}
+              className="bg-[#FFF8F5] border-2 border-dashed border-[#E66C37]/30 rounded-xl p-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#E66C37] transition group">
+              <FileSpreadsheet className="w-10 h-10 text-[#E66C37]/40 group-hover:text-[#E66C37]" />
+              <div className="text-center">
+                <p className="font-semibold text-[#333]">Arraste ou clique para selecionar</p>
+                <p className="text-xs text-[#999] mt-1">Lis OB .xlsx</p>
+              </div>
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+            </div>
+          )}
+
+          {step === 'parsing' && (
+            <div className="flex flex-col items-center gap-3 py-10"><Spinner size={7} /><p className="text-sm text-[#666]">Lendo planilha...</p></div>
+          )}
+
+          {step === 'preview' && (
+            <div className="space-y-3">
+              <div className="bg-[#F8FBFF] border border-[#D0E8FF] rounded-lg px-4 py-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-[#666]">Arquivo</span><span className="font-mono font-bold text-[#333] truncate max-w-[60%]">{fileName}</span></div>
+                <div className="flex justify-between"><span className="text-[#666]">Registros lidos</span><span className="font-bold text-[#118DFF]">{rows.length.toLocaleString('pt-BR')}</span></div>
+                <div className="flex justify-between"><span className="text-[#666]">Anos detectados</span>
+                  <span className="font-bold text-[#333]">{[...new Set(rows.map(r => r.ano_referencia as number).filter(Boolean))].sort().join(', ')}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={reset} className="flex-1 py-2 text-sm font-semibold text-[#666] border border-[#D0D0D0] rounded-lg hover:bg-[#FAFAFA]">Cancelar</button>
+                <button onClick={handleUpload} className="flex-1 py-2 text-sm font-bold bg-[#E66C37] text-white rounded-lg hover:bg-[#D05A25]">
+                  Importar {rows.length.toLocaleString('pt-BR')} OBs
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'uploading' && (
+            <div className="space-y-3 py-6">
+              <div className="flex items-center gap-2 justify-center"><Spinner size={5} /><p className="text-sm text-[#666]">Enviando... {progress}%</p></div>
+              <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
+                <div className="h-full bg-[#E66C37] rounded-full transition-all duration-300" style={{ width: progress + '%' }} />
+              </div>
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <CheckCircle2 className="w-12 h-12 text-green-500" />
+              <div>
+                <p className="font-bold text-[#333]">OBs importadas com sucesso!</p>
+                <p className="text-sm text-[#666] mt-1">{message}</p>
+                {inserted > 0 && <p className="text-xs text-[#999] mt-1">Acesse a aba <strong>OB</strong> para ver os dados e relacionamentos com a LC 131.</p>}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={reset} className="px-4 py-2 border border-[#E66C37] text-[#E66C37] text-sm font-bold rounded-lg hover:bg-[#FFF8F5]">Importar outro</button>
+                <button onClick={onClose} className="px-4 py-2 bg-[#E66C37] text-white text-sm font-bold rounded-lg">Fechar</button>
+              </div>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <AlertCircle className="w-10 h-10 text-red-300" />
+              <div><p className="font-bold text-red-700">Erro na importação</p><p className="text-xs text-red-500 mt-1 font-mono break-all">{message}</p></div>
+              <button onClick={reset} className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg">Tentar novamente</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Upload Panel ---
+function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportDone?: () => void }) {
+  const [step, setStep] = useState<UploadStep>('idle');
+  const [lcRows, setLcRows] = useState<DataRow[]>([]);
+  const [obRows, setObRows] = useState<DataRow[]>([]);
+  const [lcFileName, setLcFileName] = useState('');
+  const [obFileName, setObFileName] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [dbCount, setDbCount] = useState<number | null>(null);
+  const [procSteps, setProcSteps] = useState<{label:string; status:'wait'|'running'|'ok'|'warn'}[]>([]);
+  const [procProgress, setProcProgress] = useState(0);
+  const lcFileRef = useRef<HTMLInputElement>(null);
+  const obFileRef = useRef<HTMLInputElement>(null);
+
+  const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
+  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? '';
+
+  const hasImportShape = (sample: DataRow) => {
+    const cols = new Set(Object.keys(sample || {}));
+    const hasAnoRef = cols.has('ano_referencia');
+    const hasConsolidatedAno = cols.has('ano');
+    const hasPagoTotalOnly = cols.has('pago_total')
+      && !cols.has('empenhado')
+      && !cols.has('liquidado')
+      && !cols.has('pago')
+      && !cols.has('pago_anos_anteriores');
+    return { hasAnoRef, hasConsolidatedAno, hasPagoTotalOnly };
+  };
+
+  const OB_COL_MAP: Record<string, string> = {
+    ano_referencia: 'ano_referencia', ano: 'ano_referencia', ano_referencia_pagamento: 'ano_referencia',
+    mes_lancamento: 'mes_lancamento', mes: 'mes_lancamento',
+    codigo_nome_credor: 'codigo_nome_credor', credor: 'codigo_nome_credor', nome_credor: 'codigo_nome_credor', favorecido: 'codigo_nome_credor',
+    data_lancamento: 'data_lancamento', data: 'data_lancamento',
+    numero_documento: 'numero_documento', n_documento: 'numero_documento', n_do_documento: 'numero_documento', num_documento: 'numero_documento', nro_documento: 'numero_documento', numero_do_documento: 'numero_documento',
+    valor_documento: 'valor_documento', valor: 'valor_documento',
+    codigo_nome_ug_responsavel: 'codigo_nome_ug', codigo_nome_ug: 'codigo_nome_ug', ug: 'codigo_nome_ug',
+    codigo_uo_responsavel: 'codigo_uo', codigo_uo: 'codigo_uo', uo: 'codigo_uo',
+    descricao_documento: 'descricao_documento', descricao: 'descricao_documento',
+    codigo_nome_orgao_responsavel: 'codigo_nome_orgao', codigo_nome_orgao: 'codigo_nome_orgao', orgao: 'codigo_nome_orgao',
+    numero_documento_origem: 'numero_documento_origem', n_documento_origem: 'numero_documento_origem', doc_origem: 'numero_documento_origem', doc_de_origem: 'numero_documento_origem',
+    ne_origem: 'ne_origem', ne: 'ne_origem',
+    codigo_nome_fonte_recurso: 'codigo_nome_fonte_recurso', fonte_recurso: 'codigo_nome_fonte_recurso', fonte: 'codigo_nome_fonte_recurso',
+    codigo_nome_programa_trabalho: 'codigo_nome_programa', codigo_nome_programa: 'codigo_nome_programa', programa: 'codigo_nome_programa',
+    codigo_nome_elemento: 'codigo_nome_elemento', elemento: 'codigo_nome_elemento',
+    numero_processo: 'numero_processo', n_processo: 'numero_processo', n_do_processo: 'numero_processo', numero_do_processo: 'numero_processo', numero_de_processo: 'numero_processo', num_processo: 'numero_processo', num_do_processo: 'numero_processo', nro_processo: 'numero_processo', no_processo: 'numero_processo',
+  };
+
+  const normHeader = (h: string) =>
+    h.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+
+  const excelSerial = (v: unknown): string | null => {
+    if (!v) return null;
+    if (typeof v === 'string' && v.includes('/')) return v;
+    const n = Number(v);
+    if (!n || isNaN(n)) return typeof v === 'string' ? v : null;
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+  };
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/health`)
+      .then(r => r.json())
+      .then((d: unknown) => setDbCount((d as { rows: number }).rows ?? 0))
+      .catch(() => setDbCount(0));
+  }, [WORKER_URL]);
+
+  // ── Mapeamento de colunas XLSX → D1 ──────────────────────────────────────
+  // Cobre variantes comuns de headers do SIAFEM/SIGEO, incluindo abreviações
+  // como "Nº" (normaliza para "n") e preposições ("do", "de", "da").
+  const D1_ALIASES: Record<string, string> = {
+    nome_municipio:           'municipio',
+    codigo_fonte_recursos:    'fonte_recurso',
+    // numero_processo — col O no LC 131: "Número do Processo" → "numero_do_processo"
+    numero_do_processo:       'numero_processo',
+    numero_de_processo:       'numero_processo',
+    n_processo:               'numero_processo',
+    n_do_processo:            'numero_processo',
+    num_processo:             'numero_processo',
+    num_do_processo:          'numero_processo',
+    nro_processo:             'numero_processo',
+    no_processo:              'numero_processo',
+    // descricao_processo — variantes
+    descricao_do_processo:    'descricao_processo',
+    descricao_de_processo:    'descricao_processo',
+  };
+
+  // Lookup tables (geradas de tab_municipios_rows.csv e despesas.csv)
+  const MUNICIPIOS_REF = (MUNICIPIOS_LOOKUP as { lookup: Record<string, { drs: string; regiao_ad: string; rras: string; regiao_sa: string; cod_ibge: string }> }).lookup;
+  const TIPO_BY_ELEM   = (DESPESAS_LOOKUPS as { tipo_by_element: Record<string, string> }).tipo_by_element;
+  const FONTE_BY_CODE  = (DESPESAS_LOOKUPS as { fonte_by_code: Record<string, string> }).fonte_by_code;
+
+  // Lookup composto: UO5, UO5+proj4, proj4, proj4+elem6, elem6+proj4, elem6
+  const TL = TIPO_LOOKUP as {
+    by_uo5: Record<string, string>;
+    by_uo5_proj4: Record<string, string>;
+    by_proj4: Record<string, string>;
+    by_proj4_elem6: Record<string, string>;
+    by_elem_proj: Record<string, string>;
+    by_elem6: Record<string, string>;
+    [k: string]: unknown;
+  };
+
+  function resolveTipo(
+    uo: string | null | undefined,
+    proj: string | null | undefined,
+    elem: string | null | undefined,
+  ): string {
+    const uo5   = String(uo   ?? '').substring(0, 5);
+    const p4    = String(proj ?? '').substring(0, 4);
+    const e6    = String(elem ?? '').replace(/\D.*/, '').substring(0, 6);
+    const e3    = e6.substring(0, 3);
+    // Projeto 9001-9020 → Intraorçamentária
+    const pNum  = parseInt(p4, 10);
+    if (pNum >= 9001 && pNum <= 9020) return 'INTRAORÇAMENTÁRIA';
+    // 1. UO+proj
+    if (uo5 && p4) { const r = TL.by_uo5_proj4[`${uo5}|${p4}`]; if (r) return r; }
+    // 2. UO sozinha
+    if (uo5)       { const r = TL.by_uo5[uo5];                   if (r) return r; }
+    // 3. Proj+elem
+    if (p4 && e6)  { const r = TL.by_proj4_elem6[`${p4}|${e6}`]; if (r) return r; }
+    // 4. Proj sozinho (programas singulares)
+    if (p4)        { const r = TL.by_proj4[p4];                   if (r) return r; }
+    // 5. Elem+proj (composite do CSV)
+    if (e6 && p4)  { const r = TL.by_elem_proj[`${e6}|${p4}`];   if (r) return r; }
+    // 6. Elem6 (dominante do CSV)
+    if (e6)        { const r = TL.by_elem6[e6] ?? TIPO_BY_ELEM[e6]; if (r) return r; }
+    // 7. Elem3 prefixo
+    const TIPO_PREFIX: Record<string, string> = {
+      '319': 'UNIDADE PRÓPRIA', '329': 'DIVIDA EXTERNA E INTERNA',
+      '334': 'TRANSFERÊNCIA VOLUNTÁRIA', '335': 'TRANSFERÊNCIA VOLUNTÁRIA',
+      '336': 'TRANSFERÊNCIA VOLUNTÁRIA', '337': 'TRANSFERÊNCIA VOLUNTÁRIA',
+      '338': 'UNIDADE PRÓPRIA', '339': 'UNIDADE PRÓPRIA',
+      '444': 'TRANSFERÊNCIA VOLUNTÁRIA', '445': 'TRANSFERÊNCIA VOLUNTÁRIA',
+      '447': 'TRANSFERÊNCIA VOLUNTÁRIA', '449': 'UNIDADE PRÓPRIA',
+      '469': 'DIVIDA EXTERNA E INTERNA',
+    };
+    return TIPO_PREFIX[e3] ?? 'UNIDADE PRÓPRIA';
+  }
+
+  const enrichForD1 = (inputRows: DataRow[]): DataRow[] =>
+    inputRows.map(r => {
+      const out = { ...r };
+
+      // 1. Rename colunas XLSX → D1
+      for (const [from, to] of Object.entries(D1_ALIASES)) {
+        if (from in out) {
+          if (out[to] == null || out[to] === '') out[to] = out[from];
+          delete out[from];
+        }
+      }
+
+      // 2. DRS/RRAS via lookup estático (tab_municipios_rows.csv)
+      if (!out.drs && out.municipio) {
+        const munKey = String(out.municipio).toUpperCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const ref = MUNICIPIOS_REF[munKey];
+        if (ref) {
+          out.drs       = ref.drs;
+          out.regiao_ad = ref.regiao_ad;
+          out.rras      = ref.rras;
+          out.regiao_sa = ref.regiao_sa;
+          out.cod_ibge  = ref.cod_ibge;
+        }
+      }
+
+      // 3. grupo_despesa → categoria de negócio (PESSOAL/CUSTEIO/INVESTIMENTO/DIVIDA)
+      const validGrupos = ['PESSOAL', 'CUSTEIO', 'INVESTIMENTO', 'DIVIDA'];
+      if (!out.grupo_despesa || !validGrupos.includes(String(out.grupo_despesa))) {
+        const prefix = String(out.codigo_nome_grupo ?? '').match(/^(\d{2})/)?.[1] ?? '';
+        const GRUPO_PREFIX: Record<string, string> = {
+          '31': 'PESSOAL', '32': 'DIVIDA', '33': 'CUSTEIO',
+          '44': 'INVESTIMENTO', '45': 'INVESTIMENTO', '46': 'DIVIDA', '47': 'DIVIDA',
+        };
+        out.grupo_despesa = GRUPO_PREFIX[prefix] ?? 'CUSTEIO';
+      }
+
+      // 4. grupo_simpl (derivado do grupo_despesa)
+      if (!out.grupo_simpl) {
+        const g = String(out.grupo_despesa ?? '');
+        if      (g === 'PESSOAL')     out.grupo_simpl = 'Pessoal';
+        else if (g === 'INVESTIMENTO') out.grupo_simpl = 'Investimentos';
+        else if (g === 'DIVIDA')      out.grupo_simpl = 'Juros/Dívida';
+        else                          out.grupo_simpl = 'Custeio';
+      }
+
+      // 5. tipo_despesa — hierarquia: UO → Projeto+Elem → Elemento (via resolveTipo)
+      const wrongTipos = ['PESSOAL', 'CUSTEIO', 'INVESTIMENTO', 'DIVIDA',
+                          'OUTRAS DESPESAS CORRENTES', 'PESSOAL E ENCARGOS SOCIAIS',
+                          'INVESTIMENTOS', 'AMORTIZACAO DE DIVIDA', 'JUROS E ENCARGOS DA DIVIDA'];
+      if (!out.tipo_despesa || wrongTipos.includes(String(out.tipo_despesa))) {
+        out.tipo_despesa = resolveTipo(
+          out.codigo_nome_uo as string | null,
+          out.codigo_nome_projeto_atividade as string | null,
+          out.codigo_nome_elemento as string | null,
+        );
+      }
+
+      // 6. fonte_simpl → 2-way: TESOURO / FEDERAL (DEMAIS FONTES consolidado em TESOURO)
+      const validFontes = ['TESOURO', 'FEDERAL'];
+      if (!out.fonte_simpl || !validFontes.includes(String(out.fonte_simpl))) {
+        const fRaw = String(out.codigo_nome_fonte_recurso ?? out.fonte_recurso ?? '');
+        const fCode6 = fRaw.replace(/\D.*/, '').substring(0, 6);
+        const fCode3 = fCode6.substring(0, 3);
+        out.fonte_simpl = FONTE_BY_CODE[fCode6] ?? FONTE_BY_CODE[fCode3] ?? 'TESOURO';
+      }
+
+      // 7. pago_total
+      if (out.pago_total == null || out.pago_total === '') {
+        out.pago_total = (Number(out.pago) || 0) + (Number(out.pago_anos_anteriores) || 0);
+      }
+
+      // 8. unidade (alias de codigo_nome_uo)
+      if (!out.unidade) out.unidade = out.codigo_nome_uo ?? null;
+
+      // 9. rotulo = código-nome do projeto atividade
+      if (!out.rotulo) out.rotulo = out.codigo_nome_projeto_atividade ?? null;
+
+      return out;
+    });
+
+  // ── Pipeline pós-upload incremental (D1) ─────────────────────────────────
+  const runPipelineForYears = async (years: number[]) => {
+    setStep('processing');
+    const steps: {label:string; status:'wait'|'running'|'ok'|'warn'}[] = [];
+    setProcSteps([...steps]);
+    setProcProgress(10);
+    try {
+      const validYears = Array.from(new Set(years)).filter(y => Number.isFinite(y));
+      if (!validYears.length) return;
+
+      for (let i = 0; i < validYears.length; i++) {
+        const ano = validYears[i];
+        steps.push({ label: `Aplicando enriquecimento de dados ${ano} no D1...`, status: 'running' });
+        setProcSteps([...steps]);
+
+        const fixRes = await fetch(`${WORKER_URL}/api/fix-year`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ano, token: IMPORT_TOKEN }),
+        }).then(r => r.json()) as { ok?: boolean; changes?: number; error?: string };
+        if (fixRes.error) throw new Error(fixRes.error);
+
+        const fixIdx = steps.length - 1;
+        steps[fixIdx] = { ...steps[fixIdx], status: 'ok', label: `✓ Enriquecimento ${ano}: ${fixRes.changes ?? 0} campos corrigidos` };
+        setProcSteps([...steps]);
+
+        steps.push({ label: `Recalculando agregados de ${ano}...`, status: 'running' });
+        setProcSteps([...steps]);
+        try {
+          const TOTAL_DIMS = 17;
+          let offset = 0;
+          let totalInserted = 0;
+          while (offset < TOTAL_DIMS) {
+            const aggRes = await fetch(`${WORKER_URL}/api/query`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'rebuild_agg', ano, offset, count: 5, token: IMPORT_TOKEN }),
+            }).then(r => r.json()) as { ok?: boolean; rows_inserted?: number; next_offset?: number; done?: boolean; error?: string };
+            if (!aggRes.ok) throw new Error(aggRes.error ?? 'rebuild_agg failed');
+            totalInserted += aggRes.rows_inserted ?? 0;
+            if (aggRes.done) break;
+            offset = aggRes.next_offset ?? TOTAL_DIMS;
+          }
+          const aggIdx = steps.length - 1;
+          steps[aggIdx] = { ...steps[aggIdx], status: 'ok', label: `✓ Agregados de ${ano} recalculados (${totalInserted} linhas)` };
+          setProcSteps([...steps]);
+        } catch {
+          const aggIdx = steps.length - 1;
+          steps[aggIdx] = { ...steps[aggIdx], status: 'warn', label: `⚠ Agregados de ${ano} não recalculados` };
+          setProcSteps([...steps]);
+        }
+
+        setProcProgress(Math.min(70, Math.round(((i + 1) / validYears.length) * 70)));
+      }
+    } catch (e: unknown) {
+      throw e;
+    }
+  };
+
+  const handleLcFile = async (file: File) => {
+    setLcFileName(file.name);
+    setStep('parsing');
+    try {
+      if (!/lc\s*131|lc131/i.test(file.name)) throw new Error('Selecione o arquivo LC131 para a primeira etapa.');
       let raw: DataRow[] = [];
       if (file.name.match(/\.(xlsx|xls)$/i)) {
         const XLSX = await import('xlsx');
@@ -1893,94 +2319,183 @@ function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportD
         raw = parseCSV(await file.text());
       } else throw new Error('Use .xlsx ou .csv');
       if (!raw.length) throw new Error('Arquivo vazio');
-      setRows(raw); setStep('preview');
+
+      const shape = hasImportShape(raw[0]);
+      if (!shape.hasAnoRef && shape.hasConsolidatedAno && shape.hasPagoTotalOnly) {
+        throw new Error('Arquivo consolidado detectado (ANO + PAGO TOTAL). Para importação LC131 use o layout bruto com ano_referencia, empenhado, liquidado, pago e pago_anos_anteriores.');
+      }
+      if (!shape.hasAnoRef) {
+        throw new Error('Coluna obrigatória ausente: ano_referencia. Verifique o layout do arquivo LC131.');
+      }
+
+      setLcRows(raw);
+      setStep(obRows.length ? 'preview' : 'idle');
+    } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
+  };
+
+  const handleObFile = async (file: File) => {
+    setObFileName(file.name);
+    setStep('parsing');
+    try {
+      if (!/lis\s*ob|lisob/i.test(file.name)) throw new Error('Selecione o arquivo LisOB para a segunda etapa.');
+      if (!file.name.match(/\.(xlsx|xls)$/i)) throw new Error('Apenas arquivos .xlsx são suportados para LisOB.');
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const matrix: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      let hIdx = 3;
+      for (let i = 2; i < Math.min(8, matrix.length); i++) {
+        const row = matrix[i] as unknown[];
+        const texts = row.filter(v => typeof v === 'string' && v.trim().length > 2);
+        if (texts.length >= 5) { hIdx = i; break; }
+      }
+
+      const rawHeaders = (matrix[hIdx] as unknown[]).map(h => normHeader(String(h ?? '')));
+      const colMap: Record<number, string> = {};
+      rawHeaders.forEach((h, i) => {
+        const d1Col = OB_COL_MAP[h];
+        if (d1Col) colMap[i] = d1Col;
+      });
+      const mapped = Object.values(colMap);
+      if (mapped.length < 4) throw new Error(`LisOB sem colunas reconhecidas. Detectadas: ${rawHeaders.filter(Boolean).slice(0, 5).join(', ')}`);
+
+      const SKIP = ['total geral', 'total', 'subtotal'];
+      const parsed: DataRow[] = [];
+      for (let i = hIdx + 1; i < matrix.length; i++) {
+        const arr = matrix[i] as unknown[];
+        if (arr.every(v => v === '' || v == null)) continue;
+        const first = String(arr[0] ?? '').toLowerCase().trim();
+        if (SKIP.some(s => first.startsWith(s))) continue;
+        const row: DataRow = {};
+        for (const [idx, d1Col] of Object.entries(colMap)) {
+          const j = Number(idx);
+          let v: unknown = arr[j] ?? null;
+          if (d1Col === 'data_lancamento') v = excelSerial(v);
+          else if (d1Col === 'ano_referencia') v = parseInt(String(v)) || null;
+          else if (d1Col === 'valor_documento') v = parseFloat(String(v)) || 0;
+          else v = (v === '' || v == null) ? null : String(v).trim();
+          row[d1Col] = v;
+        }
+        if (!row.numero_documento && !row.ano_referencia) continue;
+        parsed.push(row);
+      }
+
+      if (!parsed.length) throw new Error('Nenhum registro LisOB encontrado.');
+      setObRows(parsed);
+      setStep(lcRows.length ? 'preview' : 'idle');
     } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
   };
 
   const handleUpload = async () => {
     if (!confirm) { setConfirm(true); return; }
     setConfirm(false); setStep('uploading'); setProgress(0);
-    const CHUNK = 500; let uploaded = 0;
+    const CHUNK = 1000;
+    const CHUNK_OB = 500;
+    let uploadedLc = 0;
+    let uploadedOb = 0;
     try {
-      // Valida quais colunas existem na tabela
-      const testRow = rows[0];
-      const allCols = Object.keys(testRow);
-      let validCols = [...allCols];
-      for (let attempts = 0; attempts < 5; attempts++) {
-        const { error } = await supabase.from('lc131_despesas').select(validCols.join(',')).limit(1);
-        if (!error) break;
-        const m = error.message.match(/column\s+\w+\.(\w+)\s+does not exist/);
-        if (m) { validCols = validCols.filter(c => c !== m[1]); continue; }
-        throw error;
-      }
-      const colsToRemove = allCols.filter(c => !validCols.includes(c));
-      let uploadRows = rows;
-      if (colsToRemove.length > 0) {
-        uploadRows = rows.map(r => {
-          const clean = { ...r };
-          for (const c of colsToRemove) delete clean[c];
-          return clean;
-        });
+      if (!lcRows.length || !obRows.length) throw new Error('Selecione os dois arquivos: LC131 e LisOB.');
+
+      // ── Enriquecimento: calcula campos derivados ausentes no XLSX ────────────
+      setMessage('Enriquecendo dados...');
+      let uploadRows = enrichForD1(lcRows);
+
+      // Detecta ano(s) do LC131 para pipeline incremental
+      const lcYears = Array.from(new Set(uploadRows
+        .map(r => Number(r.ano_referencia))
+        .filter(y => Number.isFinite(y) && y >= 2000 && y <= 2030)));
+      if (!lcYears.length) throw new Error('Não foi possível detectar o ano no arquivo LC131 (ano_referencia).');
+
+      // ── Lookup DRS/RRAS/IBGE dos municípios via Worker ───────────────────────
+      try {
+        setMessage('Buscando referências de municípios...');
+        const refRes = await fetch(`${WORKER_URL}/api/municipio-refs`);
+        if (refRes.ok) {
+          const muniRefs = await refRes.json() as Record<string, {
+            drs: string; regiao_ad: string; rras: string; regiao_sa: string; cod_ibge: string;
+          }>;
+          uploadRows = uploadRows.map(r => {
+            const mun = String(r.municipio ?? '').toUpperCase().trim();
+            const ref = muniRefs[mun];
+            if (ref && !r.drs) {
+              return { ...r, drs: ref.drs, regiao_ad: ref.regiao_ad, rras: ref.rras, regiao_sa: ref.regiao_sa, cod_ibge: ref.cod_ibge };
+            }
+            return r;
+          });
+        }
+      } catch { /* DRS/RRAS lookup opcional */ }
+      setMessage('');
+
+      // ── Importa LC131 em modo incremental (INSERT OR IGNORE no backend) ────
+      for (let i = 0; i < uploadRows.length; i += CHUNK) {
+        const impRes = await fetch(`${WORKER_URL}/api/import-despesas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: IMPORT_TOKEN, rows: uploadRows.slice(i, i + CHUNK) }),
+        }).then(r => r.json()) as { ok?: boolean; inserted?: number; error?: string };
+        if (!impRes.ok && impRes.error) throw new Error(impRes.error);
+        uploadedLc += impRes.inserted ?? 0;
+        setProgress(Math.round(((i + CHUNK) / uploadRows.length) * 45));
       }
 
-      // Detecta o ano do arquivo
-      const detectedYear = uploadRows[0]?.ano_referencia ? Number(uploadRows[0].ano_referencia) : null;
+      await runPipelineForYears(lcYears);
 
-      if (uploadMode === 'replace') {
-        // Deleta apenas o ano detectado via RPC (SECURITY DEFINER, bypass RLS)
-        if (detectedYear) {
-          setMessage(`Deletando registros de ${detectedYear}...`);
-          const { error: delErr } = await supabase.rpc('lc131_delete_year', { p_ano: detectedYear });
-          if (delErr) throw new Error(`Erro ao deletar ano ${detectedYear}: ${delErr.message}`);
-        } else {
-          throw new Error('Não foi possível detectar o ano do arquivo. Verifique a coluna ano_referencia.');
-        }
-        setMessage('');
-        for (let i = 0; i < uploadRows.length; i += CHUNK) {
-          const { error } = await supabase.from('lc131_despesas').insert(uploadRows.slice(i, i + CHUNK));
-          if (error) throw error;
-          uploaded += Math.min(CHUNK, uploadRows.length - i);
-          setProgress(Math.round((uploaded / uploadRows.length) * 100));
-        }
-      } else {
-        // Incremental: deleta o ano e reimporta tudo (mais confiável que fingerprint)
-        if (detectedYear) {
-          setMessage(`Substituindo registros de ${detectedYear}...`);
-          const { error: delErr } = await supabase.rpc('lc131_delete_year', { p_ano: detectedYear });
-          if (delErr) throw new Error(`Erro ao deletar ano ${detectedYear}: ${delErr.message}`);
-          setMessage('');
-        }
-        for (let i = 0; i < uploadRows.length; i += CHUNK) {
-          const { error } = await supabase.from('lc131_despesas').insert(uploadRows.slice(i, i + CHUNK));
-          if (error) throw error;
-          uploaded += Math.min(CHUNK, uploadRows.length - i);
-          setProgress(Math.round((uploaded / uploadRows.length) * 100));
-        }
+      // ── Importa LisOB em modo incremental/upsert por numero_documento ───────
+      setStep('uploading');
+      setMessage('Importando LisOB...');
+      for (let i = 0; i < obRows.length; i += CHUNK_OB) {
+        const batch = obRows.slice(i, i + CHUNK_OB);
+        const obRes = await fetch(`${WORKER_URL}/api/import-ob`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: IMPORT_TOKEN, rows: batch, skip_enrich: true }),
+        }).then(r => r.json()) as { ok?: boolean; inserted?: number; error?: string };
+        if (!obRes.ok && obRes.error) throw new Error(obRes.error);
+        uploadedOb += obRes.inserted ?? 0;
+        const pctOb = Math.round(((i + CHUNK_OB) / obRows.length) * 45);
+        setProgress(Math.min(95, 50 + pctOb));
       }
 
-      try { await supabase.rpc('refresh_dashboard_batch', { p_batch_size: 10000 }); } catch { /* optional */ }
-      setMessage(uploaded.toLocaleString('pt-BR') + ` registros de ${detectedYear ?? '?'} importados com sucesso!`);
-      if (detectedYear) {
-        await runPipeline(detectedYear);
-      } else {
-        setStep('done');
+      // ── Enriquece LisOB com join por numero_processo em lotes ───────────────
+      setStep('processing');
+      setMessage('Relacionando LisOB com LC131...');
+      let guard = 0;
+      while (guard < 40) {
+        const e = await fetch(`${WORKER_URL}/api/enrich-ob`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: IMPORT_TOKEN, batch_size: 1000 }),
+        }).then(r => r.json()) as { ok?: boolean; done?: boolean; remaining?: number; error?: string };
+        if (e.error) throw new Error(e.error);
+        if (e.done) break;
+        guard += 1;
       }
+
+      setProgress(100);
+      setMessage(`Atualização incremental concluída. LC131 novos: ${uploadedLc.toLocaleString('pt-BR')} | LisOB atualizadas: ${uploadedOb.toLocaleString('pt-BR')}.`);
+      onImportDone?.();
+      setStep('done');
     } catch (e: unknown) { setMessage((e as Error).message); setStep('error'); }
   };
 
-  const reset = () => { setStep('idle'); setRows([]); setFileName(''); setProgress(0); setMessage(''); setConfirm(false); setUploadMode('incremental'); setProcSteps([]); setProcProgress(0); };
-  const cols = rows.length ? Object.keys(rows[0]) : [];
+  const reset = () => { setStep('idle'); setLcRows([]); setObRows([]); setLcFileName(''); setObFileName(''); setProgress(0); setMessage(''); setConfirm(false); setProcSteps([]); setProcProgress(0); };
+  const lcCols = lcRows.length ? Object.keys(lcRows[0]) : [];
+  const lcYears = Array.from(new Set(lcRows.map(r => Number(r.ano_referencia)).filter(y => Number.isFinite(y)))).sort((a, b) => a - b);
+  const obYears = Array.from(new Set(obRows.map(r => Number(r.ano_referencia)).filter(y => Number.isFinite(y)))).sort((a, b) => a - b);
+  const ready = lcRows.length > 0 && obRows.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[10000] flex">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden">
         <div className="px-5 py-3 border-b border-[#E5E5E5] flex items-center justify-between bg-[#FAFAFA]">
           <div className="flex items-center gap-2.5">
             <Upload className="w-4 h-4 text-[#118DFF]" />
             <div>
-              <p className="font-bold text-[#333] text-sm">Importar LC 131</p>
-              <p className="text-[10px] text-[#999]">Importar registros novos ou substituir</p>
+              <p className="font-bold text-[#333] text-sm">Atualização Incremental</p>
+              <p className="text-[10px] text-[#999]">LC131 + LisOB no mesmo processamento</p>
             </div>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#E5E5E5]">
@@ -1994,64 +2509,67 @@ function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportD
               <span className="font-bold text-sm font-mono text-[#333]">{dbCount.toLocaleString('pt-BR')}</span>
             </div>
           )}
-          {step === 'idle' && (
-            <div onDrop={e => { e.preventDefault(); e.dataTransfer.files[0] && handleFile(e.dataTransfer.files[0]); }}
-              onDragOver={e => e.preventDefault()} onClick={() => fileRef.current?.click()}
-              className="bg-[#F8FBFF] border-2 border-dashed border-[#118DFF]/30 rounded-xl p-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#118DFF] transition group">
-              <FileSpreadsheet className="w-10 h-10 text-[#118DFF]/40 group-hover:text-[#118DFF]" />
-              <div className="text-center">
-                <p className="font-semibold text-[#333]">Arraste ou clique para selecionar</p>
-                <p className="text-xs text-[#999] mt-1">.xlsx ou .csv</p>
+          {(step === 'idle' || step === 'preview') && (
+            <div className="space-y-3">
+              <div onDrop={e => { e.preventDefault(); e.dataTransfer.files[0] && handleLcFile(e.dataTransfer.files[0]); }}
+                onDragOver={e => e.preventDefault()} onClick={() => lcFileRef.current?.click()}
+                className="bg-[#F8FBFF] border-2 border-dashed border-[#118DFF]/30 rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-[#118DFF] transition group">
+                <FileSpreadsheet className="w-8 h-8 text-[#118DFF]/40 group-hover:text-[#118DFF]" />
+                <div className="text-center">
+                  <p className="font-semibold text-[#333]">Arquivo LC131</p>
+                  <p className="text-xs text-[#999] mt-0.5">.xlsx ou .csv</p>
+                  {lcFileName && <p className="text-[11px] text-[#118DFF] font-mono mt-1 truncate max-w-[360px]">{lcFileName}</p>}
+                </div>
+                <input ref={lcFileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleLcFile(e.target.files[0])} />
               </div>
-              <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+
+              <div onDrop={e => { e.preventDefault(); e.dataTransfer.files[0] && handleObFile(e.dataTransfer.files[0]); }}
+                onDragOver={e => e.preventDefault()} onClick={() => obFileRef.current?.click()}
+                className="bg-[#FFF8F5] border-2 border-dashed border-[#E66C37]/30 rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-[#E66C37] transition group">
+                <FileSpreadsheet className="w-8 h-8 text-[#E66C37]/40 group-hover:text-[#E66C37]" />
+                <div className="text-center">
+                  <p className="font-semibold text-[#333]">Arquivo LisOB</p>
+                  <p className="text-xs text-[#999] mt-0.5">.xlsx</p>
+                  {obFileName && <p className="text-[11px] text-[#E66C37] font-mono mt-1 truncate max-w-[360px]">{obFileName}</p>}
+                </div>
+                <input ref={obFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && handleObFile(e.target.files[0])} />
+              </div>
+
+              <div className="bg-[#FAFAFA] border border-[#E5E5E5] rounded-lg p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-[#666]">LC131 lidas</span><span className="font-bold text-[#118DFF]">{lcRows.length.toLocaleString('pt-BR')}</span></div>
+                <div className="flex justify-between"><span className="text-[#666]">LisOB lidas</span><span className="font-bold text-[#E66C37]">{obRows.length.toLocaleString('pt-BR')}</span></div>
+                <div className="flex justify-between"><span className="text-[#666]">Anos LC131</span><span className="font-bold text-[#333]">{lcYears.length ? lcYears.join(', ') : '-'}</span></div>
+                <div className="flex justify-between"><span className="text-[#666]">Anos LisOB</span><span className="font-bold text-[#333]">{obYears.length ? obYears.join(', ') : '-'}</span></div>
+              </div>
             </div>
           )}
           {step === 'parsing' && <div className="flex flex-col items-center gap-3 py-10"><Spinner size={7} /><p className="text-sm text-[#666]">Processando...</p></div>}
           {step === 'preview' && (
             <div className="space-y-3">
-              <div className="flex gap-2">
-                <button onClick={() => setUploadMode('incremental')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg border transition ${uploadMode === 'incremental' ? 'bg-[#118DFF] text-white border-[#118DFF]' : 'bg-white text-[#666] border-[#D0D0D0] hover:bg-[#F8FBFF]'}`}>
-                  Substituir Ano
-                </button>
-                <button onClick={() => setUploadMode('replace')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg border transition ${uploadMode === 'replace' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-[#666] border-[#D0D0D0] hover:bg-red-50'}`}>
-                  Substituir Tudo
-                </button>
-              </div>
-              <div className={`border rounded-lg p-3 flex items-start gap-2.5 ${uploadMode === 'replace' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
-                <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${uploadMode === 'replace' ? 'text-amber-600' : 'text-blue-600'}`} />
+              <div className="border rounded-lg p-3 flex items-start gap-2.5 bg-blue-50 border-blue-200">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
                 <div>
-                  <p className={`font-semibold text-sm ${uploadMode === 'replace' ? 'text-amber-800' : 'text-blue-800'}`}>
-                    {uploadMode === 'replace' ? 'Substituição total (todos os anos)' : 'Substituição por ano'}
-                  </p>
-                  <p className={`text-xs mt-0.5 ${uploadMode === 'replace' ? 'text-amber-700' : 'text-blue-700'}`}>
-                    {uploadMode === 'replace'
-                      ? <>Deleta <strong>todos os {dbCount?.toLocaleString('pt-BR') ?? '?'}</strong> registros e importa <strong>{rows.length.toLocaleString('pt-BR')}</strong> de <span className="font-mono">{fileName}</span>.</>
-                      : <>Deleta apenas os registros do <strong>ano detectado no arquivo</strong> e reimporta <strong>{rows.length.toLocaleString('pt-BR')}</strong> linhas de <span className="font-mono">{fileName}</span>. Outros anos não são afetados.</>
-                    }
+                  <p className="font-semibold text-sm text-blue-800">Modo incremental fixo</p>
+                  <p className="text-xs mt-0.5 text-blue-700">
+                    Não deleta dados existentes. O LC131 insere somente novos registros e o LisOB atualiza por número de documento.
                   </p>
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-[#999] uppercase mb-1">Colunas ({cols.length})</p>
-                <div className="flex flex-wrap gap-1">{cols.slice(0,20).map(c => <span key={c} className="px-1.5 py-0.5 bg-[#F0F0F0] text-[#666] text-[9px] font-mono rounded">{c}</span>)}</div>
+                <p className="text-[10px] font-bold text-[#999] uppercase mb-1">Colunas LC131 ({lcCols.length})</p>
+                <div className="flex flex-wrap gap-1">{lcCols.slice(0,20).map(c => <span key={c} className="px-1.5 py-0.5 bg-[#F0F0F0] text-[#666] text-[9px] font-mono rounded">{c}</span>)}</div>
               </div>
               {!confirm ? (
                 <div className="flex gap-2 pt-1">
                   <button onClick={reset} className="flex-1 py-2 text-sm font-semibold text-[#666] border border-[#D0D0D0] rounded-lg hover:bg-[#FAFAFA]">Cancelar</button>
-                  <button onClick={handleUpload} className="flex-1 py-2 text-sm font-bold bg-[#118DFF] text-white rounded-lg hover:bg-[#0D7AE8]">Importar</button>
+                  <button onClick={handleUpload} disabled={!ready} className="flex-1 py-2 text-sm font-bold bg-[#118DFF] text-white rounded-lg hover:bg-[#0D7AE8] disabled:opacity-50 disabled:cursor-not-allowed">Importar LC131 + LisOB</button>
                 </div>
               ) : (
-                <div className={`border rounded-lg p-3 space-y-2 ${uploadMode === 'replace' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-                  <p className={`font-semibold text-sm ${uploadMode === 'replace' ? 'text-red-800' : 'text-blue-800'}`}>
-                    {uploadMode === 'replace' ? 'Tem certeza? Deleta TODOS os anos.' : 'Confirma substituição do ano?'}
-                  </p>
+                <div className="border rounded-lg p-3 space-y-2 bg-blue-50 border-blue-200">
+                  <p className="font-semibold text-sm text-blue-800">Confirma atualização incremental dos dois arquivos?</p>
                   <div className="flex gap-2">
                     <button onClick={() => setConfirm(false)} className="flex-1 py-1.5 text-xs font-semibold border border-[#D0D0D0] rounded bg-white">Não</button>
-                    <button onClick={handleUpload} className={`flex-1 py-1.5 text-xs font-bold text-white rounded ${uploadMode === 'replace' ? 'bg-red-600' : 'bg-[#118DFF]'}`}>
-                      {uploadMode === 'replace' ? 'Sim, substituir' : 'Sim, importar novos'}
-                    </button>
+                    <button onClick={handleUpload} className="flex-1 py-1.5 text-xs font-bold text-white rounded bg-[#118DFF]">Sim, atualizar incremental</button>
                   </div>
                 </div>
               )}
@@ -2104,7 +2622,7 @@ function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportD
           {step === 'done' && (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <CheckCircle2 className="w-12 h-12 text-green-500" />
-              <div><p className="font-bold text-[#333]">Importação concluída!</p><p className="text-sm text-[#666] mt-1">{message}</p></div>
+              <div><p className="font-bold text-[#333]">Atualização incremental concluída!</p><p className="text-sm text-[#666] mt-1">{message}</p></div>
               <button onClick={reset} className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg">Outro</button>
             </div>
           )}
@@ -2122,6 +2640,285 @@ function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportD
 }
 
 // --.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+// --- OB Tab ---
+interface ObSummaryData {
+  totals: { total: number; processos: number; valor_total: number; credores: number };
+  byYear: { ano: number; total: number; valor: number; credores: number }[];
+  linked: { ob_vinculadas: number; processos_vinculados: number };
+  topCredores: { credor: string; total: number; valor: number }[];
+  porDrs:   { drs: string; ob_total: number; municipios: number; valor: number }[];
+  porTipo:  { tipo_despesa: string; ob_total: number; valor: number }[];
+  porMunic: { municipio: string; regiao_ad: string; drs: string; ob_total: number; valor: number }[];
+}
+interface ObDetailRow {
+  id: number; ano_referencia: number; mes_lancamento: string;
+  codigo_nome_credor: string; data_lancamento: string;
+  numero_documento: string; valor_documento: number;
+  codigo_nome_ug: string; codigo_uo: string;
+  descricao_documento: string; codigo_nome_orgao: string;
+  numero_documento_origem: string; ne_origem: string;
+  codigo_nome_fonte_recurso: string; codigo_nome_programa: string;
+  codigo_nome_elemento: string; numero_processo: string;
+  // joined from despesas
+  municipio?: string; drs?: string; rras?: string; regiao_ad?: string; tipo_despesa?: string;
+}
+
+function ObTab({ onUploadClick }: { onUploadClick: () => void }) {
+  const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
+  const [summary, setSummary] = useState<ObSummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchProc, setSearchProc] = useState('');
+  const [searchCreedor, setSearchCreedor] = useState('');
+  const [anoFilter, setAnoFilter] = useState<number | ''>('');
+  const [detailRows, setDetailRows] = useState<ObDetailRow[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSearched, setDetailSearched] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${WORKER_URL}/api/ob-summary`)
+      .then(r => r.json())
+      .then((d: unknown) => {
+        const data = d as ObSummaryData & { ok?: boolean };
+        if (data.ok !== false) setSummary(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [WORKER_URL]);
+
+  const searchDetail = async () => {
+    setDetailLoading(true); setDetailSearched(true);
+    try {
+      const params: Record<string, string> = { action: 'ob_detail', limit: '200' };
+      if (anoFilter) params.p_ano = String(anoFilter);
+      if (searchProc.trim()) params.processo = searchProc.trim();
+      if (searchCreedor.trim()) params.credor = searchCreedor.trim();
+      const res = await fetch(`${WORKER_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const data = await res.json() as { ok?: boolean; rows?: ObDetailRow[]; error?: string };
+      setDetailRows(data.rows ?? []);
+    } catch { setDetailRows([]); }
+    setDetailLoading(false);
+  };
+
+  const totalObs    = summary?.totals?.total ?? 0;
+  const obVinc      = summary?.linked?.ob_vinculadas ?? 0;
+  const pctVinc     = totalObs > 0 ? Math.round((obVinc / totalObs) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Header + upload button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-[#1B1B1B]">Ordens Bancárias (OB)</h2>
+          <p className="text-[11px] text-[#888] mt-0.5">Lis OB 2022–2026 · relacionamento via Número de Processo com LC 131</p>
+        </div>
+        <button onClick={onUploadClick}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E66C37] text-white text-xs font-bold rounded-lg hover:bg-[#D05A25] transition">
+          <Upload className="w-3.5 h-3.5" />
+          Atualizar LC131 + LisOB
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-40"><Spinner size={6} /></div>
+      ) : !summary || totalObs === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <DollarSign className="w-12 h-12 text-[#DDD]" />
+          <div>
+            <p className="font-bold text-[#666]">Nenhuma OB importada</p>
+            <p className="text-xs text-[#999] mt-1">Execute a atualização conjunta com os arquivos LC131 e LisOB para começar.</p>
+          </div>
+          <button onClick={onUploadClick}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#E66C37] text-white text-sm font-bold rounded-lg hover:bg-[#D05A25]">
+            <Upload className="w-4 h-4" />
+            Atualizar LC131 + LisOB
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="Total OBs" value={totalObs.toLocaleString('pt-BR')}
+              icon={<FileText className="w-4 h-4" />} color="#E66C37" />
+            <KpiCard label="Valor Total" value={fmt(summary.totals.valor_total, 'compact')}
+              icon={<DollarSign className="w-4 h-4" />} color="#118DFF" />
+            <KpiCard label="OBs Vinculadas à LC 131" value={`${obVinc.toLocaleString('pt-BR')} (${pctVinc}%)`}
+              sub={`${(summary.linked.processos_vinculados ?? 0).toLocaleString('pt-BR')} processos em comum`}
+              icon={<CheckCircle2 className="w-4 h-4" />} color="#1AAB40" />
+            <KpiCard label="Credores únicos" value={(summary.totals.credores ?? 0).toLocaleString('pt-BR')}
+              icon={<Users className="w-4 h-4" />} color="#6B007B" />
+          </div>
+
+          {/* Vinculação alert */}
+          {pctVinc < 100 && (
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+              <p>
+                <strong>{(totalObs - obVinc).toLocaleString('pt-BR')}</strong> OBs ({100 - pctVinc}%) não possuem correspondência na LC 131 via Número de Processo.
+                Isso pode indicar registros de anos distintos ou processos não presentes na planilha de despesas.
+              </p>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* OBs por ano */}
+            <Card title="OBs por Ano" icon={<BarChart3 className="w-4 h-4" />}>
+              <div className="space-y-2">
+                {(summary.byYear ?? []).map(r => {
+                  const pct = summary.totals.valor_total > 0 ? (r.valor / summary.totals.valor_total) * 100 : 0;
+                  return (
+                    <div key={r.ano} className="space-y-0.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-semibold text-[#333]">{r.ano}</span>
+                        <span className="text-[#666]">{r.total.toLocaleString('pt-BR')} OBs · {fmt(r.valor, 'compact')}</span>
+                      </div>
+                      <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#E66C37] rounded-full" style={{ width: pct + '%' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Top credores */}
+            <Card title="Top 10 Credores (por valor)" icon={<Users className="w-4 h-4" />}>
+              <div className="space-y-1 max-h-56 overflow-y-auto">
+                {(summary.topCredores ?? []).slice(0, 10).map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-[#F5F5F5] last:border-0">
+                    <span className="text-[#999] w-5 shrink-0 text-right font-mono">{i + 1}</span>
+                    <span className="flex-1 text-[#333] truncate">{c.credor}</span>
+                    <span className="text-[#666] shrink-0 font-mono">{fmt(c.valor, 'compact')}</span>
+                    <span className="text-[#999] shrink-0 text-[10px]">({c.total})</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* OBs por DRS + por Tipo Despesa (vinculação LC 131) */}
+          {((summary.porDrs ?? []).length > 0 || (summary.porTipo ?? []).length > 0) && (
+            <div className="grid md:grid-cols-2 gap-4">
+              {(summary.porDrs ?? []).length > 0 && (
+                <Card title="OBs por DRS (via LC 131)" icon={<MapPin className="w-4 h-4" />}>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {(summary.porDrs ?? []).map((r, i) => {
+                      const maxVal = summary.porDrs[0]?.valor ?? 1;
+                      const pct = (r.valor / maxVal) * 100;
+                      return (
+                        <div key={i} className="text-xs">
+                          <div className="flex justify-between mb-0.5">
+                            <span className="text-[#333] truncate max-w-[55%]">{r.drs}</span>
+                            <span className="text-[#666] shrink-0">{r.ob_total} OBs · {fmt(r.valor, 'compact')}</span>
+                          </div>
+                          <div className="h-1 bg-[#F0F0F0] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#1B7AB5] rounded-full" style={{ width: pct + '%' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+              {(summary.porTipo ?? []).length > 0 && (
+                <Card title="OBs por Tipo de Despesa (via LC 131)" icon={<Tag className="w-4 h-4" />}>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {(summary.porTipo ?? []).slice(0, 15).map((r, i) => {
+                      const maxVal = summary.porTipo[0]?.valor ?? 1;
+                      const pct = (r.valor / maxVal) * 100;
+                      return (
+                        <div key={i} className="text-xs">
+                          <div className="flex justify-between mb-0.5">
+                            <span className="text-[#333] truncate max-w-[55%]">{r.tipo_despesa}</span>
+                            <span className="text-[#666] shrink-0">{r.ob_total} OBs · {fmt(r.valor, 'compact')}</span>
+                          </div>
+                          <div className="h-1 bg-[#F0F0F0] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#E66C37] rounded-full" style={{ width: pct + '%' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Search OBs */}
+          <Card title="Consultar OBs" icon={<Search className="w-4 h-4" />}>
+            <div className="space-y-3">
+              <div className="flex gap-2 flex-wrap">
+                <select value={anoFilter} onChange={e => setAnoFilter(e.target.value ? Number(e.target.value) : '')}
+                  className="h-8 px-2 text-xs border border-[#D0D0D0] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#E66C37]">
+                  <option value="">Todos os anos</option>
+                  {(summary.byYear ?? []).map(r => <option key={r.ano} value={r.ano}>{r.ano}</option>)}
+                </select>
+                <input value={searchProc} onChange={e => setSearchProc(e.target.value)} placeholder="Número do Processo"
+                  className="h-8 px-2 text-xs border border-[#D0D0D0] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#E66C37] flex-1 min-w-[160px]" />
+                <input value={searchCreedor} onChange={e => setSearchCreedor(e.target.value)} placeholder="Credor (busca parcial)"
+                  className="h-8 px-2 text-xs border border-[#D0D0D0] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#E66C37] flex-1 min-w-[160px]" />
+                <button onClick={searchDetail} disabled={detailLoading}
+                  className="h-8 px-4 bg-[#E66C37] text-white text-xs font-bold rounded hover:bg-[#D05A25] disabled:opacity-50 flex items-center gap-1.5">
+                  {detailLoading ? <Spinner size={3} /> : <Search className="w-3.5 h-3.5" />}
+                  Buscar
+                </button>
+              </div>
+
+              {detailSearched && (
+                detailLoading ? (
+                  <div className="flex justify-center py-4"><Spinner size={5} /></div>
+                ) : detailRows.length === 0 ? (
+                  <p className="text-xs text-[#999] text-center py-4">Nenhuma OB encontrada.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded border border-[#E5E5E5]">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="bg-[#F8F8F8] border-b border-[#E5E5E5]">
+                          {['Ano','Mês','Data','Nº Documento','Credor','Valor','Órgão/UG','Elemento','Processo','Município (LC 131)','DRS','Tipo Despesa'].map(h => (
+                            <th key={h} className="px-2 py-1.5 text-left font-bold text-[#555] whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F5F5F5]">
+                        {detailRows.map((row, i) => (
+                          <tr key={i} className={cn('hover:bg-[#FAFAFA]', row.municipio ? 'bg-white' : 'bg-amber-50/30')}>
+                            <td className="px-2 py-1">{row.ano_referencia}</td>
+                            <td className="px-2 py-1">{row.mes_lancamento}</td>
+                            <td className="px-2 py-1 whitespace-nowrap">{row.data_lancamento}</td>
+                            <td className="px-2 py-1 font-mono">{row.numero_documento}</td>
+                            <td className="px-2 py-1 max-w-[180px] truncate">{row.codigo_nome_credor}</td>
+                            <td className="px-2 py-1 text-right font-mono">{fmt(row.valor_documento, 'currency')}</td>
+                            <td className="px-2 py-1 max-w-[140px] truncate">{row.codigo_nome_ug || row.codigo_uo}</td>
+                            <td className="px-2 py-1 max-w-[120px] truncate">{row.codigo_nome_elemento}</td>
+                            <td className="px-2 py-1 font-mono">{row.numero_processo}</td>
+                            <td className="px-2 py-1">{row.municipio ?? <span className="text-[#BBB] italic">—</span>}</td>
+                            <td className="px-2 py-1">{row.drs ?? '—'}</td>
+                            <td className="px-2 py-1 max-w-[120px] truncate">{row.tipo_despesa ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {detailRows.length >= 200 && (
+                      <p className="text-[10px] text-[#999] text-center py-1.5 bg-[#FAFAFA] border-t border-[#E5E5E5]">
+                        Mostrando primeiros 200 resultados. Refine a busca para ver mais.
+                      </p>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+// --.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 // --- Main App ---
 // --.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 export default function App() {
@@ -2129,6 +2926,7 @@ export default function App() {
   const [error, setError]                 = useState<string|null>(null);
   const [viewMissing, setViewMissing]     = useState(false);
   const [uploadOpen, setUploadOpen]       = useState(false);
+  const [obUploadOpen, setObUploadOpen]   = useState(false);
   const [pwdGateOpen, setPwdGateOpen]     = useState(false);
   const [pwdInput, setPwdInput]           = useState('');
   const [pwdError, setPwdError]           = useState(false);
@@ -2168,18 +2966,29 @@ export default function App() {
   const [pivotXlsxLoading, setPivotXlsxLoading] = useState(false);
   const pivotDragIdx = useRef<number | null>(null);
 
-  // -- Retry helper for RPC calls (handles upstream timeouts) --
-  const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 3) => {
+  const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
+
+  // -- Retry helper for RPC calls (Worker API em vez de Supabase) --
+  const rpcWithRetry = useCallback(async (fnName: string, params: Record<string, unknown>, retries = 1) => {
+    const ACTION_MAP: Record<string, string> = { 'lc131_dashboard': 'dashboard', 'lc131_distincts': 'distincts' };
+    const action = ACTION_MAP[fnName] ?? fnName;
     for (let attempt = 0; attempt < retries; attempt++) {
-      const { data, error } = await supabase.rpc(fnName, params);
-      if (!error) return { data, error: null };
-      if (error.message?.includes('timeout') || error.message?.includes('upstream') || error.code === 'PGRST000') {
+      try {
+        const res = await fetch(`${WORKER_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...params }),
+        });
+        const data = await res.json();
+        if (!res.ok) return { data: null, error: { code: String(res.status), message: (data as Record<string,unknown>).error as string ?? 'Worker error' } };
+        return { data, error: null };
+      } catch (e: unknown) {
         if (attempt < retries - 1) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
+        return { data: null, error: { code: 'NETWORK', message: (e as Error).message } };
       }
-      return { data, error };
     }
     return { data: null, error: { code: 'TIMEOUT', message: 'upstream request timeout após múltiplas tentativas' } };
-  }, []);
+  }, [WORKER_URL]);
 
   // -- Load dashboard --
   const loadDashboard = useCallback(async (ano: number | 'todos', activeFilters: Partial<Record<DetailFilterKey, string[]>>) => {
@@ -2229,12 +3038,11 @@ export default function App() {
     (async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          const [{ data: maxR }, { data: minR }] = await Promise.all([
-            supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: false }).limit(1).single(),
-            supabase.from('lc131_despesas').select('ano_referencia').order('ano_referencia', { ascending: true }).limit(1).single(),
-          ]);
-          const maxAno = (maxR?.ano_referencia as number) ?? new Date().getFullYear();
-          const minAno = (minR?.ano_referencia as number) ?? maxAno;
+          const res = await fetch(`${WORKER_URL}/api/years`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const yr = await res.json() as { min: number; max: number };
+          const maxAno = yr.max ?? new Date().getFullYear();
+          const minAno = yr.min ?? maxAno;
           const anos = Array.from({ length: maxAno - minAno + 1 }, (_, i) => minAno + i);
           setAvailableAnos(anos);
           setAnoSel(maxAno);
@@ -2273,20 +3081,6 @@ export default function App() {
       const { data: rpc, error: rpcErr } = await rpcWithRetry('lc131_distincts', params);
       if (!rpcErr) nextDistincts = buildDistinctState(rpc as Record<string, unknown> | undefined);
 
-      if (!hasAnyDistinctOptions(nextDistincts) || (nextDistincts.distinct_tipo?.length ?? 0) === 0) {
-        let query = supabase.from('lc131_despesas')
-          .select('drs, regiao_ad, municipio, rras, regiao_sa, codigo_nome_grupo, codigo_nome_elemento, tipo_despesa, descricao_processo, rotulo, codigo_nome_fonte_recurso, codigo_nome_uo, codigo_nome_favorecido, codigo_ug')
-          .limit(20000);
-        if (ano !== 'todos') query = query.eq('ano_referencia', Number(ano));
-        query = applyFiltersToQuery(query, cf, '');
-
-        let { data: fallbackRows, error: fallbackErr } = await query;
-
-        if (!fallbackErr && Array.isArray(fallbackRows)) {
-          nextDistincts = buildDistinctStateFromRows(fallbackRows as Record<string, unknown>[]);
-        }
-      }
-
       if ((nextDistincts.distinct_tipo?.length ?? 0) === 0 && data?.porTipoDespesa?.length) {
         nextDistincts = {
           ...nextDistincts,
@@ -2313,25 +3107,27 @@ export default function App() {
   const loadDetail = useCallback(async (page: number, search = '') => {
     setDetailLoading(true); setDetailError(null);
     try {
-      // Direct REST query – avoids the slow COUNT(*) in lc131_detail RPC
-      let query = supabase.from('lc131_despesas')
-        .select('*', { count: 'exact' })
-        .order('empenhado', { ascending: false, nullsFirst: false })
-        .range(page * DETAIL_PAGE_SIZE, (page + 1) * DETAIL_PAGE_SIZE - 1);
-
-      if (anoSel !== 'todos') query = query.eq('ano_referencia', Number(anoSel));
-      query = applyFiltersToQuery(query, filters, search);
-
-      let { data, count, error } = await query;
-
-      // tipo_despesa is now the enriched column (from TIPO_DESPESA.xlsx mapping)
-
-      if (error) throw new Error(error.message);
-      const rows = (data ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));
-      setDetailTotal(count ?? rows.length); setDetailRows(rows); setDetailPage(page);
+      const params: Record<string, unknown> = { action: 'detail', p_limit: DETAIL_PAGE_SIZE, p_offset: page * DETAIL_PAGE_SIZE };
+      if (anoSel !== 'todos') params.p_ano = Number(anoSel);
+      if (search.trim()) {
+        params.p_codigo_ug = search.trim();
+      } else {
+        Object.entries(filters).forEach(([k, v]) => {
+          if (Array.isArray(v) && v.length > 0) params[k] = expandFilterValues(k, v).join('|');
+        });
+      }
+      const res = await fetch(`${WORKER_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const d = await res.json() as { rows?: Record<string,unknown>[]; total?: number; error?: string };
+      if (!res.ok) throw new Error(d.error ?? `HTTP ${res.status}`);
+      const rows = (d.rows ?? []).map(r => enrichDetailRow(r));
+      setDetailTotal(d.total ?? rows.length); setDetailRows(rows); setDetailPage(page);
     } catch (e: unknown) { setDetailError((e as Error).message); }
     finally { setDetailLoading(false); }
-  }, [anoSel, filters]);
+  }, [anoSel, filters, WORKER_URL]);
 
   const detailDeb = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
@@ -2354,8 +3150,17 @@ export default function App() {
       Object.entries(filters).forEach(([k, v]) => {
         if (Array.isArray(v) && v.length > 0) params[k] = v.join('|');
       });
-      const { data, error } = await supabase.rpc('lc131_pivot_multi', params);
-      if (error) throw new Error(error.message);
+      const res = await fetch(`${WORKER_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pivot', ...params }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error((data as Record<string,unknown>).error as string ?? `HTTP ${res.status}`);
+      // Worker returns { error, timeout } on pivot timeout
+      if (!Array.isArray(data) && (data as Record<string,unknown>).error) {
+        throw new Error((data as Record<string,unknown>).error as string);
+      }
       setPivotMultiRaw(Array.isArray(data) ? (data as Record<string,unknown>[]).map(r => ({
         d1: String(r.d1 ?? ''),
         d2: r.d2 != null ? String(r.d2) : null,
@@ -2372,7 +3177,7 @@ export default function App() {
     } finally {
       setPivotLoading(false);
     }
-  }, [filters, anoSel, pivotDims]);
+  }, [filters, anoSel, pivotDims, WORKER_URL]);
 
   useEffect(() => {
     if (activeTab !== 'pivot') return;
@@ -2398,6 +3203,10 @@ export default function App() {
   const activeFilterCount = Object.values(filters).filter(v => Array.isArray(v) && v.length > 0).length;
   const handleRefresh = () => { cacheRef.current.clear(); setData(null); loadDashboard(anoSel, filters); loadDistincts(filters, anoSel); };
 
+  useEffect(() => {
+    if (activeTab === 'mapa' && filtersOpen) setFiltersOpen(false);
+  }, [activeTab, filtersOpen]);
+
   const switchTab = (t: Tab) => {
     setActiveTab(t);
     if (t === 'dados') { loadDetail(0, tableSearch); if (Object.keys(distincts).length === 0) loadDistincts(filters, anoSel); }
@@ -2415,19 +3224,26 @@ export default function App() {
   const downloadAllXlsx = async () => {
     setXlsxLoading(true);
     try {
-      const BATCH = 1000; // Supabase REST hard-caps at 1000 rows per request
+      const BATCH = 2000;
       let offset = 0;
       const allRows: DetailRow[] = [];
+      const baseParams: Record<string, unknown> = { action: 'detail', p_limit: BATCH };
+      if (anoSel !== 'todos') baseParams.p_ano = Number(anoSel);
+      if (tableSearch.trim()) {
+        baseParams.p_codigo_ug = tableSearch.trim();
+      } else {
+        Object.entries(filters).forEach(([k, v]) => {
+          if (Array.isArray(v) && v.length > 0) baseParams[k] = expandFilterValues(k, v).join('|');
+        });
+      }
       while (true) {
-        let q = supabase.from('lc131_despesas')
-          .select('*')
-          .order('empenhado', { ascending: false, nullsFirst: false })
-          .range(offset, offset + BATCH - 1);
-        if (anoSel !== 'todos') q = q.eq('ano_referencia', Number(anoSel));
-        q = applyFiltersToQuery(q, filters, tableSearch);
-        const { data: batch, error } = await q;
-        if (error) throw new Error(error.message);
-        const fetched = (batch ?? []).map(r => enrichDetailRow(r as Record<string, unknown>));
+        const res = await fetch(`${WORKER_URL}/api/query`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...baseParams, p_offset: offset }),
+        });
+        const d = await res.json() as { rows?: Record<string,unknown>[]; error?: string };
+        if (!res.ok) throw new Error(d.error ?? `HTTP ${res.status}`);
+        const fetched = (d.rows ?? []).map(r => enrichDetailRow(r));
         allRows.push(...fetched);
         if (fetched.length < BATCH) break;
         offset += BATCH;
@@ -2464,7 +3280,7 @@ export default function App() {
       <div className="bg-white rounded-lg border border-amber-200 p-6 max-w-md w-full space-y-3">
         <AlertCircle className="w-6 h-6 text-amber-400" />
         <p className="font-bold text-[#333]">Setup necessário</p>
-        <p className="text-sm text-[#666]">Execute <code className="bg-[#F0F0F0] px-1 rounded text-xs">scripts/supabase_setup.sql</code> no Supabase.</p>
+        <p className="text-sm text-[#666]">A API não está disponível. Entre em contato com o administrador do sistema.</p>
         <button onClick={handleRefresh} className="w-full py-2 bg-[#118DFF] text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2">
           <RefreshCw className="w-3.5 h-3.5" /> Verificar
         </button>
@@ -2478,7 +3294,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F3F2F1]">
       {/* --.-.-.-.-.-.-.-HEADER --.-.-.-.-.-.-.-*/}
-      <header className="sticky top-0 z-40 bg-[#1B1B1B] text-white shadow-md">
+      <header className="sticky top-0 z-[1200] bg-[#1B1B1B] text-white shadow-md">
         <div className="max-w-screen-2xl mx-auto px-4 h-11 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <img src="/img/logo1.png" alt="Logo CSS" className="h-[84px] w-auto" />
@@ -2507,8 +3323,8 @@ export default function App() {
               </button>
               {menuOpen && (
                 <>
-                  <div className="fixed inset-0 z-[39]" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-9 z-40 w-44 bg-[#1B1B1B] border border-[#333] rounded-xl shadow-2xl overflow-hidden">
+                  <div className="fixed inset-0 z-[1198]" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-9 z-[1201] w-44 bg-[#1B1B1B] border border-[#333] rounded-xl shadow-2xl overflow-hidden">
                     <button onClick={() => { handleRefresh(); setMenuOpen(false); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#CCC] hover:bg-[#333] transition">
                       <RefreshCw className={cn('w-3.5 h-3.5 shrink-0', loading && 'animate-spin')} />
@@ -2518,7 +3334,7 @@ export default function App() {
                     <button onClick={() => { setPwdInput(''); setPwdError(false); setPwdGateOpen(true); setMenuOpen(false); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#118DFF] hover:bg-[#333] transition">
                       <Upload className="w-3.5 h-3.5 shrink-0" />
-                      Importar planilha
+                      Atualização LC131 + LisOB
                     </button>
                   </div>
                 </>
@@ -2529,7 +3345,7 @@ export default function App() {
       </header>
 
       {/* --.-.-.-.-.-.-.-TABS + YEARS --.-.-.-.-.-.-.-*/}
-      <div className="sticky top-11 z-30 bg-white border-b border-[#E5E5E5] shadow-sm">
+      <div className="sticky top-11 z-[1150] bg-white border-b border-[#E5E5E5] shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 flex items-center justify-between gap-3 h-10">
           {/* Tabs */}
           <div className="flex items-center gap-0">
@@ -2560,7 +3376,7 @@ export default function App() {
 
       {/* --.-.-.-.-.-.-.-FILTER BAR --.-.-.-.-.-.-.-*/}
       {filtersOpen && (
-        <div className="sticky top-[84px] z-30 bg-white border-b border-[#E5E5E5] shadow-md">
+        <div className="sticky top-[84px] z-[1150] bg-white border-b border-[#E5E5E5] shadow-md">
           <div className="max-w-screen-2xl mx-auto px-4 py-2.5">
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-7 gap-2">
               {FILTER_META.map(f => (
@@ -3906,8 +4722,8 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
                     <div>
                       <p className="font-semibold text-sm">Erro ao carregar a Tabela Dinâmica</p>
                       <p className="text-xs font-mono mt-0.5 text-[#888]">
-                        {pivotError.includes('Could not find the function') || pivotError.includes('lc131_pivot_multi')
-                          ? 'Função lc131_pivot_multi não encontrada. Execute scripts/create-pivot-multi-fn.sql no Supabase SQL Editor e tente novamente.'
+                        {pivotError.includes('524') || pivotError.includes('timeout') || pivotError.includes('Turso')
+                          ? 'Consulta expirou — volume de dados muito grande. Aplique filtros adicionais (ex: DRS, Grupo) para reduzir o volume.'
                           : pivotError}
                       </p>
                       <button onClick={loadPivot} className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600">Retry</button>
@@ -4026,9 +4842,7 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
                               <Database className="w-8 h-8 mx-auto mb-2 opacity-25" />
                               <p style={{ fontSize: '13px', fontWeight: 500 }}>Nenhum dado encontrado</p>
                               <p style={{ fontSize: '11px', marginTop: '4px' }}>
-                                Verifique os filtros ou execute{' '}
-                                <code className="bg-gray-100 px-1 rounded">scripts/create-pivot-multi-fn.sql</code>
-                                {' '}no Supabase SQL Editor
+                                Verifique os filtros aplicados.
                               </p>
                             </td>
                           </tr>
@@ -4043,6 +4857,13 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
         })()}
 
 
+
+        {/* ---------- TAB: OB ---------- */}
+        {activeTab === 'ob' && (
+          <div className="max-w-screen-xl mx-auto py-4">
+            <ObTab onUploadClick={() => { setPwdInput(''); setPwdError(false); setPwdGateOpen(true); }} />
+          </div>
+        )}
 
         {/* ---------- TAB: LEGENDA ---------- */}
         {activeTab === 'legenda' && (
@@ -4197,13 +5018,14 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
 
         {/* Footer */}
         <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5] text-[10px] text-[#BBB] flex-wrap gap-2">
-          <span className="font-mono">lc131_despesas · teikzwrfsxjipxozzhbr.supabase.co</span>
+          <span className="font-mono">lc131_despesas · lc131-api.sessp-css2.workers.dev</span>
           <span>Controle de Despesas · Coordenadoria de Gestão Orçamentária e Financeira · SES/SP · {new Date().getFullYear()}</span>
         </div>
       </main>
       )}
 
       {uploadOpen && <UploadPanel onClose={() => setUploadOpen(false)} onImportDone={() => { const d = new Date(); try { localStorage.setItem('lc131_lastImportAt', d.toISOString()); } catch {} setLastImportAt(d); setUploadOpen(false); }} />}
+      {obUploadOpen && <UploadObPanel onClose={() => setObUploadOpen(false)} onImportDone={() => { setObUploadOpen(false); switchTab('ob'); }} />}
 
       {/* Password gate modal */}
       {pwdGateOpen && (
@@ -4213,7 +5035,7 @@ ${filterDesc ? `<p class="meta">Filtros: ${filterDesc}</p>` : ''}
               <Lock className="w-5 h-5 text-[#118DFF] shrink-0" />
               <p className="font-bold text-[#333] text-sm">Acesso restrito</p>
             </div>
-            <p className="text-[11px] text-[#999] -mt-2">Informe a senha para importar planilha.</p>
+            <p className="text-[11px] text-[#999] -mt-2">Informe a senha para importar LC131 e LisOB.</p>
             <form onSubmit={e => { e.preventDefault(); if (pwdInput === 'cgof@#$2026') { setPwdGateOpen(false); setPwdInput(''); setPwdError(false); setUploadOpen(true); } else { setPwdError(true); setPwdInput(''); } }}>
               <input
                 autoFocus

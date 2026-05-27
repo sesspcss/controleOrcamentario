@@ -1,0 +1,4610 @@
+{
+  "lookup": {
+    "SAO PAULO": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 06",
+      "regiao_sa": "Sao Paulo",
+      "cod_ibge": "355030"
+    },
+    "LARANJAL PAULISTA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "352640"
+    },
+    "PIRAJU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "353880"
+    },
+    "REGISTRO": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "354260"
+    },
+    "TEODORO SAMPAIO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Pontal do Paranapanema",
+      "cod_ibge": "355430"
+    },
+    "TUPI PAULISTA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "355510"
+    },
+    "RANCHARIA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alto Capivari",
+      "cod_ibge": "354220"
+    },
+    "ADAMANTINA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "350010"
+    },
+    "JAU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "352530"
+    },
+    "BARRETOS": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "350550"
+    },
+    "BEBEDOURO": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "350610"
+    },
+    "ARACATUBA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "350280"
+    },
+    "BATATAIS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "350590"
+    },
+    "PRESIDENTE VENCESLAU": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Extremo Oeste Paulista",
+      "cod_ibge": "354150"
+    },
+    "RIO CLARO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "354390"
+    },
+    "AURIFLAMA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "350420"
+    },
+    "ANDRADINA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "350210"
+    },
+    "RIBEIRAO PRETO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "354340"
+    },
+    "GUARIBA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "351860"
+    },
+    "SERTAOZINHO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "355170"
+    },
+    "IBITINGA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "351960"
+    },
+    "MOGI GUACU": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Baixa Mogiana",
+      "cod_ibge": "353070"
+    },
+    "MOCOCA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "353050"
+    },
+    "LORENA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "352720"
+    },
+    "ARARAQUARA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "350320"
+    },
+    "TAQUARITINGA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "355370"
+    },
+    "SAO CARLOS": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "354890"
+    },
+    "PORTO FERREIRA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "354070"
+    },
+    "MATAO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "352930"
+    },
+    "SAO JOAO DA BOA VISTA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "354910"
+    },
+    "CARAGUATATUBA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Litoral Norte",
+      "cod_ibge": "351050"
+    },
+    "JACAREI": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "352440"
+    },
+    "SAO JOSE DOS CAMPOS": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "354990"
+    },
+    "PINDAMONHANGABA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "353800"
+    },
+    "TAUBATE": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "355410"
+    },
+    "MOGI DAS CRUZES": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "353060"
+    },
+    "TIETE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "355450"
+    },
+    "SOROCABA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "355220"
+    },
+    "APIAI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "350270"
+    },
+    "ITAPETININGA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "352230"
+    },
+    "CAPAO BONITO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "351020"
+    },
+    "APARECIDA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350250"
+    },
+    "ARARAS": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Araras",
+      "cod_ibge": "350330"
+    },
+    "BAURU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350600"
+    },
+    "BRAGANCA PAULISTA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "350760"
+    },
+    "CACONDE": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "350870"
+    },
+    "CAMPINAS": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "350950"
+    },
+    "CAMPOS DO JORDAO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "350970"
+    },
+    "CARDOSO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "351070"
+    },
+    "CATANDUVA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "351110"
+    },
+    "CHAVANTES": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "355720"
+    },
+    "CLEMENTINA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "351190"
+    },
+    "DIADEMA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "351380"
+    },
+    "DIVINOLANDIA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "351390"
+    },
+    "ESPIRITO SANTO DO PINHAL": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "351518"
+    },
+    "ESTRELA DO NORTE": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "351530"
+    },
+    "FERNANDOPOLIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "351550"
+    },
+    "FLORIDA PAULISTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "351600"
+    },
+    "FRANCA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "351620"
+    },
+    "GARCA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351670"
+    },
+    "GUARARAPES": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "351820"
+    },
+    "GUARATINGUETA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "351840"
+    },
+    "HERCULANDIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "351900"
+    },
+    "ILHA SOLTEIRA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "352044"
+    },
+    "ITAPIRA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Baixa Mogiana",
+      "cod_ibge": "352260"
+    },
+    "ITU": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "352390"
+    },
+    "JACI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "352450"
+    },
+    "JALES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "352480"
+    },
+    "JOSE BONIFACIO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "352570"
+    },
+    "JUNDIAI": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "352590"
+    },
+    "MARILIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "352900"
+    },
+    "MOGI MIRIM": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Baixa Mogiana",
+      "cod_ibge": "353080"
+    },
+    "MONTE APRAZIVEL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "353140"
+    },
+    "NHANDEARA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "353260"
+    },
+    "NOVA GRANADA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353300"
+    },
+    "OSASCO": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "353440"
+    },
+    "PARIQUERA-ACU": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "353620"
+    },
+    "PATROCINIO PAULISTA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "353630"
+    },
+    "PEDREGULHO": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "353700"
+    },
+    "PRESIDENTE PRUDENTE": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354140"
+    },
+    "SANTA FE DO SUL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "354660"
+    },
+    "SANTOS": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "354850"
+    },
+    "SAO CAETANO DO SUL": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "354880"
+    },
+    "SAO JOAQUIM DA BARRA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "354940"
+    },
+    "SAO JOSE DO RIO PRETO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "354980"
+    },
+    "SUMARE": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "355240"
+    },
+    "SUZANO": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "355250"
+    },
+    "TABOAO DA SERRA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "355280"
+    },
+    "TANABI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "355340"
+    },
+    "TUPA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "355500"
+    },
+    "BOTUCATU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "350750"
+    },
+    "AMPARO": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Circuito das Aguas",
+      "cod_ibge": "350190"
+    },
+    "ASSIS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "350400"
+    },
+    "AVARE": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "350450"
+    },
+    "BARUERI": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "350570"
+    },
+    "FRANCISCO MORATO": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 03",
+      "regiao_sa": "Franco da Rocha",
+      "cod_ibge": "351630"
+    },
+    "GUARUJA": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "351870"
+    },
+    "GUARULHOS": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "351880"
+    },
+    "ITAPOLIS": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "352270"
+    },
+    "ITUPEVA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "352400"
+    },
+    "LIMEIRA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Limeira",
+      "cod_ibge": "352690"
+    },
+    "MAUA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "352940"
+    },
+    "OLIMPIA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "353390"
+    },
+    "OURINHOS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "353470"
+    },
+    "PIRACICABA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "353870"
+    },
+    "PIRAJUI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "353890"
+    },
+    "PIRASSUNUNGA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Araras",
+      "cod_ibge": "353930"
+    },
+    "SANTA ISABEL": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "354680"
+    },
+    "SANTO ANDRE": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "354780"
+    },
+    "SAO BERNARDO DO CAMPO": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "354870"
+    },
+    "VALINHOS": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "355620"
+    },
+    "SANTO ANASTACIO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354770"
+    },
+    "JUNQUEIROPOLIS": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "352600"
+    },
+    "SOCORRO": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "355210"
+    },
+    "DRACENA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "351440"
+    },
+    "ITUVERAVA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "352410"
+    },
+    "ITATIBA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "352340"
+    },
+    "PEDERNEIRAS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "353670"
+    },
+    "CUNHA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "351360"
+    },
+    "DUARTINA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "351450"
+    },
+    "LEME": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Araras",
+      "cod_ibge": "352670"
+    },
+    "LENCOIS PAULISTA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "352680"
+    },
+    "GUARA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "351770"
+    },
+    "SAO JOSE DO RIO PARDO": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "354970"
+    },
+    "VARGEM GRANDE DO SUL": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "355640"
+    },
+    "CAFELANDIA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "350880"
+    },
+    "ITAPORANGA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "352280"
+    },
+    "PALMITAL": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "353530"
+    },
+    "POMPEIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "354000"
+    },
+    "SALTO GRANDE": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "354540"
+    },
+    "MONTE AZUL PAULISTA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "353150"
+    },
+    "SAO PEDRO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "355040"
+    },
+    "PENAPOLIS": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "353730"
+    },
+    "BURITAMA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350810"
+    },
+    "SAO VICENTE": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "355100"
+    },
+    "OSVALDO CRUZ": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "353460"
+    },
+    "CRUZEIRO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "351340"
+    },
+    "LAGOINHA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "352630"
+    },
+    "TATUI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "355400"
+    },
+    "SALTO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "354520"
+    },
+    "ITAPEVA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "352240"
+    },
+    "LINS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "352710"
+    },
+    "PRESIDENTE EPITACIO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Extremo Oeste Paulista",
+      "cod_ibge": "354130"
+    },
+    "SAO ROQUE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "355060"
+    },
+    "CESARIO LANGE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "351160"
+    },
+    "BARIRI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "350520"
+    },
+    "INDAIATUBA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "352050"
+    },
+    "CONCHAL": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Araras",
+      "cod_ibge": "351220"
+    },
+    "BARRA BONITA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "350530"
+    },
+    "ITATINGA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "352350"
+    },
+    "BROTAS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "350790"
+    },
+    "TAGUAI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "355300"
+    },
+    "CERQUEIRA CESAR": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "351140"
+    },
+    "CAIEIRAS": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 03",
+      "regiao_sa": "Franco da Rocha",
+      "cod_ibge": "350900"
+    },
+    "COSMOPOLIS": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "351280"
+    },
+    "CACAPAVA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "350850"
+    },
+    "SANTA CRUZ DAS PALMEIRAS": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "354630"
+    },
+    "MARTINOPOLIS": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "352920"
+    },
+    "BASTOS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "350580"
+    },
+    "AREIOPOLIS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "350360"
+    },
+    "BOFETE": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "350690"
+    },
+    "PORANGABA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "354050"
+    },
+    "SAO MANUEL": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "355010"
+    },
+    "IGARACU DO TIETE": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "352000"
+    },
+    "SAO MIGUEL ARCANJO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "355020"
+    },
+    "BIRIGUI": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350650"
+    },
+    "RINCAO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "354370"
+    },
+    "NOVO HORIZONTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353350"
+    },
+    "PILAR DO SUL": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "353790"
+    },
+    "PIEDADE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "353780"
+    },
+    "BOITUVA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "350700"
+    },
+    "PORTO FELIZ": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "354060"
+    },
+    "HORTOLANDIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "351907"
+    },
+    "MARACAI": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "352880"
+    },
+    "ALVARES MACHADO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "350130"
+    },
+    "ORLANDIA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "353430"
+    },
+    "AMERICANA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "350160"
+    },
+    "CARAPICUIBA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "351060"
+    },
+    "FARTURA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "351540"
+    },
+    "JABOTICABAL": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "352430"
+    },
+    "IACANGA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "351910"
+    },
+    "TAQUARITUBA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "355380"
+    },
+    "PIRAPOZINHO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "353920"
+    },
+    "SANTA CRUZ DO RIO PARDO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "354640"
+    },
+    "TAPIRATIBA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "355360"
+    },
+    "ITANHAEM": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "352210"
+    },
+    "POPULINA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "354040"
+    },
+    "ATIBAIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "350410"
+    },
+    "SANTA BARBARA DOESTE": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "354580"
+    },
+    "ANHEMBI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "350230"
+    },
+    "ARANDU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "350310"
+    },
+    "BANANAL": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350490"
+    },
+    "BARRA DO CHAPEU": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "350535"
+    },
+    "CAJURU": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "350940"
+    },
+    "CATIGUA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "351120"
+    },
+    "DOBRADA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "351400"
+    },
+    "EMBU-GUACU": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "351510"
+    },
+    "FRANCO DA ROCHA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 03",
+      "regiao_sa": "Franco da Rocha",
+      "cod_ibge": "351640"
+    },
+    "GETULINA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "351700"
+    },
+    "INDIAPORA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "352070"
+    },
+    "IPERO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "352100"
+    },
+    "IRAPURU": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "352160"
+    },
+    "JOANOPOLIS": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "352550"
+    },
+    "JUQUITIBA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "352620"
+    },
+    "MAIRIPORA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 03",
+      "regiao_sa": "Franco da Rocha",
+      "cod_ibge": "352850"
+    },
+    "MARINOPOLIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "352910"
+    },
+    "MESOPOLIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "352965"
+    },
+    "MONCOES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "353100"
+    },
+    "NATIVIDADE DA SERRA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "353230"
+    },
+    "NOVA CAMPINA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "353282"
+    },
+    "NOVA CANAA PAULISTA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "353284"
+    },
+    "PALMARES PAULISTA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353510"
+    },
+    "PARISI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "353625"
+    },
+    "PEDREIRA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "353710"
+    },
+    "PINHALZINHO": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "353820"
+    },
+    "PIRACAIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "353860"
+    },
+    "PIRANGI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353900"
+    },
+    "POA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "353980"
+    },
+    "RIBEIRA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "354280"
+    },
+    "SALES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "354480"
+    },
+    "SALTO DE PIRAPORA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "354530"
+    },
+    "SANTA ADELIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "354560"
+    },
+    "SANTA ERNESTINA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "354650"
+    },
+    "SANTO ANTONIO DE POSSE": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "354800"
+    },
+    "TAPIRAI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "355350"
+    },
+    "TEJUPA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "355420"
+    },
+    "TRABIJU": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "355475"
+    },
+    "TRES FRONTEIRAS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "355490"
+    },
+    "VITORIA BRASIL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "355695"
+    },
+    "AGUAI": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "350030"
+    },
+    "AGUAS DA PRATA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "350040"
+    },
+    "AGUAS DE SANTA BARBARA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "350055"
+    },
+    "AGUAS DE SAO PEDRO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "350060"
+    },
+    "AGUDOS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350070"
+    },
+    "ALAMBARI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "350075"
+    },
+    "ALFREDO MARCONDES": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "350080"
+    },
+    "ALTAIR": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "350090"
+    },
+    "ALTINOPOLIS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "350100"
+    },
+    "ALTO ALEGRE": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350110"
+    },
+    "ALVARO DE CARVALHO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "350140"
+    },
+    "ANALANDIA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "350200"
+    },
+    "ANHUMAS": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "350240"
+    },
+    "APARECIDA DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "350260"
+    },
+    "ARACARIGUAMA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "350275"
+    },
+    "ARACOIABA DA SERRA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "350290"
+    },
+    "ARAMINA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "350300"
+    },
+    "ARAPEI": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350315"
+    },
+    "ARCO IRIS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "350335"
+    },
+    "AREIAS": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350350"
+    },
+    "ARTUR NOGUEIRA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "350380"
+    },
+    "ARUJA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "350390"
+    },
+    "BALBINOS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350470"
+    },
+    "BALSAMO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "350480"
+    },
+    "BARRA DO TURVO": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "350540"
+    },
+    "BARRINHA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "350560"
+    },
+    "BERNARDINO DE CAMPOS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "350630"
+    },
+    "BERTIOGA": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "350635"
+    },
+    "BIRITIBA-MIRIM": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "350660"
+    },
+    "BOCAINA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "350680"
+    },
+    "BOM JESUS DOS PERDOES": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "350710"
+    },
+    "BOM SUCESSO DE ITARARE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "350715"
+    },
+    "BORACEIA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "350730"
+    },
+    "BORBOREMA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "350740"
+    },
+    "BREJO ALEGRE": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350775"
+    },
+    "BRODOSQUI": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "350780"
+    },
+    "BURITIZAL": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "350820"
+    },
+    "CABREUVA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "350840"
+    },
+    "CACHOEIRA PAULISTA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350860"
+    },
+    "CAJOBI": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "350930"
+    },
+    "CAMPINA DO MONTE ALEGRE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "350945"
+    },
+    "CAMPO LIMPO PAULISTA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "350960"
+    },
+    "CANANEIA": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "350990"
+    },
+    "CANAS": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "350995"
+    },
+    "CANDIDO MOTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "351000"
+    },
+    "CANDIDO RODRIGUES": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "351010"
+    },
+    "CANITAR": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "351015"
+    },
+    "CAPELA DO ALTO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "351030"
+    },
+    "CAPIVARI": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "351040"
+    },
+    "CASTILHO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "351100"
+    },
+    "CERQUILHO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "351150"
+    },
+    "COLOMBIA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "351210"
+    },
+    "CONCHAS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "351230"
+    },
+    "CORDEIROPOLIS": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Limeira",
+      "cod_ibge": "351240"
+    },
+    "CORONEL MACEDO": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "351260"
+    },
+    "COSMORAMA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "351290"
+    },
+    "CRISTAIS PAULISTA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "351320"
+    },
+    "CUBATAO": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "351350"
+    },
+    "DOIS CORREGOS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "351410"
+    },
+    "ELDORADO": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "351480"
+    },
+    "ELISIARIO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "351492"
+    },
+    "EMBAUBA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "351495"
+    },
+    "ESPIRITO SANTO DO TURVO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "351519"
+    },
+    "ESTIVA GERBI": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Baixa Mogiana",
+      "cod_ibge": "355730"
+    },
+    "EUCLIDES DA CUNHA PAULISTA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Pontal do Paranapanema",
+      "cod_ibge": "351535"
+    },
+    "FERNANDO PRESTES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "351560"
+    },
+    "FERNAO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351565"
+    },
+    "FLORA RICA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "351580"
+    },
+    "GABRIEL MONTEIRO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "351650"
+    },
+    "GALIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351660"
+    },
+    "GUAIRA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "351740"
+    },
+    "GUAPIARA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "351760"
+    },
+    "GUARACAI": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "351780"
+    },
+    "GUARANI DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "351800"
+    },
+    "GUAREI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "351850"
+    },
+    "GUATAPARA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "351885"
+    },
+    "IARAS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "351925"
+    },
+    "IBATE": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "351930"
+    },
+    "IBIRA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "351940"
+    },
+    "IBIUNA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "351970"
+    },
+    "IGARAPAVA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "352010"
+    },
+    "IGUAPE": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352030"
+    },
+    "ILHA COMPRIDA": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352042"
+    },
+    "ILHABELA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Litoral Norte",
+      "cod_ibge": "352040"
+    },
+    "INUBIA PAULISTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "352080"
+    },
+    "IPORANGA": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352120"
+    },
+    "IPUA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "352130"
+    },
+    "IRAPUA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "352150"
+    },
+    "ITAI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "352180"
+    },
+    "ITAJU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "352200"
+    },
+    "ITAOCA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "352215"
+    },
+    "ITAPECERICA DA SERRA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "352220"
+    },
+    "ITAPIRAPUA PAULISTA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "352265"
+    },
+    "ITAQUAQUECETUBA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "352310"
+    },
+    "ITARARE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "352320"
+    },
+    "ITARIRI": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352330"
+    },
+    "ITIRAPINA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "352360"
+    },
+    "ITIRAPUA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "352370"
+    },
+    "JABORANDI": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "352420"
+    },
+    "JACUPIRANGA": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352460"
+    },
+    "JAGUARIUNA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "352470"
+    },
+    "JAMBEIRO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "352490"
+    },
+    "JANDIRA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "352500"
+    },
+    "JARDINOPOLIS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "352510"
+    },
+    "JARINU": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "352520"
+    },
+    "JOAO RAMALHO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alto Capivari",
+      "cod_ibge": "352560"
+    },
+    "JUMIRIM": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "352585"
+    },
+    "JUQUIA": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352610"
+    },
+    "LINDOIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Circuito das Aguas",
+      "cod_ibge": "352700"
+    },
+    "LOURDES": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "352725"
+    },
+    "LUCELIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "352740"
+    },
+    "LUIS ANTONIO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "352760"
+    },
+    "LUIZIANIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "352770"
+    },
+    "LUPERCIO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "352780"
+    },
+    "MACEDONIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "352820"
+    },
+    "MAGDA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "352830"
+    },
+    "MAIRINQUE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "352840"
+    },
+    "MARABA PAULISTA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Extremo Oeste Paulista",
+      "cod_ibge": "352870"
+    },
+    "MARIAPOLIS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "352890"
+    },
+    "MIGUELOPOLIS": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Mogiana",
+      "cod_ibge": "352970"
+    },
+    "MINEIROS DO TIETE": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "352980"
+    },
+    "MIRA ESTRELA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "353000"
+    },
+    "MIRANTE DO PARANAPANEMA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Pontal do Paranapanema",
+      "cod_ibge": "353020"
+    },
+    "MONGAGUA": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "353110"
+    },
+    "MONTE ALEGRE DO SUL": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Circuito das Aguas",
+      "cod_ibge": "353120"
+    },
+    "MONTE CASTELO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "353160"
+    },
+    "MONTEIRO LOBATO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "353170"
+    },
+    "MURUTINGA DO SUL": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "353210"
+    },
+    "NARANDIBA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "353220"
+    },
+    "NOVA LUZITANIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "353330"
+    },
+    "NOVA ODESSA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "353340"
+    },
+    "NUPORANGA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "353360"
+    },
+    "OLEO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "353380"
+    },
+    "ORIENTE": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "353410"
+    },
+    "PACAEMBU": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "353490"
+    },
+    "PALMEIRA DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "353520"
+    },
+    "PARAIBUNA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "353560"
+    },
+    "PARANAPANEMA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "353580"
+    },
+    "PARAPUA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "353600"
+    },
+    "PARDINHO": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "353610"
+    },
+    "PAULICEIA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "353640"
+    },
+    "PAULINIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "353650"
+    },
+    "PEDRA BELA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "353680"
+    },
+    "PEDRANOPOLIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "353690"
+    },
+    "PEDRO DE TOLEDO": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "353720"
+    },
+    "PEREIRAS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "353750"
+    },
+    "PERUIBE": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "353760"
+    },
+    "PINDORAMA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353810"
+    },
+    "PIRAPORA DO BOM JESUS": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "353910"
+    },
+    "PONTAL": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "354020"
+    },
+    "PONTALINDA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "354025"
+    },
+    "POTIM": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "354075"
+    },
+    "POTIRENDABA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "354080"
+    },
+    "PRADOPOLIS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "354090"
+    },
+    "PRAIA GRANDE": {
+      "drs": "DRS IV - Baixada Santista",
+      "regiao_ad": "LITORAL NORTE",
+      "rras": "RRAS 07",
+      "regiao_sa": "Baixada Santista",
+      "cod_ibge": "354100"
+    },
+    "QUADRA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "354165"
+    },
+    "QUATA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alto Capivari",
+      "cod_ibge": "354170"
+    },
+    "QUEIROZ": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "354180"
+    },
+    "QUELUZ": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "354190"
+    },
+    "RAFARD": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "354210"
+    },
+    "REDENCAO DA SERRA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "354230"
+    },
+    "REGINOPOLIS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "354250"
+    },
+    "RIBEIRAO BRANCO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "354300"
+    },
+    "RIBEIRAO CORRENTE": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "354310"
+    },
+    "RIBEIRAO DO SUL": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "354320"
+    },
+    "RIBEIRAO DOS INDIOS": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354323"
+    },
+    "RIBEIRAO GRANDE": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "354325"
+    },
+    "RINOPOLIS": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "354380"
+    },
+    "RIO DAS PEDRAS": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "354400"
+    },
+    "RIO GRANDE DA SERRA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "354410"
+    },
+    "RIVERSUL": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "354350"
+    },
+    "ROSANA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Pontal do Paranapanema",
+      "cod_ibge": "354425"
+    },
+    "ROSEIRA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "354430"
+    },
+    "RUBIACEA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "354440"
+    },
+    "SAGRES": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "354470"
+    },
+    "SALESOPOLIS": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "354500"
+    },
+    "SALMORAO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "354510"
+    },
+    "SANTA ALBERTINA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "354570"
+    },
+    "SANTA CLARA DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "354610"
+    },
+    "SANTA CRUZ DA ESPERANCA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "354625"
+    },
+    "SANTA GERTRUDES": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "354670"
+    },
+    "SANTA MERCEDES": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "354710"
+    },
+    "SANTA RITA DO PASSA QUATRO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "354750"
+    },
+    "SANTA RITA DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "354740"
+    },
+    "SANTA ROSA DE VITERBO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "354760"
+    },
+    "SANTANA DA PONTE PENSA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "354720"
+    },
+    "SANTO ANTONIO DO ARACANGUA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "354805"
+    },
+    "SANTOPOLIS DO AGUAPEI": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "354840"
+    },
+    "SAO BENTO DO SAPUCAI": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "354860"
+    },
+    "SAO FRANCISCO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "354900"
+    },
+    "SAO JOSE DA BELA VISTA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "354950"
+    },
+    "SAO JOSE DO BARREIRO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "354960"
+    },
+    "SAO LOURENCO DA SERRA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "354995"
+    },
+    "SAO SEBASTIAO": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Litoral Norte",
+      "cod_ibge": "355070"
+    },
+    "SARAPUI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "355110"
+    },
+    "SARUTAIA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "355120"
+    },
+    "SEBASTIANOPOLIS DO SUL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "355130"
+    },
+    "SEVERINIA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "355190"
+    },
+    "SILVEIRAS": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "355200"
+    },
+    "TABAPUA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "355260"
+    },
+    "TABATINGA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "355270"
+    },
+    "TAMBAU": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "355330"
+    },
+    "TAQUARAL": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355365"
+    },
+    "TAQUARIVAI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "355385"
+    },
+    "TARABAI": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "355390"
+    },
+    "TARUMA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "355395"
+    },
+    "TERRA ROXA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355440"
+    },
+    "TIMBURI": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "355460"
+    },
+    "TORRE DE PEDRA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "355465"
+    },
+    "TORRINHA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "355470"
+    },
+    "TREMEMBE": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "355480"
+    },
+    "TURIUBA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "355520"
+    },
+    "UBATUBA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Litoral Norte",
+      "cod_ibge": "355540"
+    },
+    "URANIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "355580"
+    },
+    "URU": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "355590"
+    },
+    "VALENTIM GENTIL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "355610"
+    },
+    "VALPARAISO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "355630"
+    },
+    "VERA CRUZ": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "355660"
+    },
+    "VIRADOURO": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355680"
+    },
+    "VISTA ALEGRE DO ALTO": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355690"
+    },
+    "VOTORANTIM": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "355700"
+    },
+    "CASA BRANCA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "351080"
+    },
+    "COLINA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "351200"
+    },
+    "COTIA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "351300"
+    },
+    "CRAVINHOS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "351310"
+    },
+    "DESCALVADO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "351370"
+    },
+    "ELIAS FAUSTO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "351490"
+    },
+    "FERRAZ DE VASCONCELOS": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "351570"
+    },
+    "GUARACI": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "351790"
+    },
+    "HOLAMBRA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "351905"
+    },
+    "IBIRAREMA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "351950"
+    },
+    "ITAPEVI": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "352250"
+    },
+    "ITOBI": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "352380"
+    },
+    "LAVRINHAS": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "352660"
+    },
+    "LOUVEIRA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "352730"
+    },
+    "MIRACATU": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "352990"
+    },
+    "MIRASSOL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353030"
+    },
+    "MOMBUCA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "353090"
+    },
+    "MONTE ALTO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "353130"
+    },
+    "MORUNGABA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "353200"
+    },
+    "PALESTINA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353500"
+    },
+    "PIRATININGA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "353940"
+    },
+    "RIBEIRAO PIRES": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 01",
+      "regiao_sa": "Grande ABC",
+      "cod_ibge": "354330"
+    },
+    "SALTINHO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "354515"
+    },
+    "SAO SIMAO": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "355090"
+    },
+    "SERRA NEGRA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Circuito das Aguas",
+      "cod_ibge": "355160"
+    },
+    "VINHEDO": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "355670"
+    },
+    "VOTUPORANGA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "355710"
+    },
+    "ADOLFO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "350020"
+    },
+    "AGUAS DE LINDOIA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Circuito das Aguas",
+      "cod_ibge": "350050"
+    },
+    "ALUMINIO": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Sorocaba",
+      "cod_ibge": "350115"
+    },
+    "ALVARES FLORENCE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "350120"
+    },
+    "ALVINLANDIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "350150"
+    },
+    "AMERICO BRASILIENSE": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "350170"
+    },
+    "AMERICO DE CAMPOS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "350180"
+    },
+    "ANGATUBA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapetininga",
+      "cod_ibge": "350220"
+    },
+    "AREALVA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350340"
+    },
+    "ARIRANHA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "350370"
+    },
+    "ASPASIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "350395"
+    },
+    "AVAI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350430"
+    },
+    "AVANHANDAVA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350440"
+    },
+    "BADY BASSITT": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "350460"
+    },
+    "BARAO DE ANTONINA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "350500"
+    },
+    "BARBOSA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350510"
+    },
+    "BENTO DE ABREU": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "350620"
+    },
+    "BILAC": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "350640"
+    },
+    "BOA ESPERANCA DO SUL": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "350670"
+    },
+    "BORA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "350720"
+    },
+    "BOREBI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350745"
+    },
+    "BRAUNA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "350770"
+    },
+    "BURI": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "350800"
+    },
+    "CABRALIA PAULISTA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "350830"
+    },
+    "CAIABU": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "350890"
+    },
+    "CAJAMAR": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 03",
+      "regiao_sa": "Franco da Rocha",
+      "cod_ibge": "350920"
+    },
+    "CAJATI": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "350925"
+    },
+    "CAMPOS NOVOS PAULISTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "350980"
+    },
+    "CASSIA DOS COQUEIROS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "351090"
+    },
+    "CEDRAL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "351130"
+    },
+    "CHARQUEADA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "351170"
+    },
+    "COROADOS": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "351250"
+    },
+    "CORUMBATAI": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "351270"
+    },
+    "CRUZALIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "351330"
+    },
+    "DIRCE REIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "351385"
+    },
+    "DOLCINOPOLIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "351420"
+    },
+    "DOURADO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "351430"
+    },
+    "ECHAPORA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351470"
+    },
+    "EMILIANOPOLIS": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "351512"
+    },
+    "ENGENHEIRO COELHO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Limeira",
+      "cod_ibge": "351515"
+    },
+    "ESTRELA DOESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "351520"
+    },
+    "FLOREAL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "351590"
+    },
+    "FLORINEA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "351610"
+    },
+    "GASTAO VIDIGAL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "351680"
+    },
+    "GENERAL SALGADO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "351690"
+    },
+    "GUAICARA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "351720"
+    },
+    "GUAIMBE": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351730"
+    },
+    "GUAPIACU": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "351750"
+    },
+    "GUARANTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "351810"
+    },
+    "GUZOLANDIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "351890"
+    },
+    "IACRI": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Tupa",
+      "cod_ibge": "351920"
+    },
+    "ICEM": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "351980"
+    },
+    "IGARATA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "352020"
+    },
+    "INDIANA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "352060"
+    },
+    "IPAUSSU": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "352090"
+    },
+    "IPEUNA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Rio Claro",
+      "cod_ibge": "352110"
+    },
+    "IRACEMAPOLIS": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Limeira",
+      "cod_ibge": "352140"
+    },
+    "ITABERA": {
+      "drs": "DRS XVI - Sorocaba",
+      "regiao_ad": "ITAPEVA",
+      "rras": "RRAS 08",
+      "regiao_sa": "Itapeva",
+      "cod_ibge": "352170"
+    },
+    "ITAPUI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Jau",
+      "cod_ibge": "352290"
+    },
+    "ITAPURA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "352300"
+    },
+    "JERIQUARA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "352540"
+    },
+    "JULIO MESQUITA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "352580"
+    },
+    "LAVINIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "352650"
+    },
+    "LUCIANOPOLIS": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "352750"
+    },
+    "LUTECIA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "352790"
+    },
+    "MACATUBA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "352800"
+    },
+    "MACAUBAL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "352810"
+    },
+    "MANDURI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Vale do Jurumirim",
+      "cod_ibge": "352860"
+    },
+    "MARAPOAMA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "352885"
+    },
+    "MENDONCA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "352950"
+    },
+    "MERIDIANO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "352960"
+    },
+    "MIRANDOPOLIS": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "353010"
+    },
+    "MIRASSOLANDIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353040"
+    },
+    "MONTE MOR": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "353180"
+    },
+    "MOTUCA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "353205"
+    },
+    "NANTES": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alto Capivari",
+      "cod_ibge": "353215"
+    },
+    "NAZARE PAULISTA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "353240"
+    },
+    "NIPOA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "353270"
+    },
+    "NOVA ALIANCA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353280"
+    },
+    "NOVA CASTILHO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "353286"
+    },
+    "NOVA EUROPA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Noroeste",
+      "cod_ibge": "353290"
+    },
+    "NOVA GUATAPORANGA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "353310"
+    },
+    "NOVA INDEPENDENCIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "353320"
+    },
+    "NOVAIS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353325"
+    },
+    "OCAUCU": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "353370"
+    },
+    "ONDA VERDE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353400"
+    },
+    "ORINDIUVA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353420"
+    },
+    "OSCAR BRESSANE": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "353450"
+    },
+    "OURO VERDE": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "353480"
+    },
+    "OUROESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "353475"
+    },
+    "PANORAMA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "353540"
+    },
+    "PARAGUACU PAULISTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "353550"
+    },
+    "PARAISO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353570"
+    },
+    "PARANAPUA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "353590"
+    },
+    "PAULISTANIA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "353657"
+    },
+    "PAULO DE FARIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353660"
+    },
+    "PEDRINHAS PAULISTA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "353715"
+    },
+    "PEREIRA BARRETO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "353740"
+    },
+    "PIACATU": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "353770"
+    },
+    "PIQUEROBI": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Extremo Oeste Paulista",
+      "cod_ibge": "353830"
+    },
+    "PIQUETE": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Circ. da FE/V.Historico",
+      "cod_ibge": "353850"
+    },
+    "PITANGUEIRAS": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "353950"
+    },
+    "POLONI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "353990"
+    },
+    "PONTES GESTAL": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "354030"
+    },
+    "PRACINHA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 10",
+      "regiao_sa": "Adamantina",
+      "cod_ibge": "354085"
+    },
+    "PRATANIA": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "SOROCABA",
+      "rras": "RRAS 09",
+      "regiao_sa": "Polo Cuesta",
+      "cod_ibge": "354105"
+    },
+    "PRESIDENTE ALVES": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Bauru",
+      "cod_ibge": "354110"
+    },
+    "PRESIDENTE BERNARDES": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354120"
+    },
+    "QUINTANA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "354200"
+    },
+    "REGENTE FEIJO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354240"
+    },
+    "RESTINGA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "354270"
+    },
+    "RIBEIRAO BONITO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Coracao do DRS III",
+      "cod_ibge": "354290"
+    },
+    "RIOLANDIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Votuporanga",
+      "cod_ibge": "354420"
+    },
+    "RUBINEIA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "354450"
+    },
+    "SALES OLIVEIRA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "354490"
+    },
+    "SANTA BRANCA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "Alto Vale do ParaIba",
+      "cod_ibge": "354600"
+    },
+    "SANTA CRUZ DA CONCEICAO": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Araras",
+      "cod_ibge": "354620"
+    },
+    "SANTA LUCIA": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "354690"
+    },
+    "SANTA MARIA DA SERRA": {
+      "drs": "DRS X - Piracicaba",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 14",
+      "regiao_sa": "Piracicaba",
+      "cod_ibge": "354700"
+    },
+    "SANTA SALETE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "354765"
+    },
+    "SANTO ANTONIO DA ALEGRIA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Vale das Cachoeiras",
+      "cod_ibge": "354790"
+    },
+    "SANTO ANTONIO DO JARDIM": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Mantiqueira",
+      "cod_ibge": "354810"
+    },
+    "SANTO ANTONIO DO PINHAL": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "354820"
+    },
+    "SAO JOAO DAS DUAS PONTES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "354920"
+    },
+    "SAO JOAO DE IRACEMA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "354925"
+    },
+    "SAO LUIZ DO PARAITINGA": {
+      "drs": "DRS XVII - Taubaté",
+      "regiao_ad": "SÃO JOSÉ DOS CAMPOS",
+      "rras": "RRAS 17",
+      "regiao_sa": "V. Paraiba-Reg. Serrana",
+      "cod_ibge": "355000"
+    },
+    "SAO PEDRO DO TURVO": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Ourinhos",
+      "cod_ibge": "355050"
+    },
+    "SAO SEBASTIAO DA GRAMA": {
+      "drs": "DRS XIV - São João da Boa Vista",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Rio Pardo",
+      "cod_ibge": "355080"
+    },
+    "SERRA AZUL": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "355140"
+    },
+    "SERRANA": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "355150"
+    },
+    "SUD MENNUCCI": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "355230"
+    },
+    "SUZANAPOLIS": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "355255"
+    },
+    "TACIBA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "355290"
+    },
+    "TAIACU": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355310"
+    },
+    "TAIUVA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Sul - Barretos",
+      "cod_ibge": "355320"
+    },
+    "TUIUTI": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "355495"
+    },
+    "TURMALINA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "355530"
+    },
+    "UBIRAJARA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 10",
+      "regiao_sa": "Marilia",
+      "cod_ibge": "355550"
+    },
+    "UCHOA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "355560"
+    },
+    "UNIAO PAULISTA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "355570"
+    },
+    "URUPES": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "355600"
+    },
+    "VARGEM": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Braganca",
+      "cod_ibge": "355635"
+    },
+    "VARGEM GRANDE PAULISTA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "355645"
+    },
+    "VARZEA PAULISTA": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 16",
+      "regiao_sa": "Jundiai",
+      "cod_ibge": "355650"
+    },
+    "CAIUA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Extremo Oeste Paulista",
+      "cod_ibge": "350910"
+    },
+    "DUMONT": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Horizonte Verde",
+      "cod_ibge": "351460"
+    },
+    "EMBU DAS ARTES": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "351500"
+    },
+    "GAVIAO PEIXOTO": {
+      "drs": "DRS III - Araraquara",
+      "regiao_ad": "CENTRAL",
+      "rras": "RRAS 18",
+      "regiao_sa": "Central do DRS III",
+      "cod_ibge": "351685"
+    },
+    "GLICERIO": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Consorcios do DRS II",
+      "cod_ibge": "351710"
+    },
+    "GUARAREMA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 02",
+      "regiao_sa": "Alto do Tiete",
+      "cod_ibge": "351830"
+    },
+    "IEPE": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alto Capivari",
+      "cod_ibge": "351990"
+    },
+    "IPIGUA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "352115"
+    },
+    "ITAJOBI": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "352190"
+    },
+    "MORRO AGUDO": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Alta Anhanguera",
+      "cod_ibge": "353190"
+    },
+    "NEVES PAULISTA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Sao Jose do Rio Preto",
+      "cod_ibge": "353250"
+    },
+    "PLANALTO": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "353960"
+    },
+    "PLATINA": {
+      "drs": "DRS IX - Marília",
+      "regiao_ad": "MARILIA",
+      "rras": "RRAS 10",
+      "regiao_sa": "Assis",
+      "cod_ibge": "353970"
+    },
+    "PONGAI": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "354010"
+    },
+    "PROMISSAO": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "354160"
+    },
+    "RIFAINA": {
+      "drs": "DRS VIII - Franca",
+      "regiao_ad": "FRANCA",
+      "rras": "RRAS 13",
+      "regiao_sa": "Tres Colinas",
+      "cod_ibge": "354360"
+    },
+    "SABINO": {
+      "drs": "DRS VI - Bauru",
+      "regiao_ad": "BAURU",
+      "rras": "RRAS 09",
+      "regiao_sa": "Lins",
+      "cod_ibge": "354460"
+    },
+    "SANDOVALINA": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354550"
+    },
+    "SANTANA DE PARNAIBA": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 05",
+      "regiao_sa": "Rota dos Bandeirantes",
+      "cod_ibge": "354730"
+    },
+    "SANTO EXPEDITO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Sorocabana",
+      "cod_ibge": "354830"
+    },
+    "SAO JOAO DO PAU DALHO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "354930"
+    },
+    "SETE BARRAS": {
+      "drs": "DRS XII - Registro",
+      "regiao_ad": "REGISTRO",
+      "rras": "RRAS 07",
+      "regiao_sa": "Vale do Ribeira",
+      "cod_ibge": "355180"
+    },
+    "UBARANA": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "355535"
+    },
+    "ZACARIAS": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jose Bonifacio",
+      "cod_ibge": "355715"
+    },
+    "ESTRELA D'OESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "351520"
+    },
+    "APARECIDA D'OESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Jales",
+      "cod_ibge": "350260"
+    },
+    "PALMEIRA D_OESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Catanduva",
+      "cod_ibge": "353510"
+    },
+    "SUD MENUCCI": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "355230"
+    },
+    "SANTA BARBARA D'OESTE": {
+      "drs": "DRS VII - Campinas",
+      "regiao_ad": "CAMPINAS",
+      "rras": "RRAS 15",
+      "regiao_sa": "Reg Metro Campinas",
+      "cod_ibge": "354580"
+    },
+    "EMBU GUACU": {
+      "drs": "DRS I - Grande São Paulo",
+      "regiao_ad": "SÃO PAULO",
+      "rras": "RRAS 04",
+      "regiao_sa": "Mananciais",
+      "cod_ibge": "351510"
+    },
+    "GUARANI D'OESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Fernandopolis",
+      "cod_ibge": "351800"
+    },
+    "NOVA LUSITANIA": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Central do DRS II",
+      "cod_ibge": "353330"
+    },
+    "SANTA CLARA D'OESTE": {
+      "drs": "DRS XV - São José do Rio Preto",
+      "regiao_ad": "SÃO JOSÉ DO RIO PRETO",
+      "rras": "RRAS 12",
+      "regiao_sa": "Santa Fe do Sul",
+      "cod_ibge": "354610"
+    },
+    "SANTA RITA D'OESTE": {
+      "drs": "DRS XIII - Ribeirão Preto",
+      "regiao_ad": "RIBEIRÃO PRETO",
+      "rras": "RRAS 13",
+      "regiao_sa": "Aquifero Guarani",
+      "cod_ibge": "354760"
+    },
+    "SAO JOAO DO PAU D'ALHO": {
+      "drs": "DRS XI - Presidente Prudente",
+      "regiao_ad": "PRESIDENTE PRUDENTE",
+      "rras": "RRAS 11",
+      "regiao_sa": "Alta Paulista",
+      "cod_ibge": "354930"
+    },
+    "SEVERINEA": {
+      "drs": "DRS V - Barretos",
+      "regiao_ad": "BARRETOS",
+      "rras": "RRAS 13",
+      "regiao_sa": "Norte - Barretos",
+      "cod_ibge": "355190"
+    },
+    "SUZANOPOLIS": {
+      "drs": "DRS II - Araçatuba",
+      "regiao_ad": "ARAÇATUBA",
+      "rras": "RRAS 12",
+      "regiao_sa": "Lagos do DRS II",
+      "cod_ibge": "355255"
+    }
+  }
+}
