@@ -2918,6 +2918,230 @@ function ObTab({ onUploadClick }: { onUploadClick: () => void }) {
   );
 }
 
+// ── Modal de Metodologia ────────────────────────────────────────────────────
+function MetodologiaModal({ onClose }: { onClose: () => void }) {
+  const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#2A2A2A]">
+        <span className="text-[#118DFF]">{icon}</span>
+        <h3 className="text-[13px] font-bold text-[#EEE] uppercase tracking-wide">{title}</h3>
+      </div>
+      <div className="space-y-2 text-[12px] text-[#BBB] leading-relaxed">{children}</div>
+    </div>
+  );
+  const Row = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
+    <div className="flex items-start gap-3 py-1.5 border-b border-[#1E1E1E]">
+      <span className="text-[#777] text-[11px] w-44 shrink-0">{label}</span>
+      <span className={cn('text-[#CCC] text-[12px]', mono && 'font-mono text-[#7EC8E3]')}>{value}</span>
+    </div>
+  );
+  const Badge = ({ color, children }: { color: string; children: React.ReactNode }) => (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: color + '22', color }}>{children}</span>
+  );
+  const Code = ({ children }: { children: React.ReactNode }) => (
+    <code className="bg-[#0D0D0D] text-[#7EC8E3] font-mono text-[11px] px-2 py-0.5 rounded border border-[#2A2A2A]">{children}</code>
+  );
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-[#141414] rounded-2xl shadow-2xl border border-[#2A2A2A] w-full max-w-3xl max-h-[92vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#118DFF]/20 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-[#118DFF]" />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-bold text-white">Metodologia de Consolidação</h2>
+              <p className="text-[11px] text-[#666]">Como os dados LC131 e LisOB foram integrados</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#222] hover:bg-[#333] text-[#888] transition">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body scrollável */}
+        <div className="overflow-y-auto px-6 py-5 flex-1">
+
+          {/* 1. Fontes */}
+          <Section title="1. Fontes de Dados" icon={<FileSpreadsheet className="w-4 h-4" />}>
+            <p>Dois conjuntos de planilhas XLSX são utilizados como fonte primária:</p>
+            <div className="mt-3 space-y-2">
+              <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge color="#118DFF">LC 131</Badge>
+                  <span className="text-[#EEE] font-semibold">Planilhas de Despesas</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 text-[11px] text-[#999]">
+                  <span>LC_131_2022.xlsx → 96.925 linhas</span>
+                  <span>LC_131_2025.xlsx → 110.403 linhas</span>
+                  <span>LC_131_2023.xlsx → 114.812 linhas</span>
+                  <span>LC 131_2026.xlsx → 51.842 linhas</span>
+                  <span>LC_131_2024.xlsx → 102.972 linhas</span>
+                  <span className="text-[#118DFF] font-bold">Total: 476.954 despesas</span>
+                </div>
+              </div>
+              <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge color="#E66C37">LisOB</Badge>
+                  <span className="text-[#EEE] font-semibold">Ordens Bancárias</span>
+                </div>
+                <div className="text-[11px] text-[#999]">
+                  <span>Lis OB - Entidades e municipios (4).xlsx → <strong className="text-[#E66C37]">72.243 OBs</strong> (2022–2026) | R$ 26,93B em pagamentos</span>
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* 2. Estrutura das tabelas */}
+          <Section title="2. Estrutura das Tabelas (Cloudflare D1)" icon={<Database className="w-4 h-4" />}>
+            <p>Os dados são armazenados em SQLite (Cloudflare D1) com duas tabelas principais:</p>
+            <div className="mt-3 space-y-4">
+              <div>
+                <p className="text-[#EEE] font-semibold mb-2 flex items-center gap-2">
+                  <Code>despesas</Code> <span className="text-[#666]">— 476.954 linhas</span>
+                </p>
+                <Row label="Chave primária" value="(numero_processo, codigo_nome_uo, codigo_nome_elemento, ano_referencia)" mono />
+                <Row label="Identificadores" value="numero_processo — código SIAFEM 11 dígitos (ex: 20220096409)" mono />
+                <Row label="Classificação LC131" value="codigo_nome_uo, codigo_nome_elemento, codigo_nome_projeto_atividade" mono />
+                <Row label="Valores financeiros" value="empenhado, liquidado, pago, pago_anos_anteriores, pago_total" mono />
+                <Row label="Localização" value="municipio, drs, rras, regiao_ad, regiao_sa, cod_ibge" mono />
+                <Row label="Tipologia" value="tipo_despesa, grupo_despesa, grupo_simpl, fonte_simpl" mono />
+                <Row label="Importação" value="INSERT OR IGNORE — idempotente, sem duplicados" />
+              </div>
+              <div>
+                <p className="text-[#EEE] font-semibold mb-2 flex items-center gap-2">
+                  <Code>ob</Code> <span className="text-[#666]">— 72.243 linhas</span>
+                </p>
+                <Row label="Chave de ligação" value="numero_processo — mesmo formato 11 dígitos da tabela despesas" mono />
+                <Row label="Identificadores OB" value="numero_documento, numero_ob, data_ob, favorecido" mono />
+                <Row label="Valor" value="valor (R$) — referente ao pagamento da OB" mono />
+                <Row label="Classificação" value="ano_referencia, entidade, municipio" mono />
+              </div>
+            </div>
+          </Section>
+
+          {/* 3. Chave de relacionamento */}
+          <Section title="3. Chave de Relacionamento OB ↔ Despesas" icon={<Tag className="w-4 h-4" />}>
+            <div className="bg-[#0D1A2A] rounded-lg p-4 border border-[#1A3A5A] mb-3">
+              <p className="text-[#7EC8E3] font-bold text-[13px] mb-2">Chave: <Code>numero_processo</Code></p>
+              <p>O campo <Code>numero_processo</Code> é o elo entre as duas tabelas. Ambas usam o formato SIAFEM de <strong className="text-white">11 dígitos numéricos</strong> (ex: <Code>20220096409</Code>, <Code>20230154782</Code>).</p>
+            </div>
+            <p className="mb-2">O relacionamento é feito via:</p>
+            <pre className="bg-[#0D0D0D] text-[#7EC8E3] text-[11px] font-mono rounded-lg p-3 border border-[#2A2A2A] overflow-x-auto whitespace-pre">{`SELECT COUNT(*) as ob_vinculadas,
+       COUNT(DISTINCT o.numero_processo) as processos_vinculados
+FROM ob o
+WHERE o.numero_processo IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM despesas d
+    WHERE d.numero_processo = o.numero_processo
+  )`}</pre>
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {[
+                { ano: 2022, vinc: '14.490', total: '14.493', pct: '100%' },
+                { ano: 2023, vinc: '16.478', total: '16.481', pct: '100%' },
+                { ano: 2024, vinc: '17.191', total: '17.192', pct: '100%' },
+                { ano: 2025, vinc: '19.075', total: '19.077', pct: '100%' },
+                { ano: 2026, vinc: '4.987',  total: '5.000',  pct: '99,7%' },
+              ].map(r => (
+                <div key={r.ano} className="bg-[#1A1A1A] rounded-lg p-2.5 border border-[#2A2A2A] text-center">
+                  <p className="text-[#118DFF] font-bold text-[13px]">{r.ano}</p>
+                  <p className="text-[#EEE] text-[11px] font-semibold">{r.pct}</p>
+                  <p className="text-[#666] text-[10px]">{r.vinc}/{r.total}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-[#666]">
+              <strong className="text-[#888]">Nota:</strong> O resultado é cacheado em <Code>ob_linkage_cache</Code> para evitar re-computação a cada consulta. O cache é invalidado automaticamente quando novos dados são importados.
+            </p>
+          </Section>
+
+          {/* 4. Resolução de tipo_despesa */}
+          <Section title="4. Resolução de tipo_despesa (Hierarquia 7 Níveis)" icon={<Layers className="w-4 h-4" />}>
+            <p>O campo <Code>tipo_despesa</Code> é preservado directamente das planilhas LC131 (sem reclassificação). Para upload incremental pelo painel, aplica-se a seguinte hierarquia de lookup estático gerado a partir de 416.811 linhas históricas:</p>
+            <div className="mt-3 space-y-1.5">
+              {[
+                { n: 1, key: 'UO5 + proj4',    desc: 'Código da Unidade Orçamentária (5 dígitos) + Código do Projeto (4 dígitos) — regra mais específica' },
+                { n: 2, key: 'UO5',             desc: 'Código da UO sozinha — cobre UOs de propósito único (ex: Hemocentro, Irmandade)' },
+                { n: 3, key: 'proj4 + elem6',   desc: 'Código do Projeto + Elemento de Despesa (6 dígitos)' },
+                { n: 4, key: 'proj4',           desc: 'Código do Projeto sozinho — programas singulares (ex: proj 9001–9020 → Intraorçamentária)' },
+                { n: 5, key: 'elem6 + proj4',   desc: 'Elemento (6 dígitos) + Projeto — composite gerado do CSV histórico' },
+                { n: 6, key: 'elem6',           desc: 'Primeiros 6 dígitos do código do elemento (ex: 319001 → Transferência Voluntária)' },
+                { n: 7, key: 'elem3 (prefixo)', desc: 'Primeiros 3 dígitos: 319→Unidade Própria, 334/335→Transferência Voluntária, 44x→Investimento' },
+              ].map(r => (
+                <div key={r.n} className="flex items-start gap-3 bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#222]">
+                  <span className="w-5 h-5 rounded-full bg-[#118DFF]/20 text-[#118DFF] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{r.n}</span>
+                  <div>
+                    <Code>{r.key}</Code>
+                    <span className="ml-2 text-[11px] text-[#999]">{r.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-[#666]">Lookup gerado por <Code>_build-tipo-composite.cjs</Code> e armazenado em <Code>src/data/tipo_by_elem_proj.json</Code> (248 regras composite + 81 por elem6).</p>
+          </Section>
+
+          {/* 5. Pipeline de importação */}
+          <Section title="5. Pipeline de Importação (LC131 → D1)" icon={<Upload className="w-4 h-4" />}>
+            <p>A importação das planilhas XLSX para o D1 segue os seguintes passos, executados pelo script <Code>scripts/_lc131-to-d1.cjs</Code>:</p>
+            <div className="mt-3 space-y-2">
+              {[
+                { step: '①', title: 'Leitura XLSX',       desc: 'A biblioteca xlsx lê cada aba da planilha LC131 por ano e mapeiam os cabeçalhos para os nomes de colunas D1.' },
+                { step: '②', title: 'Enriquecimento',     desc: 'DRS/RRAS/Região são resolvidos via lookup estático de municípios. grupo_despesa e grupo_simpl são derivados do código do grupo. fonte_simpl (ESTADUAL/FEDERAL) é derivada do código da fonte de recurso.' },
+                { step: '③', title: 'Geração SQL',        desc: 'Os dados são divididos em ficheiros SQL temporários com INSERT OR IGNORE INTO despesas (80 linhas/INSERT, 15 ficheiros/batch = 1.200 linhas/chamada wrangler).' },
+                { step: '④', title: 'Execução via Wrangler', desc: 'Cada ficheiro SQL é executado via npx wrangler d1 execute --file --remote --yes, contornando o limite HTTP do Worker (10 MB).' },
+                { step: '⑤', title: 'Pós-processamento',  desc: 'fix_year normaliza typos nos tipos (ex: TRANFERÊNCIA→TRANSFERÊNCIA). rebuild_agg reconstrói a tabela de agregados por DRS/município/tipo em 4 rondas.' },
+              ].map(s => (
+                <div key={s.step} className="flex items-start gap-3 bg-[#1A1A1A] rounded-lg px-3 py-2.5 border border-[#222]">
+                  <span className="text-[#118DFF] font-bold text-[14px] shrink-0 w-5 text-center">{s.step}</span>
+                  <div>
+                    <p className="text-[#DDD] font-semibold text-[11px]">{s.title}</p>
+                    <p className="text-[#888] text-[11px] mt-0.5">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* 6. Integridade */}
+          <Section title="6. Garantias de Integridade" icon={<CheckCircle2 className="w-4 h-4" />}>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { ok: true,  label: 'INSERT OR IGNORE',           desc: 'Importação idempotente — re-executar não cria duplicados.' },
+                { ok: true,  label: 'tipo_despesa preservado',     desc: 'Os tipos originais das planilhas LC131 não são substituídos pelo classificador automático (force_tipo_reclassify=false).' },
+                { ok: true,  label: 'numero_processo 11 dígitos',  desc: 'O formato SIAFEM é validado em ambas as tabelas (ob e despesas) para garantir joins correctos.' },
+                { ok: true,  label: 'ob_linkage_cache',            desc: 'Calculado directamente do D1 (ob JOIN despesas) — nunca via fonte secundária com formato diferente.' },
+                { ok: false, label: '_compute-ob-linkage.cjs',     desc: 'Script desactivado — usava a tabela ob do Turso (formato diferente: "2021/40516"), produzindo 0% de match para 2022/2023.' },
+              ].map((g, i) => (
+                <div key={i} className="flex items-start gap-3 bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#222]">
+                  <span className={cn('shrink-0 mt-0.5', g.ok ? 'text-[#1AAB40]' : 'text-[#D64550]')}>
+                    {g.ok ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                  </span>
+                  <div>
+                    <Code>{g.label}</Code>
+                    <span className="ml-2 text-[11px] text-[#888]">{g.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* Footer */}
+          <div className="mt-2 pt-4 border-t border-[#2A2A2A] text-[10px] text-[#555] flex items-center gap-2">
+            <Info className="w-3 h-3 shrink-0" />
+            <span>Base: Cloudflare D1 · Worker: lc131-api.sessp-css2.workers.dev · Última importação: 27/05/2026 · Dados: SES-SP / CGOF</span>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 // --.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 // --- Main App ---
 // --.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
@@ -2931,6 +3155,7 @@ export default function App() {
   const [pwdInput, setPwdInput]           = useState('');
   const [pwdError, setPwdError]           = useState(false);
   const [menuOpen, setMenuOpen]           = useState(false);
+  const [metodologiaOpen, setMetodologiaOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const cacheRef = useRef<Map<string, CachedData>>(new Map());
   const initialLoaded = useRef(false);
@@ -3336,6 +3561,12 @@ export default function App() {
                       <Upload className="w-3.5 h-3.5 shrink-0" />
                       Atualização LC131 + LisOB
                     </button>
+                    <div className="border-t border-[#333]" />
+                    <button onClick={() => { setMetodologiaOpen(true); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-[12px] font-semibold text-[#A3D4A8] hover:bg-[#333] transition">
+                      <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                      Metodologia dos dados
+                    </button>
                   </div>
                 </>
               )}
@@ -3373,6 +3604,7 @@ export default function App() {
 
       {/* Loading modal */}
       {dashboardLoading && <ProgressModal message="Aplicando filtros..." />}
+      {metodologiaOpen && <MetodologiaModal onClose={() => setMetodologiaOpen(false)} />}
 
       {/* --.-.-.-.-.-.-.-FILTER BAR --.-.-.-.-.-.-.-*/}
       {filtersOpen && (
