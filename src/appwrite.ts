@@ -9,7 +9,7 @@ const WORKER_URL = import.meta.env.VITE_WORKER_URL
 
 // Token usado apenas na função insert() (upload de arquivo no admin panel).
 // Defina VITE_IMPORT_TOKEN no arquivo .env.local para habilitar uploads.
-const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? '';
+const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? 'lc131-import-2024';
 
 // ── Core fetch helper ────────────────────────────────────────────────────────
 async function workerPost<T = unknown>(
