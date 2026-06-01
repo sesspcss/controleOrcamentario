@@ -1720,7 +1720,7 @@ function UploadObPanel({ onClose, onImportDone }: { onClose: () => void; onImpor
   const fileRef = useRef<HTMLInputElement>(null);
 
   const WORKER_URL   = import.meta.env.VITE_WORKER_URL   ?? 'https://lc131-api.sessp-css2.workers.dev';
-  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? 'lc131-import-2024lc131-import-2024';
+  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? 'lc131-import-2024';
 
   // Mapeamento: cabeçalho xlsx (normalizado) → coluna D1
   // Nota: "Nº" normaliza para "n" (º = U+00BA não é diacrítico), por isso variantes
@@ -2011,7 +2011,7 @@ function UploadPanel({ onClose, onImportDone }: { onClose: () => void; onImportD
   const obFileRef = useRef<HTMLInputElement>(null);
 
   const WORKER_URL = import.meta.env.VITE_WORKER_URL ?? 'https://lc131-api.sessp-css2.workers.dev';
-  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? '';
+  const IMPORT_TOKEN = import.meta.env.VITE_IMPORT_TOKEN ?? 'lc131-import-2024';
 
   const hasImportShape = (sample: DataRow) => {
     const cols = new Set(Object.keys(sample || {}));
